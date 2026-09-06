@@ -178,32 +178,6 @@ export function SettingsSheet({
       title="الإعدادات"
       description="تخصيص المظهر والحفظ."
     >
-      <fieldset className="setting-section">
-        <legend>المظهر</legend>
-        <div className="segmented">
-          {(
-            [
-              ['light', 'فاتح'],
-              ['dark', 'داكن'],
-              ['system', 'تلقائي'],
-            ] as const
-          ).map(([appearance, label]) => (
-            <label
-              key={appearance}
-              data-active={prefs.appearance === appearance}
-            >
-              <input
-                className="sr-only"
-                type="radio"
-                name="appearance"
-                checked={prefs.appearance === appearance}
-                onChange={() => update({ appearance })}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
       <section className="setting-section">
         <div className="setting-label" id="reciter-label">
           القارئ
@@ -232,56 +206,6 @@ export function SettingsSheet({
         </Select>
         <p className="field-note">التلاوات قريبًا</p>
       </section>
-      <fieldset className="setting-section">
-        <legend>اللون</legend>
-        <div className="swatches">
-          {(
-            [
-              ['gold', 'ذهبي'],
-              ['sage', 'زيتوني'],
-              ['blue', 'أزرق'],
-              ['rose', 'وردي'],
-            ] as const
-          ).map(([theme, label]) => (
-            <label className="swatch-label" key={theme}>
-              <input
-                className="sr-only"
-                type="radio"
-                name="theme"
-                checked={prefs.theme === theme}
-                onChange={() => update({ theme })}
-              />
-              <span className={`swatch swatch-${theme}`}>
-                {prefs.theme === theme && <Check size={20} />}
-              </span>
-              <span>{label}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <fieldset className="setting-section">
-        <legend>طريقة العرض</legend>
-        <div className="segmented">
-          {(
-            [
-              ['text', 'نص قرآني'],
-              ['page', 'صفحة المصحف'],
-            ] as const
-          ).map(([mode, label]) => (
-            <label key={mode} data-active={prefs.mode === mode}>
-              <input
-                type="radio"
-                name="mode"
-                className="sr-only"
-                checked={prefs.mode === mode}
-                onChange={() => update({ mode })}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <p className="field-note">صور المصحف قريبًا</p>
-      </fieldset>
       <section className="setting-section">
         <div className="setting-label" id="count-label">
           الآيات في كل مرة
@@ -317,17 +241,96 @@ export function SettingsSheet({
           </SelectContent>
         </Select>
       </section>
+      <fieldset className="setting-section">
+        <legend>طريقة العرض</legend>
+        <div className="segmented">
+          {(
+            [
+              ['text', 'نص قرآني'],
+              ['page', 'صفحة المصحف'],
+            ] as const
+          ).map(([mode, label]) => (
+            <label key={mode} data-active={prefs.mode === mode}>
+              <input
+                type="radio"
+                name="mode"
+                className="sr-only"
+                checked={prefs.mode === mode}
+                onChange={() => update({ mode })}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <p className="field-note">صور المصحف قريبًا</p>
+      </fieldset>
+      <fieldset className="setting-section">
+        <legend>المظهر</legend>
+        <div className="segmented">
+          {(
+            [
+              ['light', 'فاتح'],
+              ['dark', 'داكن'],
+              ['system', 'تلقائي'],
+            ] as const
+          ).map(([appearance, label]) => (
+            <label
+              key={appearance}
+              data-active={prefs.appearance === appearance}
+            >
+              <input
+                className="sr-only"
+                type="radio"
+                name="appearance"
+                checked={prefs.appearance === appearance}
+                onChange={() => update({ appearance })}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="setting-section">
+        <legend>اللون</legend>
+        <div className="swatches">
+          {(
+            [
+              ['gold', 'ذهبي'],
+              ['sage', 'زيتوني'],
+              ['blue', 'أزرق'],
+              ['rose', 'وردي'],
+            ] as const
+          ).map(([theme, label]) => (
+            <label className="swatch-label" key={theme}>
+              <input
+                className="sr-only"
+                type="radio"
+                name="theme"
+                checked={prefs.theme === theme}
+                onChange={() => update({ theme })}
+              />
+              <span className={`swatch swatch-${theme}`}>
+                {prefs.theme === theme && <Check size={20} />}
+              </span>
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <p className="field-note">
+        لا تُحفَظ التسجيلات ولا تُرسَل. تُحذَف عند تغيير الآية.
+      </p>
       <details className="shortcut-help">
-        <summary>التنقّل والاختصارات</summary>
+        <summary>اختصارات لوحة المفاتيح</summary>
         <dl>
           <div>
-            <dt>الآيات التالية</dt>
+            <dt>التالي</dt>
             <dd>
               <kbd>←</kbd> أو <kbd>إدخال</kbd>
             </dd>
           </div>
           <div>
-            <dt>الآيات السابقة</dt>
+            <dt>السابق</dt>
             <dd>
               <kbd>→</kbd>
             </dd>
@@ -338,14 +341,21 @@ export function SettingsSheet({
               <kbd>مسافة</kbd>
             </dd>
           </div>
+          <div>
+            <dt>بدء التسجيل وإنهاؤه</dt>
+            <dd>
+              <kbd>⇧ + إدخال</kbd>
+            </dd>
+          </div>
+          <div>
+            <dt>تشغيل تسجيلك وإيقافه</dt>
+            <dd>
+              <kbd>⇧ + مسافة</kbd>
+            </dd>
+          </div>
         </dl>
-        <p>اسحب الآية يمينًا للتالي، ويسارًا للسابق.</p>
         <p>عند تحديد زر، يعمل مفتاحا الإدخال والمسافة على تفعيله.</p>
       </details>
-      <p className="field-note">
-        تُحفظ الإعدادات تلقائيًا. التسجيلات على جهازك فقط، وتُحذف عند تغيير الموضع أو
-        إغلاق الصفحة.
-      </p>
     </Panel>
   );
 }

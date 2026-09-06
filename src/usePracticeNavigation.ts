@@ -5,6 +5,8 @@ type Actions = {
   next: () => void;
   previous: () => void;
   toggleAudio: () => void;
+  toggleRecording?: () => void;
+  toggleRecordingPlayback?: () => void;
 };
 const editingSelector =
   'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"], [role="slider"], [role="spinbutton"], [role="radio"], [role="tab"], [role="listbox"], [role="menu"]';
@@ -14,6 +16,8 @@ export function usePracticeNavigation({
   next,
   previous,
   toggleAudio,
+  toggleRecording,
+  toggleRecordingPlayback,
 }: Actions) {
   const gesture = useRef<{
     x: number;
@@ -30,8 +34,7 @@ export function usePracticeNavigation({
         event.isComposing ||
         event.altKey ||
         event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey
+        event.metaKey
       )
         return;
       const target =
@@ -41,6 +44,19 @@ export function usePracticeNavigation({
         target?.closest('[role="dialog"]')
       )
         return;
+      if (event.shiftKey) {
+        const action =
+          event.key === 'Enter'
+            ? toggleRecording
+            : event.key === ' '
+              ? toggleRecordingPlayback
+              : undefined;
+        if (action) {
+          event.preventDefault();
+          action();
+        }
+        return;
+      }
       // Space and Enter must still activate whichever native control has focus.
       if (
         (event.key === ' ' || event.key === 'Enter') &&
@@ -61,7 +77,14 @@ export function usePracticeNavigation({
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [enabled, next, previous, toggleAudio]);
+  }, [
+    enabled,
+    next,
+    previous,
+    toggleAudio,
+    toggleRecording,
+    toggleRecordingPlayback,
+  ]);
 
   const cancel = () => {
     gesture.current = null;

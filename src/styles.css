@@ -796,6 +796,7 @@ progress::-moz-progress-bar {
   direction: rtl;
 }
 .shortcut-help {
+  display: none;
   margin-bottom: 24px;
   font-size: 13px;
   color: var(--muted-foreground);
@@ -827,4 +828,27 @@ progress::-moz-progress-bar {
 }
 .shortcut-help p {
   margin-top: 10px;
+}
+
+.recording-result {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.record-time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.record-button {
+  min-width: 0;
+}
+.record-row {
+  flex-wrap: wrap;
+}
+@media (min-width: 641px) and (hover: hover) and (pointer: fine) {
+  .shortcut-help {
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 0;
+  }
 }

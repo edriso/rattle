@@ -201,6 +201,7 @@ it('keeps recordings in memory and releases their URL on position change', async
     value: revokeURL,
   });
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
     value: {

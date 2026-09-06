@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { usePracticeNavigation } from '../usePracticeNavigation';
 import { useAyahAudio } from '../useAyahAudio';
@@ -20,7 +20,7 @@ import {
   reciters,
   type Preferences,
 } from '../data/quran';
-import { Recorder } from './Recorder';
+import { Recorder, type RecorderControls } from './Recorder';
 export function AyahView({
   prefs,
   update,
@@ -32,6 +32,13 @@ export function AyahView({
 }) {
   const [hidden, setHidden] = useState(false);
   const [repeat, setRepeat] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const recording = useRef<RecorderControls>(null);
+  const toggleReciter = () => {
+    if (recording.current?.isCapturing()) return;
+    recording.current?.pausePlayback();
+    void toggle();
+  };
   const source = quranProvider.getAudioUrl(
     prefs.surah,
     prefs.ayah,
@@ -64,9 +71,9 @@ export function AyahView({
     enabled: navigationEnabled,
     next: () => move(1),
     previous: () => move(-1),
-    toggleAudio: () => {
-      void toggle();
-    },
+    toggleAudio: toggleReciter,
+    toggleRecording: () => recording.current?.toggleRecording(),
+    toggleRecordingPlayback: () => recording.current?.togglePlayback(),
   });
   return (
     <>
@@ -156,9 +163,8 @@ export function AyahView({
             aria-label={playing ? 'إيقاف التلاوة مؤقتًا' : 'تشغيل التلاوة'}
             aria-keyshortcuts="Space"
             title="تشغيل أو إيقاف (مسافة)"
-            onClick={() => {
-              void toggle();
-            }}
+            disabled={capturing}
+            onClick={toggleReciter}
           >
             {playing ? (
               <Pause size={24} fill="currentColor" />
@@ -181,6 +187,8 @@ export function AyahView({
         </div>
         {notice && <output className="field-note">{notice}</output>}
         <Recorder
+          ref={recording}
+          onCaptureChange={setCapturing}
           position={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`}
           onBeforeAudio={pause}
         />

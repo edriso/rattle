@@ -21,7 +21,7 @@ npm run preview
 - Four accent colors and persistent light/dark/system appearance, 1–5 verses per view, text/page mode, reciter selection, hide/reveal and bounded navigation.
 - Minimal viewport-height layout with concise Modern Standard Arabic. Long passages, enlarged text and small landscape screens can scroll without clipping controls.
 - Versioned, validated device-local preferences loaded after mount. Nothing is uploaded.
-- Microphone recording, live analyser waveform, playback and deletion. Recording blobs exist in memory only and are released when changing position or leaving the page. A secure context and browser microphone permission are required.
+- Microphone recording, live analyser waveform, playback and deletion. Recording blobs exist in memory only and are released when changing position, re-recording, deleting, or leaving the page (including back/forward caching). Recording and reciter playback cannot overlap. A secure context and browser microphone permission are required.
 - Keyboard-operable sheets and selectors, reduced motion, focus indicators and RTL layouts.
 
 ## Phase two integration
@@ -48,8 +48,10 @@ The app uses Arabic reading direction: next is on the left, previous is on the r
 - **Left Arrow / Enter:** next displayed ayah group.
 - **Right Arrow:** previous group.
 - **Space:** play/pause the current ayah. Audio remains unavailable until the phase-two provider supplies URLs.
+- **Shift + Enter:** start, stop, or re-record your voice.
+- **Shift + Space:** play/pause your recording.
 - **Swipe right over the verse:** next group; **swipe left:** previous group.
 
-Shortcuts pause while either sheet is open and ignore typing, text selection controls, modified keys and held-key repeats. Space/Enter keep native behavior on a focused button or link. Swipes require a deliberate horizontal gesture and ignore vertical scrolling, small drags, multi-touch, selected text and browser edges. Neither keyboard nor swipe navigation leaves the current surah. Shortcut help is available in Settings.
+Shortcuts pause while either sheet is open and ignore typing, text selection controls, unassigned modified keys and held-key repeats. Space/Enter keep native behavior on a focused button or link. Swipes require a deliberate horizontal gesture and ignore vertical scrolling, small drags, multi-touch, selected text and browser edges. Neither keyboard nor swipe navigation leaves the current surah. Collapsible shortcut help appears at the bottom of Settings on desktop devices with a mouse/trackpad. Settings are ordered: reciter, ayah count, display mode, appearance, accent colors.
 
-Verified with automated interaction/media tests and native-browser keyboard checks plus touch emulation at phone widths (including 320 × 568); emulation does not replace testing on physical iOS/Android devices.
+Verified with automated interaction/media tests and native-browser keyboard checks plus touch emulation at phone widths (including 320 × 568), real microphone recording, playback, re-recording and swipe cleanup; emulation does not replace testing on physical iOS/Android devices.
