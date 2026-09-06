@@ -103,6 +103,13 @@ is as long as the audio that just played, times a factor the user chooses, from
 half of it up to double. It is never a fixed number of seconds — a long ayah
 needs a long pause and a short one does not. `manual` waits for a tap instead.
 
+The echo is **not** part of the passage. `buildPassage()` in `usePassage.ts`
+makes the segments and the schedule without it, and the session is told the
+length separately through `setEcho()`. Fold it back into the passage and every
+change of the silence builds a new session, which drops the learner back on
+step one mid-drill. `preparePassage()` adds the cost estimate on top, and only
+the start screen needs that.
+
 `off` is not a switched-off setting, it is the other way of using the app: some
 people want to hear the passage repeated and do not repeat it aloud. It leaves
 only a short breath, so two passes do not run into each other. That is why the

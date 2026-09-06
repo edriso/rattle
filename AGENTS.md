@@ -176,6 +176,11 @@ header, so you cannot simply swap the URL.
 - Numbers shown to the user use Arabic-Indic digits and correct Arabic grammar.
   Use the helpers in `src/data/arabic.ts` (`arabic`, `ayatCount`, `timesCount`,
   `minutesCount`, `daysCount`) rather than writing `${n} آيات` by hand.
+- **A field that takes a number is never `type="number"`.** That field silently
+  throws away ٢٥٥, which is what an Arabic keyboard types, and it can only show
+  Latin digits. Use `type="text"` with `inputMode="numeric"`, show the value
+  through `arabic()`, and read it back through `digits()`, which accepts either
+  set of numerals.
 - Do not add a dependency unless there is no reasonable way around it. The app
   ships almost nothing beyond React and the UI parts it already has.
 - The linter runs the React Compiler rules and is strict. It will reject
@@ -192,6 +197,26 @@ header, so you cannot simply swap the URL.
 - A control that becomes unavailable while it holds focus uses `aria-disabled`,
   not `disabled`. A `disabled` button drops the keyboard on the floor the
   moment it is pressed.
+
+## The panels
+
+The two sheets — the passage picker and the settings — and the grading sheet
+share `Panel` in `src/components/Sheets.tsx`. Three things about them are
+deliberate:
+
+- They open with the cursor on their **title**, not on the close button.
+  Landing on «إغلاق» reads as though leaving were the thing to do, and a
+  screen reader hears "close" instead of the panel's name. That is what
+  `initialFocus` is for; do not drop it.
+- The surah box is a **search field that happens to show where you are**.
+  Opening it empties it, so nobody has to delete البقرة before looking for
+  آل عمران, and closing it without choosing puts the name back. The name to
+  restore comes from a ref, not from the rendered selection: picking a surah
+  closes the list in the same breath, and a handler would still be holding the
+  previous one.
+- Anything the panel says about the app rather than about a setting belongs in
+  the `.sheet-about` footer at the end, not as another note under the last
+  control.
 
 ## Tests
 
