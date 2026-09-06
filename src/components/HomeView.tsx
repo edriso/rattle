@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   BookOpen,
   ChevronDown,
@@ -16,7 +17,13 @@ import {
   type Preferences,
 } from '../data/quran';
 import { findReciter } from '../data/audio';
-import { grainLabel, grains, type Grain } from '../memorize/session';
+import {
+  echoLabel,
+  grainLabel,
+  grains,
+  type EchoMode,
+  type Grain,
+} from '../memorize/session';
 import { preparePassage, usePassageSource } from '../memorize/usePassage';
 import { daysUntil, due, type ReviewItem } from '../memorize/review';
 
@@ -56,6 +63,11 @@ export function HomeView({
     : null;
   const pending = due(items);
   const ayat = prefs.to - prefs.ayah + 1;
+  /* Listening on its own is a way people use the app, not a setting turned
+     off, so it sits here rather than in the sheet. Coming back to repeating
+     restores the gap the learner had chosen, which is why it is kept. */
+  const repeating = prefs.echo !== 'off';
+  const lastGap = useRef<EchoMode>(repeating ? prefs.echo : 1);
 
   const setRange = (from: number, to: number) => {
     const start = Math.max(1, Math.min(surah.count, from));
@@ -193,6 +205,40 @@ export function HomeView({
                 {grainLabel(grain)}
               </label>
             ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="grain-row">
+          <legend className="setting-label">
+            الترديد
+            {typeof prefs.echo === 'number' && (
+              <span className="muted"> · سكتة {echoLabel(prefs.echo)}</span>
+            )}
+          </legend>
+          <div className="segmented">
+            <label data-active={repeating}>
+              <input
+                className="sr-only"
+                type="radio"
+                name="echo-mode"
+                checked={repeating}
+                onChange={() => update({ echo: lastGap.current })}
+              />
+              أستمع وأُردّد
+            </label>
+            <label data-active={!repeating}>
+              <input
+                className="sr-only"
+                type="radio"
+                name="echo-mode"
+                checked={!repeating}
+                onChange={() => {
+                  if (prefs.echo !== 'off') lastGap.current = prefs.echo;
+                  update({ echo: 'off' });
+                }}
+              />
+              أستمع فقط
+            </label>
           </div>
         </fieldset>
 

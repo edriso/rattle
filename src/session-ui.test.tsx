@@ -99,6 +99,22 @@ describe('choosing a passage', () => {
     expect(estimate.textContent).toMatch(/مرة|مرات|مرتان/);
   });
 
+  it('offers listening alone, and hands the gap back when repeating resumes', async () => {
+    start({ surah: 112, ayah: 1, to: 4, echo: 2 });
+    render(<App />);
+    const estimate = await screen.findByRole('status');
+    await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
+    const repeating = estimate.textContent;
+    fireEvent.click(screen.getByRole('radio', { name: 'أستمع فقط' }));
+    // Dropping the gaps is most of the session, so the estimate must follow.
+    await waitFor(() => expect(estimate.textContent).not.toBe(repeating));
+    expect(JSON.parse(localStorage.getItem('rattil:v1')!).echo).toBe('off');
+    fireEvent.click(screen.getByRole('radio', { name: /أستمع وأُردّد/ }));
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattil:v1')!).echo).toBe(2),
+    );
+  });
+
   it('offers the ayah before the passage so it can be joined to what came before', async () => {
     start({ surah: 2, ayah: 6, to: 10 });
     render(<App />);

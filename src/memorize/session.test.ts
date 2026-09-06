@@ -115,6 +115,11 @@ describe('costing a session before any audio is fetched', () => {
     expect(echoed.echo).toBeCloseTo(silent.listening, 5);
     expect(echoed.total).toBeCloseTo(silent.listening * 2, 5);
     expect(costSession(steps, seconds, 'manual').total).toBe(silent.total);
+    // The learner who wants twice the reciter's time to repeat gets it.
+    expect(costSession(steps, seconds, 2).echo).toBeCloseTo(
+      silent.listening * 2,
+      5,
+    );
   });
 
   it('costs only what is left once a session is under way', () => {

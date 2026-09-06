@@ -162,21 +162,27 @@ const DIACRITICS = /[ً-ٰٕۖ-ۭـ\s]/g;
 export const spokenLetters = (text: string) =>
   text.replace(DIACRITICS, '').length;
 
-/** The silence left after each pass for the learner to recite it back. */
-export type EchoMode = 'off' | 'manual' | 0.5 | 1 | 1.5;
+/**
+ * The silence left after each pass for the learner to recite it back, as a
+ * multiple of the pass itself. `off` is the other way of using the app: the
+ * recitation repeats and the learner only listens.
+ */
+export type EchoMode = 'off' | 'manual' | 0.5 | 1 | 1.5 | 2;
 
-export const echoModes: readonly EchoMode[] = ['off', 0.5, 1, 1.5, 'manual'];
+export const echoModes: readonly EchoMode[] = ['off', 0.5, 1, 1.5, 2, 'manual'];
 
 export const echoLabel = (echo: EchoMode) =>
   echo === 'off'
-    ? 'بلا سكتة'
+    ? 'استماع فقط'
     : echo === 'manual'
       ? 'أنا أتحكّم'
       : echo === 0.5
         ? 'نصف المقطع'
         : echo === 1
           ? 'بقدر المقطع'
-          : 'مرة ونصف';
+          : echo === 1.5
+            ? 'مرة ونصف'
+            : 'ضعف المقطع';
 
 export const isEcho = (value: unknown): value is EchoMode =>
   echoModes.includes(value as EchoMode);

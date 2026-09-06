@@ -89,10 +89,15 @@ A few rules the class keeps to. Break one and something will get stuck:
 ## The echo
 
 After each pass, the app leaves silence for the learner to repeat. The silence
-is as long as the audio that just played, times a factor the user chooses. It
-is never a fixed number of seconds — a long ayah needs a long pause and a short
-one does not. `manual` waits for a tap instead. `off` leaves only a short
-breath, so two passes do not run into each other.
+is as long as the audio that just played, times a factor the user chooses, from
+half of it up to double. It is never a fixed number of seconds — a long ayah
+needs a long pause and a short one does not. `manual` waits for a tap instead.
+
+`off` is not a switched-off setting, it is the other way of using the app: some
+people want to hear the passage repeated and do not repeat it aloud. It leaves
+only a short breath, so two passes do not run into each other. That is why the
+home screen offers it as a choice of its own and the sheet only tunes the
+length.
 
 ## Review scheduling
 
