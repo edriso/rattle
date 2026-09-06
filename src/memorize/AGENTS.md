@@ -84,11 +84,28 @@ A few rules the class keeps to. Break one and something will get stuck:
 
 - Recordings come from `everyayah.com`, one MP3 per ayah. That host allows
   cross-origin reads, which is what lets the app decode and slice the sound.
+- `ClipPlayer` takes the other addresses of a recording as a constructor
+  argument rather than importing them, so this whole folder stays free of any
+  knowledge of where recitation comes from. `useSession` passes
+  `audioMirrors`; a test passes whatever it likes.
+- A recording is cached under the address it was **asked** for, never under
+  the one that answered. Key it by the answering address and the same
+  recitation lands in memory twice.
 - The context is created at 24 kHz to keep decoded audio small.
 - The cache holds about seven minutes of decoded audio, then drops the oldest.
   The clips a run needs are pinned first, so a long run cannot be cut short.
-- A fetch that fails is tried once more, and one that hangs is dropped after 20
-  seconds. Without the timeout a stalled connection looks like a frozen app.
+- A fetch tries every address of a recording, then all of them once more after
+  a pause: a later address answers a host being unreachable, the second round
+  answers a moment of no signal. One attempt is dropped after 20 seconds and
+  the whole thing after 30, so reaching for more addresses can never leave a
+  learner waiting longer than one stalled connection used to.
+- **The 30 seconds is counted on the clock, not held as a third
+  `AbortSignal`.** Safari 16.0 to 16.3, Chrome 103 to 115 and Firefox 100 to
+  123 have `AbortSignal.timeout` but not `AbortSignal.any`, so only one signal
+  reaches `fetch`. A deadline passed that way would displace each attempt's
+  own limit, and one stalled host would then eat the whole budget before any
+  other address was tried, which is precisely the failure the list of
+  addresses exists to answer. Never pass `combine()` more than two signals.
 - `play()` silences the batch it replaces. Only the sources of the newest call
   are held, so anything left scheduled by an older one could never be stopped
   again — two recitations at once, with no way to quiet the first.

@@ -114,3 +114,54 @@ it('holds the run in flight in memory however long the run is', async () => {
   expect(player.cached('/a.mp3')).toBe(true);
   expect(player.cached('/b.mp3')).toBe(false);
 });
+
+/* One host being unreachable used to end a session. The same recitation is
+   served from a second address, so a failed fetch falls through to it. */
+it("reaches for a mirror when a recording's own host does not answer", async () => {
+  const asked: string[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      asked.push(url);
+      return url === '/one.mp3'
+        ? Promise.reject(new Error('offline'))
+        : audioOf(7);
+    }),
+  );
+  const player = new ClipPlayer((url) =>
+    url === '/one.mp3' ? ['/mirror.mp3'] : [],
+  );
+  await expect(player.load('/one.mp3')).resolves.toBe(7);
+  expect(asked).toEqual(['/one.mp3', '/mirror.mp3']);
+  // Kept under the address it was asked for, so a mirror never becomes a
+  // second cache entry for recitation already in memory.
+  expect(player.cached('/one.mp3')).toBe(true);
+  expect(player.cached('/mirror.mp3')).toBe(false);
+});
+
+it('treats a missing file as a reason to try the next address', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) =>
+      url === '/one.mp3'
+        ? Promise.resolve({ ok: false, status: 404 })
+        : audioOf(3),
+    ),
+  );
+  const player = new ClipPlayer(() => ['/mirror.mp3']);
+  await expect(player.load('/one.mp3')).resolves.toBe(3);
+});
+
+it('gives up only once every address has been tried twice', async () => {
+  const asked: string[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      asked.push(url);
+      return Promise.reject(new Error('offline'));
+    }),
+  );
+  const player = new ClipPlayer(() => ['/mirror.mp3']);
+  await expect(player.load('/one.mp3')).rejects.toThrow('offline');
+  expect(asked).toEqual(['/one.mp3', '/mirror.mp3', '/one.mp3', '/mirror.mp3']);
+});

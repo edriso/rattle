@@ -13,6 +13,7 @@ import { App } from './App';
 import { defaults } from './data/quran';
 import { usePracticeNavigation } from './usePracticeNavigation';
 import { useRangeAudio } from './useRangeAudio';
+import { audioMirrors, ayahAudioUrl } from './data/audio';
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -396,4 +397,104 @@ it('uses the latest ayah count without reinstalling the global key listener', ()
   expect(
     listener.mock.calls.filter(([type]) => type === 'keydown'),
   ).toHaveLength(before);
+});
+
+/* A recording's own host being unreachable used to be the end of it, even
+   though the same recitation is served from a second address. */
+it('moves an unreachable ayah to its mirror before giving up on it', async () => {
+  const player = new FakeAudio();
+  vi.stubGlobal(
+    'Audio',
+    class {
+      constructor() {
+        return player;
+      }
+    },
+  );
+  const url = ayahAudioUrl(2, 27, 'husary');
+  const view = renderHook(() => useRangeAudio([url], false));
+  await act(() => view.result.current.toggle());
+  await act(async () => player.onerror?.());
+  expect(player.src).toBe(audioMirrors(url)[0]);
+  // Recovered, so the learner is not told anything went wrong.
+  expect(view.result.current.notice).toBe('');
+  expect(view.result.current.playing).toBe(true);
+  // Nowhere left to reach, and now it is worth saying.
+  await act(async () => player.onerror?.());
+  expect(view.result.current.playing).toBe(false);
+  expect(view.result.current.notice).not.toBe('');
+});
+
+/* An error can land after the learner has already pressed pause. Moving to
+   the mirror is right; starting it sounding is not. */
+it('moves to a mirror without sounding a run that was paused', async () => {
+  const player = new FakeAudio();
+  vi.stubGlobal(
+    'Audio',
+    class {
+      constructor() {
+        return player;
+      }
+    },
+  );
+  const url = ayahAudioUrl(2, 27, 'husary');
+  const view = renderHook(() => useRangeAudio([url], false));
+  await act(() => view.result.current.toggle());
+  act(() => view.result.current.pause());
+  player.play.mockClear();
+  await act(async () => player.onerror?.());
+  expect(player.src).toBe(audioMirrors(url)[0]);
+  expect(player.play).not.toHaveBeenCalled();
+  expect(view.result.current.playing).toBe(false);
+});
+
+const fakePlayer = () => {
+  const player = new FakeAudio();
+  vi.stubGlobal(
+    'Audio',
+    class {
+      constructor() {
+        return player;
+      }
+    },
+  );
+  return player;
+};
+
+/* Asking the dead host again at every ayah bought nothing but another
+   failure, once per ayah and once more on every pass of a loop. */
+it('keeps the mirror it found for the rest of the run', async () => {
+  const player = fakePlayer();
+  const urls = [ayahAudioUrl(2, 27, 'husary'), ayahAudioUrl(2, 28, 'husary')];
+  const view = renderHook(() => useRangeAudio(urls, false));
+  await act(() => view.result.current.toggle());
+  await act(async () => player.onerror?.());
+  expect(player.src).toBe(audioMirrors(urls[0])[0]);
+  await act(async () => player.onended?.());
+  expect(player.src).toBe(audioMirrors(urls[1])[0]);
+});
+
+/* An error can land after the learner has already stopped listening. Telling
+   them the recitation failed is then just noise about something they ended. */
+it('says nothing about a run the learner stopped before it failed', async () => {
+  const player = fakePlayer();
+  const url = ayahAudioUrl(2, 27, 'husary');
+  const view = renderHook(() => useRangeAudio([url], false));
+  await act(() => view.result.current.toggle());
+  await act(async () => player.onerror?.());
+  act(() => view.result.current.pause());
+  await act(async () => player.onerror?.());
+  expect(view.result.current.notice).toBe('');
+  expect(view.result.current.playing).toBe(false);
+});
+
+it('still says so when the learner is waiting and nowhere answers', async () => {
+  const player = fakePlayer();
+  const url = ayahAudioUrl(2, 27, 'husary');
+  const view = renderHook(() => useRangeAudio([url], false));
+  await act(() => view.result.current.toggle());
+  await act(async () => player.onerror?.());
+  await act(async () => player.onerror?.());
+  expect(view.result.current.notice).not.toBe('');
+  expect(view.result.current.playing).toBe(false);
 });

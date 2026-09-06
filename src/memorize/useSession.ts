@@ -4,6 +4,7 @@
    already been fetched is never fetched again. */
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { audioMirrors } from '../data/audio';
 import { ClipPlayer } from './player';
 import { Session, type SessionState } from './runtime';
 import type { EchoMode, PlayableSegment } from './session';
@@ -26,7 +27,7 @@ const noSnapshot = (): SessionState | null => null;
  * finishing is read from `state.phase`, not signalled by a callback.
  */
 export function useSession(config: SessionConfig | null, echo: EchoMode) {
-  const [audio] = useState(() => new ClipPlayer());
+  const [audio] = useState(() => new ClipPlayer(audioMirrors));
   useEffect(() => () => void audio.dispose(), [audio]);
 
   // A session is built without an echo and given one straight away, so that

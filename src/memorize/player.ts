@@ -26,23 +26,48 @@ export interface Audio {
   readonly now: number;
 }
 
-/** Fetch a recording, once more after a moment if the first attempt fails.
-    Most failures on a phone are a moment of no signal, not a missing file. */
-async function fetchAudio(url: string, signal?: AbortSignal) {
+/** Combine the signals that exist. Without `AbortSignal.any` only one of them
+    can reach `fetch`, and it is the caller's: an abort must always be heard,
+    even on an engine where the attempt then loses its own time limit. Pass at
+    most two, or the one dropped will not be the one you meant. */
+function combine(...signals: (AbortSignal | undefined)[]) {
+  const live = signals.filter((s) => s !== undefined);
+  if (live.length < 2) return live[0];
+  return AbortSignal.any?.(live) ?? live[0];
+}
+
+/**
+ * Fetch a recording from the first address that answers, and go round the
+ * whole list once more after a moment before giving it up. A later address
+ * answers a host being unreachable; the second round answers the commoner
+ * failure on a phone, a moment of no signal.
+ */
+async function fetchAudio(urls: readonly string[], signal?: AbortSignal) {
+  /* One ceiling over every attempt, so reaching for more addresses can never
+     leave a learner waiting longer than a single stalled connection used to.
+     It is arithmetic rather than a third signal because on an engine with
+     `AbortSignal.timeout` but no `AbortSignal.any` only one signal survives:
+     a deadline passed that way would displace each attempt's own limit, and
+     the first stalled host would burn the whole budget before any other
+     address was tried. That is the failure this list exists to answer. */
+  const started = Date.now();
+  const left = () => DEADLINE - (Date.now() - started);
   let last: unknown;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt) await new Promise((resolve) => setTimeout(resolve, 600));
-    if (signal?.aborted) throw signal.reason;
-    const timeout = AbortSignal.timeout?.(TIMEOUT);
-    const abort =
-      signal && timeout ? AbortSignal.any?.([signal, timeout]) : timeout;
-    try {
-      const response = await fetch(url, { signal: abort ?? signal });
-      if (!response.ok) throw new Error(`audio ${response.status}`);
-      return await response.arrayBuffer();
-    } catch (error) {
-      if (signal?.aborted) throw error;
-      last = error;
+  for (let round = 0; round < 2 && left() > 0; round++) {
+    if (round) await new Promise((resolve) => setTimeout(resolve, RETRY));
+    for (const url of urls) {
+      if (signal?.aborted) throw signal.reason;
+      if (left() <= 0) break;
+      const attempt = AbortSignal.timeout?.(Math.min(TIMEOUT, left()));
+      const abort = combine(signal, attempt);
+      try {
+        const response = await fetch(url, { signal: abort });
+        if (!response.ok) throw new Error(`audio ${response.status}`);
+        return await response.arrayBuffer();
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        last = error;
+      }
     }
   }
   throw last;
@@ -55,6 +80,11 @@ const LEAD = 0.06;
 /** A recording that has not arrived by now is treated as a failure, so a
     stalled connection surfaces as a message rather than an endless wait. */
 const TIMEOUT = 20_000;
+/** Ceiling on one recording's whole fetch, however many addresses it tries,
+    counted on the clock so no attempt has to give up its own limit for it. */
+const DEADLINE = 30_000;
+/** Pause before trying every address again, long enough to outlast a blip. */
+const RETRY = 600;
 
 export class ClipPlayer implements Audio {
   private context: AudioContext | null = null;
@@ -66,6 +96,15 @@ export class ClipPlayer implements Audio {
   private live: AudioBufferSourceNode[] = [];
   private pinned = new Set<string>();
   private generation = 0;
+
+  /**
+   * @param mirrors Other addresses carrying the recording at a URL, tried in
+   * turn when it cannot be reached. Injected rather than imported so this
+   * layer stays free of any knowledge of where recitation comes from.
+   */
+  constructor(
+    private readonly mirrors: (url: string) => readonly string[] = () => [],
+  ) {}
 
   private ensureContext(): AudioContext {
     if (!this.context) {
@@ -114,7 +153,7 @@ export class ClipPlayer implements Audio {
     if (inFlight) return inFlight;
     // Decoding works on a suspended context, so loading needs no gesture.
     const context = this.ensureContext();
-    const request = fetchAudio(url, signal)
+    const request = fetchAudio([url, ...this.mirrors(url)], signal)
       .then((bytes) => context.decodeAudioData(bytes))
       .then((buffer) => {
         this.buffers.set(url, buffer);

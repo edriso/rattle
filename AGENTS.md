@@ -182,7 +182,48 @@ splitting rules in `phrases.ts`, run `npm run prepare:timings` again.
 Audio itself is **not** committed. It is fetched from `everyayah.com`, one MP3
 per ayah. That host sends `access-control-allow-origin: *`, which is what lets
 the app decode and cut the audio. Many other Quran audio hosts do not send that
-header, so you cannot simply swap the URL.
+header, so you cannot simply swap the URL. `cdn.islamic.network` is one that
+does not: it has the same recitations and no CORS header at all.
+
+Every recording has a **second address**, on the mirror Quran.com serves its own
+audio from, and a fetch that fails falls through to it. `ayahAudioUrl()` mints
+the first address, which stays the one a recording is cached and keyed under;
+`audioMirrors()` returns the rest. Two things to know before you touch either:
+
+- The mirror does not carry `Abdurrahmaan_As-Sudais_64kbps` or
+  `Saood_ash-Shuraym_64kbps`. Those two fall through to the 192 and 128 kbps
+  cuts of the same reading. Measured over eleven ayat from 2 to 43 seconds
+  long, the higher cut runs a **constant** 78.7 ms (Sudais) and 34.1 ms
+  (Shuraym) longer, whatever the ayah: encoder padding, not drift that piles
+  up. So a phrase cut lands within a tenth of a second of where the vendored
+  timings put it, and no correction is worth carrying. That is what a
+  reciter's `mirror` field is for. If you add a reciter, check its folder on
+  the mirror and set the field when the name differs.
+- Both hosts sit behind the same CDN. This carries a session through an origin
+  or a folder going missing, not through that CDN going down. A genuinely
+  independent third address would have to be storage someone owns and pays
+  for, which the app deliberately does not have.
+- Nothing in the test suite can prove the mirror still resolves; the tests pin
+  the strings the code builds, and a network test in CI would be flaky. Check
+  it by hand when you touch this, and after a long gap:
+
+  ```sh
+  for f in $(grep -oE "(folder|mirror): '[^']+" src/data/audio.ts | cut -d"'" -f2); do
+    printf '%-34s %s\n' "$f" \
+      "$(curl -sS -o /dev/null -w '%{http_code}' -r 0-0 \
+         https://mirrors.quranicaudio.com/everyayah/$f/002027.mp3)"
+  done
+  ```
+
+  Expect 206 for every `mirror:` folder and for the seven `folder:` values the
+  mirror shares. The two 64 kbps folders it does not carry return 404, which
+  is why they have a `mirror:` of their own.
+
+**The address that answers belongs to the run.** In `useRangeAudio` the media
+element remembers which address worked and keeps it for the rest of the range,
+rather than starting from the unreachable one again at every ayah. It goes back
+to the recording's own address only once nowhere answers, so a retry after the
+network comes back starts from the right place.
 
 ## Style
 
