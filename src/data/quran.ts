@@ -1,5 +1,16 @@
-import { reciters } from './audio';
-// Local catalogue and validated device preferences. Audio integration is separate.
+import { defaultReciter, findReciter } from './audio';
+import {
+  defaultPlan,
+  restorePlan,
+  type SchedulePlan,
+} from '../memorize/schedule';
+import {
+  isEcho,
+  isGrain,
+  type EchoMode,
+  type Grain,
+} from '../memorize/session';
+// Local catalogue, and the device preferences restored from storage.
 const names =
   'الفاتحة البقرة آل_عمران النساء المائدة الأنعام الأعراف الأنفال التوبة يونس هود يوسف الرعد إبراهيم الحجر النحل الإسراء الكهف مريم طه الأنبياء الحج المؤمنون النور الفرقان الشعراء النمل القصص العنكبوت الروم لقمان السجدة الأحزاب سبأ فاطر يس الصافات ص الزمر غافر فصلت الشورى الزخرف الدخان الجاثية الأحقاف محمد الفتح الحجرات ق الذاريات الطور النجم القمر الرحمن الواقعة الحديد المجادلة الحشر الممتحنة الصف الجمعة المنافقون التغابن الطلاق التحريم الملك القلم الحاقة المعارج نوح الجن المزمل المدثر القيامة الإنسان المرسلات النبأ النازعات عبس التكوير الانفطار المطففين الانشقاق البروج الطارق الأعلى الغاشية الفجر البلد الشمس الليل الضحى الشرح التين العلق القدر البينة الزلزلة العاديات القارعة التكاثر العصر الهمزة الفيل قريش الماعون الكوثر الكافرون النصر المسد الإخلاص الفلق الناس'.split(
     ' ',
@@ -17,56 +28,89 @@ export const surahs = names.map((name, i) => ({
   name: name.replace('_', ' '),
   count: counts[i],
 }));
-const numberFormat = new Intl.NumberFormat('ar-EG', { useGrouping: false });
-export const arabic = (n: number) => numberFormat.format(n);
-export const normalize = (s: string) =>
-  s
-    .normalize('NFKD')
-    .replace(/[\u064B-\u065F\u0670]/g, '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ى/g, 'ي');
+export {
+  arabic,
+  ayatCount,
+  counted,
+  daysCount,
+  minutesCount,
+  normalize,
+  timesCount,
+} from './arabic';
+
+export type Screen = 'home' | 'session' | 'practice';
+
 export type Preferences = {
-  started: boolean;
+  screen: Screen;
   surah: number;
+  /** First ayah of the passage, and the position free practice sits at. */
   ayah: number;
+  /** Last ayah of the passage a session drills. */
+  to: number;
   reciter: string;
   theme: 'gold' | 'sage' | 'blue' | 'rose';
   appearance: 'dark' | 'light' | 'system';
+  /** Ayat shown at once in free practice. */
   perView: number;
+  grain: Grain;
+  echo: EchoMode;
+  plan: SchedulePlan;
 };
+
+/** A first passage short enough to finish, so a session never opens daunting. */
+const PASSAGE = 5;
+
 export const defaults: Preferences = {
-  started: false,
+  screen: 'home',
   surah: 1,
   ayah: 1,
-  reciter: reciters[0].id,
+  to: PASSAGE,
+  reciter: defaultReciter,
   theme: 'gold',
   appearance: 'dark',
   perView: 1,
+  grain: 1,
+  echo: 1,
+  plan: defaultPlan,
 };
+
+/** Pull a stored number back into range, keeping as much of it as is usable. */
+const clamped = (
+  value: unknown,
+  low: number,
+  high: number,
+  fallback: number,
+) =>
+  Number.isInteger(value)
+    ? Math.min(high, Math.max(low, value as number))
+    : fallback;
+
 export function restore(value: unknown): Preferences {
   if (!value || typeof value !== 'object') return defaults;
-  const p = value as Partial<Preferences>;
-  const surah =
-    Number.isInteger(p.surah) && p.surah! >= 1 && p.surah! <= 114
-      ? p.surah!
-      : 1;
+  const p = value as Partial<Preferences> & { started?: boolean };
+  const surah = clamped(p.surah, 1, 114, 1);
+  const count = surahs[surah - 1].count;
+  const ayah = clamped(p.ayah, 1, count, 1);
   return {
-    started: p.started === true,
+    // A store written before the two modes existed only knew free practice.
+    screen: (['home', 'session', 'practice'] as const).includes(p.screen!)
+      ? p.screen!
+      : p.started === true
+        ? 'practice'
+        : 'home',
     surah,
-    ayah: Number.isInteger(p.ayah)
-      ? Math.max(1, Math.min(surahs[surah - 1].count, p.ayah!))
-      : 1,
-    reciter: reciters.some((r) => r.id === p.reciter)
-      ? p.reciter!
-      : defaults.reciter,
-    theme: ['gold', 'sage', 'blue', 'rose'].includes(p.theme!)
+    ayah,
+    to: clamped(p.to, ayah, count, Math.min(count, ayah + PASSAGE - 1)),
+    reciter: findReciter(p.reciter ?? '').id,
+    theme: (['gold', 'sage', 'blue', 'rose'] as const).includes(p.theme!)
       ? p.theme!
       : defaults.theme,
-    appearance: ['dark', 'light', 'system'].includes(p.appearance!)
+    appearance: (['dark', 'light', 'system'] as const).includes(p.appearance!)
       ? p.appearance!
       : defaults.appearance,
-    perView: Number.isInteger(p.perView)
-      ? Math.max(1, Math.min(5, p.perView!))
-      : 1,
+    perView: clamped(p.perView, 1, 5, 1),
+    grain: isGrain(p.grain) ? p.grain : defaults.grain,
+    echo: isEcho(p.echo) ? p.echo : defaults.echo,
+    plan: restorePlan(p.plan),
   };
 }

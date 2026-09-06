@@ -1,7 +1,8 @@
-/* Hydration intentionally restores device storage after the initial render. */
+/* Storage is written from an effect, so a failing store surfaces as a notice
+   rather than throwing out of a state updater. */
 /* eslint-disable react/react-compiler */
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Settings, ChevronDown, ArrowLeft, BookOpen } from 'lucide-react';
+import { Settings, ChevronDown, ArrowRight } from 'lucide-react';
 import {
   defaults,
   restore,
@@ -11,42 +12,63 @@ import {
 } from './data/quran';
 import { useWebMCP } from './webmcp';
 import { useAppearance } from './useAppearance';
+import { useReviewPlan } from './memorize/useReviewPlan';
 import { DirectionProvider } from '@/components/ui/direction';
+import { HomeView } from './components/HomeView';
+import { AyahView } from './components/AyahView';
+
+const SessionView = lazy(() =>
+  import('./components/SessionView').then((m) => ({ default: m.SessionView })),
+);
 const Picker = lazy(() =>
   import('./components/Sheets').then((m) => ({ default: m.Picker })),
 );
 const SettingsSheet = lazy(() =>
   import('./components/Sheets').then((m) => ({ default: m.SettingsSheet })),
 );
-import { AyahView } from './components/AyahView';
+
+const STORAGE = 'rattil:v1';
+
+function stored(): Preferences {
+  try {
+    return restore(JSON.parse(localStorage.getItem(STORAGE) ?? 'null'));
+  } catch {
+    return defaults;
+  }
+}
+
 export function App() {
-  const [prefs, setPrefs] = useState<Preferences>(defaults);
-  const [ready, setReady] = useState(false);
+  const [prefs, setPrefs] = useState<Preferences>(stored);
   const [panel, setPanel] = useState<'picker' | 'settings' | null>(null);
   const [storageError, setStorageError] = useState(false);
+  const review = useReviewPlan();
+
   useEffect(() => {
-    try {
-      setPrefs(
-        restore(JSON.parse(localStorage.getItem('rattil:v1') || 'null')),
-      );
-    } catch {
-      setStorageError(true);
-    }
-    setReady(true);
-  }, []);
-  useEffect(() => {
-    if (!ready) return;
     document.documentElement.dataset.theme = prefs.theme;
     try {
-      localStorage.setItem('rattil:v1', JSON.stringify(prefs));
+      localStorage.setItem(STORAGE, JSON.stringify(prefs));
     } catch {
       setStorageError(true);
     }
-  }, [prefs, ready]);
-  useAppearance(prefs.appearance, ready);
+  }, [prefs]);
+  useAppearance(prefs.appearance, true);
   useWebMCP(setPrefs);
-  const update = (v: Partial<Preferences>) => setPrefs((p) => ({ ...p, ...v }));
+
+  /* Free review moves `ayah` on its own. The passage keeps its length and
+     follows, so returning to the start screen never leaves an empty range. */
+  const update = (v: Partial<Preferences>) =>
+    setPrefs((p) => {
+      const next = { ...p, ...v };
+      const count = surahs[next.surah - 1].count;
+      if (v.to === undefined && v.ayah !== undefined && v.ayah !== p.ayah)
+        next.to = p.to + (v.ayah - p.ayah);
+      next.ayah = Math.max(1, Math.min(count, next.ayah));
+      next.to = Math.max(next.ayah, Math.min(count, next.to));
+      return next;
+    });
   const surah = surahs[prefs.surah - 1];
+  const home = prefs.screen === 'home';
+
   return (
     <DirectionProvider direction="rtl">
       <div className="app-shell" dir="rtl">
@@ -54,25 +76,41 @@ export function App() {
           انتقل إلى المحتوى
         </a>
         <header className="topbar">
-          <a
-            href={import.meta.env.BASE_URL}
-            className="brand"
-            aria-label="رَتِّلِ، الصفحة الرئيسية"
-          >
-            رَتِّلِ
-          </a>
-          {prefs.started ? (
+          {home ? (
+            <a
+              href={import.meta.env.BASE_URL}
+              className="brand"
+              aria-label="رَتِّلِ، الصفحة الرئيسية"
+            >
+              رَتِّلِ
+            </a>
+          ) : (
+            <button
+              className="icon-button"
+              aria-label="رجوع إلى اختيار المقطع"
+              onClick={() => update({ screen: 'home' })}
+            >
+              <ArrowRight size={21} />
+            </button>
+          )}
+          {home ? null : (
             <button
               className="position-button"
               onClick={() => setPanel('picker')}
             >
               <span>
                 سورة {surah.name}
-                <span className="muted"> · آية {arabic(prefs.ayah)}</span>
+                <span className="muted">
+                  {' '}
+                  ·{' '}
+                  {prefs.screen === 'session'
+                    ? `${arabic(prefs.ayah)}–${arabic(prefs.to)}`
+                    : `آية ${arabic(prefs.ayah)}`}
+                </span>
               </span>
               <ChevronDown size={15} />
             </button>
-          ) : null}
+          )}
           <button
             className="icon-button gear"
             aria-label="الإعدادات"
@@ -81,92 +119,69 @@ export function App() {
             <Settings size={21} />
           </button>
         </header>
-        <main
-          id="main"
-          className={prefs.started ? 'memorizing-main' : 'start-main'}
-        >
-          {!ready ? (
-            <output className="loading">جارٍ استعادة موضعك…</output>
-          ) : prefs.started ? (
+
+        <main id="main" className={home ? 'start-main' : 'memorizing-main'}>
+          {home ? (
+            <HomeView
+              prefs={prefs}
+              update={update}
+              items={review.items}
+              onOpenPicker={() => setPanel('picker')}
+              onStart={(screen) => update({ screen })}
+            />
+          ) : prefs.screen === 'session' ? (
+            <Suspense
+              fallback={
+                <div className="placeholder" aria-live="polite">
+                  <p>جارٍ تحضير الجلسة…</p>
+                </div>
+              }
+            >
+              <SessionView
+                key={`${prefs.surah}:${prefs.ayah}-${prefs.to}:${String(prefs.grain)}`}
+                prefs={prefs}
+                navigationEnabled={panel === null}
+                onExit={() => update({ screen: 'home' })}
+                onGraded={(grade) => {
+                  review.complete(
+                    { surah: prefs.surah, from: prefs.ayah, to: prefs.to },
+                    grade,
+                  );
+                  update({ screen: 'home' });
+                }}
+              />
+            </Suspense>
+          ) : (
             <AyahView
               key={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`}
               prefs={prefs}
               update={update}
               navigationEnabled={panel === null}
             />
-          ) : (
-            <>
-              <div className="intro">
-                <h1>حفظ القرآن</h1>
-                <p>اختر موضع البداية.</p>
-              </div>
-              <section className="start-form" aria-label="اختر موضع الحفظ">
-                <button
-                  className="surah-field"
-                  aria-label={`اختيار السورة، سورة ${surah.name}`}
-                  onClick={() => setPanel('picker')}
-                >
-                  <BookOpen size={21} />
-                  <span>
-                    <small>السورة</small>
-                    <strong>سورة {surah.name}</strong>
-                  </span>
-                  <ChevronDown size={18} />
-                </button>
-                <div className="ayah-field">
-                  <label htmlFor="start-ayah">ابدأ من الآية</label>
-                  <input
-                    id="start-ayah"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={surah.count}
-                    value={prefs.ayah}
-                    onChange={(e) =>
-                      update({
-                        ayah: Math.max(
-                          1,
-                          Math.min(
-                            surah.count,
-                            Math.trunc(Number(e.target.value)) || 1,
-                          ),
-                        ),
-                      })
-                    }
-                  />
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() => update({ started: true })}
-                >
-                  ابدأ الحفظ
-                  <ArrowLeft size={20} />
-                </button>
-                <p className="save-hint">يُحفظ موضعك تلقائيًا</p>
-              </section>
-            </>
           )}
         </main>
-        {storageError && (
+
+        {(storageError || review.failed) && (
           <output className="storage-notice">
             تعذّر حفظ التقدّم على هذا المتصفح.
           </output>
         )}
+
         <Suspense fallback={null}>
           {panel === 'picker' && (
             <Picker
-              open={panel === 'picker'}
+              open
               onClose={() => setPanel(null)}
               prefs={prefs}
-              onSelect={(surah, ayah) => {
-                update({ surah, ayah });
+              onSelect={(surahId, ayah, to) => {
+                update({ surah: surahId, ayah, to });
                 setPanel(null);
               }}
             />
           )}
           {panel === 'settings' && (
             <SettingsSheet
-              open={panel === 'settings'}
+              open
               onClose={() => setPanel(null)}
               prefs={prefs}
               update={update}

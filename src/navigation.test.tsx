@@ -11,9 +11,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { defaults } from './data/quran';
-import { audioProvider } from './data/audio';
 import { usePracticeNavigation } from './usePracticeNavigation';
-import { useAyahAudio } from './useAyahAudio';
+import { useRangeAudio } from './useRangeAudio';
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -24,7 +23,7 @@ beforeEach(() => {
   window.getSelection()?.removeAllRanges();
   localStorage.setItem(
     'rattil:v1',
-    JSON.stringify({ ...defaults, started: true, ayah: 2 }),
+    JSON.stringify({ ...defaults, screen: 'practice', ayah: 2 }),
   );
 });
 const position = () => JSON.parse(localStorage.getItem('rattil:v1')!).ayah;
@@ -82,18 +81,17 @@ it('keeps Space and Enter native on focused buttons', async () => {
   expect(position()).toBe(2);
   expect(screen.queryByText('التلاوة غير متاحة حاليًا.')).toBeNull();
 });
-it('Space uses playback and honestly reports the unavailable source', () => {
+it('claims Space for playback rather than letting it scroll or navigate', async () => {
   render(<App />);
   const event = new KeyboardEvent('keydown', {
     key: ' ',
     bubbles: true,
     cancelable: true,
   });
-  act(() => {
+  await act(async () => {
     document.body.dispatchEvent(event);
   });
   expect(event.defaultPrevented).toBe(true);
-  expect(screen.getByText('التلاوة غير متاحة حاليًا.')).toBeTruthy();
   expect(position()).toBe(2);
 });
 it('pauses shortcuts while settings or picker are opening', () => {
@@ -143,7 +141,7 @@ it('preserves browser edge gestures and verse text selection', () => {
 it('uses the visible group boundary for keyboard and swipe navigation', () => {
   localStorage.setItem(
     'rattil:v1',
-    JSON.stringify({ ...defaults, started: true, ayah: 1, perView: 5 }),
+    JSON.stringify({ ...defaults, screen: 'practice', ayah: 1, perView: 5 }),
   );
   render(<App />);
   fireEvent.keyDown(document.body, { key: 'Enter' });
@@ -157,7 +155,7 @@ it('uses the visible group boundary for keyboard and swipe navigation', () => {
 
 class FakeAudio {
   paused = true;
-  loop = false;
+  src = '';
   preload = '';
   onplaying: (() => void) | null = null;
   onpause: (() => void) | null = null;
@@ -174,7 +172,26 @@ class FakeAudio {
   removeAttribute = vi.fn();
   load = vi.fn();
 }
-it('plays, pauses, loops, and cleans up actual audio when a source is provided', async () => {
+it('plays, pauses, and cleans up actual audio', async () => {
+  const player = new FakeAudio();
+  vi.stubGlobal(
+    'Audio',
+    class {
+      constructor() {
+        return player;
+      }
+    },
+  );
+  const view = renderHook(() => useRangeAudio(['/one.mp3'], false));
+  await act(() => view.result.current.toggle());
+  expect(view.result.current.playing).toBe(true);
+  await act(() => view.result.current.toggle());
+  expect(view.result.current.playing).toBe(false);
+  view.unmount();
+  expect(player.pause).toHaveBeenCalled();
+  expect(player.removeAttribute).toHaveBeenCalledWith('src');
+});
+it('walks a run of ayat and loops it only when asked', async () => {
   const player = new FakeAudio();
   vi.stubGlobal(
     'Audio',
@@ -185,18 +202,22 @@ it('plays, pauses, loops, and cleans up actual audio when a source is provided',
     },
   );
   const view = renderHook(
-    ({ repeat }) => useAyahAudio('/fixture.mp3', repeat),
+    ({ repeat }) => useRangeAudio(['/one.mp3', '/two.mp3'], repeat),
     { initialProps: { repeat: false } },
   );
   await act(() => view.result.current.toggle());
-  expect(view.result.current.playing).toBe(true);
-  await act(() => view.result.current.toggle());
+  await act(async () => player.onended?.());
+  expect(player.src).toBe('/two.mp3');
+  await act(async () => player.onended?.());
   expect(view.result.current.playing).toBe(false);
+  // The run rewinds, so play starts it over instead of resuming on the last.
+  expect(player.src).toBe('/one.mp3');
   view.rerender({ repeat: true });
-  expect(player.loop).toBe(true);
-  view.unmount();
-  expect(player.pause).toHaveBeenCalled();
-  expect(player.removeAttribute).toHaveBeenCalledWith('src');
+  await act(() => view.result.current.toggle());
+  await act(async () => player.onended?.());
+  await act(async () => player.onended?.());
+  expect(player.src).toBe('/one.mp3');
+  expect(view.result.current.playing).toBe(true);
 });
 it('handles rejected playback without reporting a playing state', async () => {
   const player = new FakeAudio();
@@ -209,7 +230,7 @@ it('handles rejected playback without reporting a playing state', async () => {
       }
     },
   );
-  const { result } = renderHook(() => useAyahAudio('/fixture.mp3', false));
+  const { result } = renderHook(() => useRangeAudio(['/fixture.mp3'], false));
   await act(() => result.current.toggle());
   expect(result.current.playing).toBe(false);
   expect(result.current.notice).toContain('تعذّر');
@@ -231,7 +252,7 @@ it('cancels pending playback when Space is pressed a second time', async () => {
       }
     },
   );
-  const { result } = renderHook(() => useAyahAudio('/fixture.mp3', false));
+  const { result } = renderHook(() => useRangeAudio(['/fixture.mp3'], false));
   act(() => {
     void result.current.toggle();
   });
@@ -251,7 +272,6 @@ it('connects Space and the play button to the same audio and stops it on navigat
       }
     },
   );
-  vi.spyOn(audioProvider, 'getAudioUrl').mockReturnValue('/fixture.mp3');
   render(<App />);
   await act(async () => {
     fireEvent.keyDown(document.body, { key: ' ' });

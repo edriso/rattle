@@ -1,4 +1,5 @@
 import firstSurah from './surahs/1.json';
+export { BASMALA, openVerse, type OpenedVerse } from './verse';
 import { surahs } from './quran';
 type TextFile = { notice: string; verses: string[] };
 const files = import.meta.glob<TextFile>(

@@ -28,25 +28,34 @@ describe('catalogue and persisted state', () => {
       restore({
         surah: 114,
         ayah: 999,
+        to: 999,
         perView: 999,
         theme: 'invalid',
         reciter: 'invalid',
+        grain: 'page',
+        echo: 9,
+        plan: { linkBack: 99, singleReps: 4 },
       }),
     ).toMatchObject({
       surah: 114,
       ayah: 6,
+      to: 6,
       perView: 5,
       theme: 'gold',
       reciter: defaults.reciter,
+      grain: defaults.grain,
+      echo: defaults.echo,
+      plan: { ...defaults.plan, singleReps: 4 },
     });
     expect(restore({ surah: Infinity, ayah: NaN })).toMatchObject({
       surah: 1,
       ayah: 1,
+      to: 5,
     });
   });
-  it('starts, hides actual verse text, navigates, and restores position', async () => {
+  it('reviews freely, hides actual verse text, navigates, and restores position', async () => {
     const view = render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'ابدأ الحفظ' }));
+    fireEvent.click(await screen.findByRole('button', { name: /راجِع بنفسك/ }));
     expect(screen.getByText('بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'إخفاء الآية' }));
     expect(screen.queryByText('بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ')).toBeNull();
@@ -57,22 +66,26 @@ describe('catalogue and persisted state', () => {
     await waitFor(() =>
       expect(screen.getByText('ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ')).toBeTruthy(),
     );
-    expect(screen.queryByRole('button', { name: 'ابدأ الحفظ' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /راجِع بنفسك/ })).toBeNull();
   });
-  it('handles unavailable local storage', async () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+  it('stays usable, and says so, when local storage is blocked', async () => {
+    const blocked = () => {
       throw new Error('blocked');
-    });
+    };
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(blocked);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked);
     render(<App />);
     expect(
       await screen.findByText('تعذّر حفظ التقدّم على هذا المتصفح.'),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'ابدأ الحفظ' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'ابدأ جلسة التلقين' }),
+    ).toBeTruthy();
   });
   it('does not pass the last verse', async () => {
     localStorage.setItem(
       'rattil:v1',
-      JSON.stringify({ ...defaults, started: true, surah: 114, ayah: 6 }),
+      JSON.stringify({ ...defaults, screen: 'practice', surah: 114, ayah: 6 }),
     );
     render(<App />);
     await waitFor(() =>
@@ -174,21 +187,24 @@ describe('settings and surah picker', () => {
     await user.type(input, 'الناس');
     const option = await screen.findByRole('option', { name: /سورة الناس/ });
     fireEvent.click(option);
-    const ayah = screen.getByRole('spinbutton', { name: 'ابدأ من الآية' });
-    fireEvent.change(ayah, { target: { value: '7' } });
+    const from = screen.getByRole('spinbutton', { name: 'من الآية' });
+    const to = screen.getByRole('spinbutton', { name: 'إلى الآية' });
+    fireEvent.change(from, { target: { value: '7' } });
     expect(
       (
         screen.getByRole('button', {
-          name: 'تأكيد الموضع',
+          name: 'تأكيد المقطع',
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
-    fireEvent.change(ayah, { target: { value: '6' } });
-    fireEvent.click(screen.getByRole('button', { name: 'تأكيد الموضع' }));
+    fireEvent.change(from, { target: { value: '4' } });
+    fireEvent.change(to, { target: { value: '6' } });
+    fireEvent.click(screen.getByRole('button', { name: 'تأكيد المقطع' }));
     await waitFor(() =>
       expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
         surah: 114,
-        ayah: 6,
+        ayah: 4,
+        to: 6,
       }),
     );
   });
@@ -247,23 +263,24 @@ it('keeps recordings in memory and releases their URL on position change', async
   expect(screen.queryByRole('button', { name: 'تشغيل التسجيل' })).toBeNull();
 });
 
-it('restores older saved progress with the default dark appearance', () => {
+it('carries a store written before the two modes existed into free review', () => {
   expect(
     restore({ started: true, surah: 24, ayah: 9, theme: 'rose' }),
   ).toMatchObject({
-    started: true,
+    screen: 'practice',
     surah: 24,
     ayah: 9,
     theme: 'rose',
     appearance: 'dark',
   });
+  expect(restore({ started: false }).screen).toBe('home');
   expect(restore({ appearance: 'invalid' }).appearance).toBe('dark');
 });
 
 it('changes appearance without losing the verse or accent and restores it after remount', async () => {
   localStorage.setItem(
     'rattil:v1',
-    JSON.stringify({ ...defaults, started: true, ayah: 2, theme: 'blue' }),
+    JSON.stringify({ ...defaults, screen: 'practice', ayah: 2, theme: 'blue' }),
   );
   const view = render(<App />);
   fireEvent.click(await screen.findByRole('button', { name: 'الإعدادات' }));

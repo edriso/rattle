@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { arabic } from '../data/quran';
-import { cachedSurah, loadSurah } from '../data/text';
+import { cachedSurah, loadSurah, openVerse } from '../data/text';
 export function QuranVerses({
   surah,
   first,
@@ -56,17 +56,22 @@ export function QuranVerses({
     );
   return (
     <div className="verses">
-      {verses.slice(first - 1, last).map((text, i) => (
-        <p className="quran-text" key={first + i}>
-          {text}{' '}
-          <span
-            className="ayah-number"
-            aria-label={`الآية ${arabic(first + i)}`}
-          >
-            {arabic(first + i)}
-          </span>
-        </p>
-      ))}
+      {verses.slice(first - 1, last).map((raw, i) => {
+        const ayah = first + i;
+        // The basmala opens ayah 1 in the source text but is read on its own.
+        const { basmala, text } = openVerse(surah, ayah, raw);
+        return (
+          <div key={ayah}>
+            {basmala && <p className="quran-text basmala">{basmala}</p>}
+            <p className="quran-text">
+              {text}{' '}
+              <span className="ayah-number" aria-label={`الآية ${arabic(ayah)}`}>
+                {arabic(ayah)}
+              </span>
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }

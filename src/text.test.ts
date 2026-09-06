@@ -45,17 +45,17 @@ it('rejects invalid positions rather than substituting unrelated verses', async 
 it('drops obsolete display preferences while preserving progress and settings', () => {
   const restored = restore({
     ...defaults,
-    started: true,
     surah: 24,
     ayah: 9,
+    to: 13,
     mode: 'page',
     theme: 'sage',
   });
   expect(restored).toEqual({
     ...defaults,
-    started: true,
     surah: 24,
     ayah: 9,
+    to: 13,
     theme: 'sage',
   });
   expect(restored).not.toHaveProperty('mode');

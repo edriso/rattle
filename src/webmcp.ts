@@ -25,14 +25,15 @@ export function useWebMCP(setPrefs: Dispatch<SetStateAction<Preferences>>) {
         registry.registerTool(
           {
             name: 'start_memorization',
-            title: 'ابدأ الحفظ',
+            title: 'ابدأ جلسة التلقين',
             description:
-              'Start memorization at a Quran surah and ayah, saving the position on this device.',
+              'Start a cumulative memorization session over a passage of the Quran, saving the position on this device. Omit `to` to drill five ayat.',
             inputSchema: {
               type: 'object',
               properties: {
                 surah: { type: 'integer', minimum: 1, maximum: 114 },
                 ayah: { type: 'integer', minimum: 1 },
+                to: { type: 'integer', minimum: 1 },
               },
               required: ['surah', 'ayah'],
               additionalProperties: false,
@@ -41,7 +42,11 @@ export function useWebMCP(setPrefs: Dispatch<SetStateAction<Preferences>>) {
             execute(input) {
               if (!input || typeof input !== 'object')
                 throw new Error('موضع غير صالح');
-              const { surah, ayah } = input as { surah: number; ayah: number };
+              const { surah, ayah, to } = input as {
+                surah: number;
+                ayah: number;
+                to?: number;
+              };
               if (
                 !Number.isInteger(surah) ||
                 !Number.isInteger(ayah) ||
@@ -51,10 +56,20 @@ export function useWebMCP(setPrefs: Dispatch<SetStateAction<Preferences>>) {
                 ayah > surahs[surah - 1].count
               )
                 throw new Error('موضع غير صالح');
+              const count = surahs[surah - 1].count;
+              const last = Number.isInteger(to)
+                ? Math.min(count, Math.max(ayah, to!))
+                : Math.min(count, ayah + 4);
               flushSync(() =>
-                setPrefs((p) => ({ ...p, surah, ayah, started: true })),
+                setPrefs((p) => ({
+                  ...p,
+                  surah,
+                  ayah,
+                  to: last,
+                  screen: 'session',
+                })),
               );
-              return { surah, ayah, started: true };
+              return { surah, ayah, to: last };
             },
           },
           { signal: lifecycle.signal },

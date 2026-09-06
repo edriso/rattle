@@ -364,14 +364,6 @@ label:has(input:focus-visible) {
   display: inline-block;
   flex-shrink: 0;
 }
-.preview-badge {
-  font-size: 12px;
-  color: var(--muted-foreground);
-}
-.preview-badge::before {
-  content: '·';
-  margin-inline-end: 8px;
-}
 .play-controls {
   display: flex;
   align-items: center;
@@ -451,16 +443,6 @@ label:has(input:focus-visible) {
   justify-content: space-between;
   gap: 8px;
 }
-.text-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 0;
-  color: var(--accent);
-  min-height: 44px;
-  font-size: 14px;
-}
 .session-progress {
   width: min(100%, 380px);
   margin: 14px auto 0;
@@ -510,11 +492,6 @@ progress::-moz-progress-bar {
 }
 .skip-link:focus {
   transform: translateY(0);
-}
-.loading {
-  display: block;
-  text-align: center;
-  color: var(--muted-foreground);
 }
 .storage-notice,
 .error-text {
@@ -598,12 +575,6 @@ progress::-moz-progress-bar {
 }
 .sheet-action {
   margin-top: 24px;
-}
-.phase-note {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  line-height: 1.8;
-  margin: 16px 0 0;
 }
 .setting-section {
   border: 0;
@@ -699,6 +670,360 @@ progress::-moz-progress-bar {
   background: var(--shadow);
   backdrop-filter: blur(4px);
 }
+/* ── The passage a session will drill ─────────────────────────────────── */
+.review-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 14px 16px 10px;
+  margin-bottom: 22px;
+  text-align: start;
+}
+.review-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.review-card .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 13px;
+  line-height: 1;
+}
+.review-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.review-card li + li {
+  border-top: 1px solid var(--border);
+}
+.review-card li button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 15px;
+  border-radius: 6px;
+  text-align: start;
+}
+.review-card li button:hover {
+  background: var(--surface-raised);
+}
+.review-card small {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.review-card .late {
+  color: var(--destructive);
+}
+.range-fields {
+  display: flex;
+  gap: 12px;
+}
+.range-fields .ayah-field {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin: 16px 0 14px;
+  text-align: start;
+}
+.range-fields .ayah-field input {
+  width: 100%;
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.chip:hover {
+  background: var(--surface-raised);
+  color: var(--foreground);
+}
+.chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.grain-row {
+  border: 0;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.grain-row legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+.grain-choice label {
+  padding: 8px 2px;
+  font-size: 13px;
+}
+.session-estimate {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+  margin: 20px 0 14px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.session-estimate span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  border-radius: 8px;
+}
+.text-button:hover {
+  color: var(--foreground);
+  background: var(--surface-raised);
+}
+
+/* ── A running session ────────────────────────────────────────────────── */
+.session-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 4px 2px;
+}
+.session-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.step-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.step-tag {
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  white-space: nowrap;
+}
+.step-link {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.step-recite {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-foreground);
+}
+.remaining {
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.session-verses {
+  /* A joined run can outgrow the space; scrolling beats squeezing the text. */
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  align-items: safe center;
+}
+.session-verses .quran-text {
+  transition: opacity 220ms;
+}
+.session-verses .quran-text[data-role='linked'] {
+  font-size: clamp(21px, 2.6vw, 28px);
+  opacity: 0.5;
+}
+.session-verses .quran-text[data-sounding] {
+  opacity: 1;
+  color: var(--accent);
+}
+.session-phase {
+  display: block;
+  min-height: 24px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+.session-phase:empty {
+  min-height: 0;
+}
+.echoing {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent);
+}
+.echo-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.basmala {
+  font-size: clamp(20px, 2.4vw, 26px);
+  color: var(--muted-foreground);
+  margin-bottom: 4px;
+}
+
+/* ── Grading a finished session ───────────────────────────────────────── */
+.grade-passage {
+  margin: 4px 0 2px;
+  font-size: 15px;
+}
+.grade-list {
+  list-style: none;
+  margin: 14px 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.grade-button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 60px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--foreground);
+  text-align: start;
+}
+.grade-button:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+.grade-button strong {
+  font-weight: 500;
+  font-size: 15px;
+}
+.grade-button small {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.grade-again:hover {
+  border-color: var(--destructive);
+}
+
+/* ── Repetition counts ───────────────────────────────────────────────── */
+.advanced {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-bottom: 10px;
+}
+.advanced summary,
+.shortcut-help summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--foreground);
+  list-style: none;
+}
+.advanced summary::-webkit-details-marker,
+.shortcut-help summary::-webkit-details-marker {
+  display: none;
+}
+/* A chevron that turns, so a closed section reads as openable. The interface
+   is right-to-left throughout, so closed points along the reading direction. */
+.advanced summary::after,
+.shortcut-help summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(135deg);
+  transition: transform 160ms;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.advanced[open] summary::after,
+.shortcut-help[open] summary::after {
+  transform: rotate(45deg);
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 4px;
+}
+.stepper-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+.stepper-label small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.stepper-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.stepper-controls output {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding-inline: 20px;
@@ -716,7 +1041,25 @@ progress::-moz-progress-bar {
     gap: 4px;
   }
   .start-main {
-    padding-block: 24px 48px;
+    padding-block: 20px 40px;
+  }
+  .intro {
+    margin-bottom: 22px;
+  }
+  .intro h1 {
+    font-size: 27px;
+  }
+  .review-card {
+    margin-bottom: 18px;
+  }
+  .range-fields .ayah-field {
+    margin-block: 12px 12px;
+  }
+  .grain-row {
+    margin-top: 16px;
+  }
+  .session-estimate {
+    margin-block: 16px 12px;
   }
   .memorizing-main {
     padding-top: 0;
@@ -801,13 +1144,7 @@ progress::-moz-progress-bar {
   font-size: 13px;
   color: var(--muted-foreground);
 }
-.shortcut-help summary {
-  cursor: pointer;
-  min-height: 44px;
-  padding-block: 10px;
-  color: var(--foreground);
-  font-size: 14px;
-}
+
 .shortcut-help dl {
   margin: 8px 0;
 }

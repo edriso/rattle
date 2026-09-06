@@ -50,7 +50,7 @@ beforeEach(() => {
   localStorage.clear();
   localStorage.setItem(
     'rattil:v1',
-    JSON.stringify({ ...defaults, started: true }),
+    JSON.stringify({ ...defaults, screen: 'practice' }),
   );
   stopTrack.mockClear();
   vi.stubGlobal('MediaRecorder', FakeRecorder);
@@ -100,7 +100,7 @@ it('records with Shift+Enter, ignores repeated stop, and plays with Shift+Space'
   expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce();
   expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toEqual({
     ...defaults,
-    started: true,
+    screen: 'practice',
   });
 });
 it('revokes the old recording on re-record, then discards the new one on navigation', async () => {

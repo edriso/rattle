@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { usePracticeNavigation } from '../usePracticeNavigation';
-import { useAyahAudio } from '../useAyahAudio';
+import { useRangeAudio } from '../useRangeAudio';
 import {
   Eye,
   EyeOff,
@@ -13,7 +13,7 @@ import {
   Check,
 } from 'lucide-react';
 import { surahs, arabic, type Preferences } from '../data/quran';
-import { audioProvider, reciters } from '../data/audio';
+import { ayahAudioUrl, findReciter } from '../data/audio';
 import { QuranVerses } from './QuranVerses';
 import { Recorder, type RecorderControls } from './Recorder';
 export function AyahView({
@@ -34,14 +34,16 @@ export function AyahView({
     recording.current?.pausePlayback();
     void toggle();
   };
-  const source = audioProvider.getAudioUrl(
-    prefs.surah,
-    prefs.ayah,
-    prefs.reciter,
-  );
-  const { playing, notice, toggle, pause } = useAyahAudio(source, repeat);
   const surah = surahs[prefs.surah - 1];
   const last = Math.min(surah.count, prefs.ayah + prefs.perView - 1);
+  const sources = useMemo(
+    () =>
+      Array.from({ length: last - prefs.ayah + 1 }, (_, i) =>
+        ayahAudioUrl(prefs.surah, prefs.ayah + i, prefs.reciter),
+      ),
+    [prefs.surah, prefs.ayah, last, prefs.reciter],
+  );
+  const { playing, notice, toggle, pause } = useRangeAudio(sources, repeat);
   const move = (direction: number) => {
     if (
       (direction > 0 && last === surah.count) ||
@@ -102,8 +104,7 @@ export function AyahView({
       <div className="practice-controls">
         <div className="reciter-caption">
           <span className="status-dot" />
-          {reciters.find((r) => r.id === prefs.reciter)?.name}
-          {!source && <span className="preview-badge">قريبًا</span>}
+          {findReciter(prefs.reciter).name}
         </div>
         <div className="play-controls">
           <button

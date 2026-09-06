@@ -25,10 +25,13 @@ export const indexRoute = createRoute({
       {
         name: 'description',
         content:
-          'مساحة هادئة لحفظ القرآن الكريم. استمع، وردّد، واختبر حفظك، آيةً آية.',
+          'مساحة هادئة لحفظ القرآن الكريم. يُلقّنك المقطع، ثم يصله بما قبله، ثم يجدوله للمراجعة.',
       },
       { property: 'og:title', content: 'رَتِّلِ — رفيق حفظ القرآن' },
-      { property: 'og:description', content: 'رحلتك مع القرآن، آيةً آية.' },
+      {
+        property: 'og:description',
+        content: 'اسمع، وردّد، واربط ما حفظت بما قبله.',
+      },
       { property: 'og:locale', content: 'ar_AR' },
       { property: 'og:type', content: 'website' },
       { name: 'twitter:card', content: 'summary' },
