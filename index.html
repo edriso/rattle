@@ -8,10 +8,38 @@
     />
     <meta name="theme-color" content="#171918" />
     <link rel="icon" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;450;500;600&family=Reem+Kufi:wght@400;500;600&display=swap"
+    />
     <title>رَتِّلِ — رفيق حفظ القرآن</title>
+    <style>
+      :root { color-scheme: dark; background: #171918; }
+      :root[data-appearance='light'] { color-scheme: light; background: #faf9f5; }
+      body { margin: 0; background: inherit; }
+      #root { min-height: 100vh; min-height: 100dvh; }
+      .boot-shell { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; color: #b9b2a2; font: 500 16px/1.7 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+      .boot-mark { color: #c9a35f; font: 500 26px/1.5 'Reem Kufi', system-ui, sans-serif; }
+      :root[data-theme='sage'] .boot-mark { color: #9bc19d; }
+      :root[data-theme='blue'] .boot-mark { color: #9abbd0; }
+      :root[data-theme='rose'] .boot-mark { color: #d59aa1; }
+      :root[data-appearance='light'] .boot-shell { color: #6f6a60; }
+    </style>
+    <script>
+      try {
+        const saved = JSON.parse(localStorage.getItem('rattil:v1') || 'null');
+        if (saved && ['gold', 'sage', 'blue', 'rose'].includes(saved.theme)) document.documentElement.dataset.theme = saved.theme;
+        const appearance = saved?.appearance;
+        const dark = appearance === 'dark' || (appearance !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.appearance = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#171918' : '#faf9f5');
+      } catch (_) {}
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-shell" role="status" aria-live="polite"><span class="boot-mark">رَتِّلِ</span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

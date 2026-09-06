@@ -12,8 +12,18 @@ declare module '@tanstack/react-router' {
     router: typeof router;
   }
 }
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const app = (
   <React.StrictMode>
     <RouterProvider router={router} />
-  </React.StrictMode>,
+  </React.StrictMode>
 );
+
+// Keep the critical Arabic shell visible until the font stylesheet has settled.
+// A short fallback prevents a blocked font request from holding the app hostage.
+const fontsReady = document.fonts?.ready ?? Promise.resolve();
+const fontTimeout = new Promise<void>((resolve) =>
+  window.setTimeout(resolve, 1200),
+);
+void Promise.race([fontsReady, fontTimeout]).then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(app);
+});

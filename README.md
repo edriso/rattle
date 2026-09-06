@@ -20,6 +20,7 @@ npm run preview
 - Complete Tanzil Uthmani Quran text (114 surahs, 6,236 ayahs), served from local, versioned assets. Reciter audio remains a clearly marked placeholder pending the supplied API.
 - Four accent colors and persistent light/dark/system appearance, 1–5 verses per view, reciter selection, hide/reveal and bounded navigation.
 - Minimal viewport-height layout with concise Modern Standard Arabic. Long passages, enlarged text and small landscape screens can scroll without clipping controls.
+- Startup keeps a theme-aware Arabic shell visible, restores the saved appearance before first paint, and waits for the UI font set (with a bounded fallback) before mounting the app to prevent a dark flash or font swap.
 - Versioned, validated device-local preferences loaded after mount. Nothing is uploaded.
 - Microphone recording, live analyser waveform, playback and deletion. Recording blobs exist in memory only and are released when changing position, re-recording, deleting, or leaving the page (including back/forward caching). Recording and reciter playback cannot overlap. A secure context and browser microphone permission are required.
 - Keyboard-operable sheets and selectors, reduced motion, focus indicators and RTL layouts.

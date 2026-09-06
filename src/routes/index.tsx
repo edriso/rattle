@@ -7,18 +7,7 @@ import {
 import { App } from '../App';
 export const rootRoute = createRootRoute({
   head: () => ({
-    links: [
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      {
-        rel: 'preconnect',
-        href: 'https://fonts.gstatic.com',
-        crossOrigin: 'anonymous',
-      },
-      {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;450;500;600&family=Reem+Kufi:wght@400;500;600&display=swap',
-      },
-    ],
+    links: [],
   }),
   component: () => (
     <>
