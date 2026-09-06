@@ -1152,14 +1152,20 @@ progress::-moz-progress-bar {
     justify-content: space-between;
   }
 }
-/* Under a phone's worth of height the promise line gives way to the form it
-   introduces. The heading stays: it is the page's only h1, and the brand in
-   the corner is a link, not a title. */
-@media (max-height: 780px) {
+/* 844px is the viewport of the phone most people are holding, and the form
+   fills it exactly. Below that the promise line gives way to the form it
+   introduces, and the rhythm tightens. The heading stays: it is the page's
+   only h1, and the brand in the corner is a link, not a title. */
+@media (max-height: 843px) {
   /* Height is scarce from here down, so the rhythm gives ground faster than
-     the linear `dvh` curve would. */
+     the linear `dvh` curve would, and the surah field gives up the roomiest
+     of its padding. It stays well over the 44px a finger needs. */
   .start-main {
-    --gap: clamp(6px, 1.2dvh, 12px);
+    --gap: clamp(6px, 1.1dvh, 12px);
+  }
+  .surah-field {
+    min-height: 64px;
+    padding-block: 8px;
   }
   .intro p {
     display: none;
@@ -1192,7 +1198,7 @@ progress::-moz-progress-bar {
 }
 
 .grain-note {
-  margin-top: 8px;
+  margin-top: var(--gap-sm, 8px);
 }
 .long-session {
   text-align: center;
