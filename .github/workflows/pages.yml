@@ -41,6 +41,19 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      # Relative URLs work on both a project Pages path and a future custom domain.
+      - name: Build the mirror
+        if: ${{ vars.MIRROR_REPO != '' }}
+        run: npm run build
+        env:
+          VITE_BASE_PATH: ./
+      - name: Upload mirror
+        if: ${{ vars.MIRROR_REPO != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-mirror
+          path: dist
+          retention-days: 1
 
   deploy:
     needs: build
@@ -56,3 +69,52 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # Optional so forks can still publish without cross-repository credentials.
+  mirror:
+    needs: build
+    if: ${{ vars.MIRROR_REPO != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-mirror
+          path: dist-mirror
+      - name: Push the built site to the mirror repository
+        env:
+          MIRROR_REPO: ${{ vars.MIRROR_REPO }}
+          DEPLOY_KEY: ${{ secrets.MIRROR_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::MIRROR_REPO requires a MIRROR_DEPLOY_KEY secret with write access to the mirror."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/mirror_key
+          trap 'rm -f ~/.ssh/mirror_key' EXIT
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND='ssh -i ~/.ssh/mirror_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes'
+
+          cd dist-mirror
+          git init -q -b main
+          git remote add origin "git@github.com:${MIRROR_REPO}.git"
+          # Keep the domain added through the mirror's Pages settings. Replacing
+          # the generated branch must not erase its CNAME on the next deployment.
+          remote_head=$(git ls-remote origin refs/heads/main)
+          if [ -n "$remote_head" ]; then
+            git fetch --depth=1 origin main
+            if git cat-file -e FETCH_HEAD:CNAME 2>/dev/null; then
+              git show FETCH_HEAD:CNAME > CNAME
+            fi
+          fi
+          touch .nojekyll
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -qm "Built from ${GITHUB_SHA}"
+          # The mirror is generated output; a single commit keeps its size bounded.
+          git push --force origin main
