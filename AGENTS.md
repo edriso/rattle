@@ -11,8 +11,10 @@ everything the user does stays on their own device.
 The app has two screens you can work in:
 
 - **A talqeen session** (`جلسة التلقين`). The app plays a piece of the Quran,
-  you repeat it, and then it joins that piece to the pieces before it. This is
-  the main screen.
+  you repeat it in the silence it leaves, and then it joins that piece to the
+  pieces before it. This is the main screen. Repeating is not required: the
+  home screen also offers `أستمع فقط`, where the same steps run with no gaps
+  for people who want to hear a passage over and over.
 - **Free review** (`مراجعة حرة`). It shows one to five ayat. You can hide them,
   read from memory, and record yourself.
 
