@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { flushSync } from 'react-dom';
+import { usePracticeNavigation } from '../usePracticeNavigation';
+import { useAyahAudio } from '../useAyahAudio';
 import {
   Eye,
   EyeOff,
@@ -6,6 +9,7 @@ import {
   ChevronRight,
   Repeat2,
   Play,
+  Pause,
   BookOpen,
   Check,
 } from 'lucide-react';
@@ -20,28 +24,62 @@ import { Recorder } from './Recorder';
 export function AyahView({
   prefs,
   update,
+  navigationEnabled = true,
 }: {
   prefs: Preferences;
+  navigationEnabled?: boolean;
   update: (v: Partial<Preferences>) => void;
 }) {
   const [hidden, setHidden] = useState(false);
   const [repeat, setRepeat] = useState(false);
-  const [notice, setNotice] = useState('');
+  const source = quranProvider.getAudioUrl(
+    prefs.surah,
+    prefs.ayah,
+    prefs.reciter,
+  );
+  const { playing, notice, toggle, pause } = useAyahAudio(source, repeat);
   const surah = surahs[prefs.surah - 1];
   const last = Math.min(surah.count, prefs.ayah + prefs.perView - 1);
-  const move = (direction: number) =>
-    update({
-      ayah: Math.max(
-        1,
-        Math.min(surah.count, prefs.ayah + direction * prefs.perView),
-      ),
-    });
+  const move = (direction: number) => {
+    if (
+      (direction > 0 && last === surah.count) ||
+      (direction < 0 && prefs.ayah === 1)
+    )
+      return;
+    const focusId = document.activeElement?.id;
+    flushSync(() =>
+      update({
+        ayah:
+          direction > 0 ? last + 1 : Math.max(1, prefs.ayah - prefs.perView),
+      }),
+    );
+    const control = focusId ? document.getElementById(focusId) : null;
+    const target =
+      control && !control.matches(':disabled')
+        ? control
+        : document.getElementById('current-verse');
+    target?.focus({ preventScroll: true });
+  };
+  const gestures = usePracticeNavigation({
+    enabled: navigationEnabled,
+    next: () => move(1),
+    previous: () => move(-1),
+    toggleAudio: () => {
+      void toggle();
+    },
+  });
   return (
     <>
       <h1 className="sr-only">
         سورة {surah.name}، الآية {arabic(prefs.ayah)}
       </h1>
-      <section className="verse-space" aria-label="موضع الحفظ">
+      <section
+        id="current-verse"
+        tabIndex={-1}
+        className="verse-space"
+        aria-label={`سورة ${surah.name}، الآية ${arabic(prefs.ayah)}`}
+        {...gestures}
+      >
         {hidden ? (
           <div className="hidden-prompt">
             <EyeOff size={27} />
@@ -90,12 +128,15 @@ export function AyahView({
         <div className="reciter-caption">
           <span className="status-dot" />
           {reciters.find((r) => r.id === prefs.reciter)?.name}
-          <span className="preview-badge">قريبًا</span>
+          {!source && <span className="preview-badge">قريبًا</span>}
         </div>
         <div className="play-controls">
           <button
             className="icon-button"
+            id="previous-ayah"
             aria-label="الآيات السابقة"
+            aria-keyshortcuts="ArrowRight"
+            title="السابق (→)"
             disabled={prefs.ayah === 1}
             onClick={() => move(-1)}
           >
@@ -111,15 +152,27 @@ export function AyahView({
           </button>
           <button
             className="play-main"
-            aria-label="تشغيل التلاوة"
-            onClick={() => setNotice('التلاوة غير متاحة حاليًا.')}
+            id="reciter-play"
+            aria-label={playing ? 'إيقاف التلاوة مؤقتًا' : 'تشغيل التلاوة'}
+            aria-keyshortcuts="Space"
+            title="تشغيل أو إيقاف (مسافة)"
+            onClick={() => {
+              void toggle();
+            }}
           >
-            <Play size={24} fill="currentColor" />
+            {playing ? (
+              <Pause size={24} fill="currentColor" />
+            ) : (
+              <Play size={24} fill="currentColor" />
+            )}
           </button>
           <span className="play-balance" aria-hidden="true" />
           <button
             className="icon-button"
+            id="next-ayah"
             aria-label="الآيات التالية"
+            aria-keyshortcuts="ArrowLeft Enter"
+            title="التالي (← أو إدخال)"
             disabled={last === surah.count}
             onClick={() => move(1)}
           >
@@ -127,7 +180,10 @@ export function AyahView({
           </button>
         </div>
         {notice && <output className="field-note">{notice}</output>}
-        <Recorder position={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`} />
+        <Recorder
+          position={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`}
+          onBeforeAudio={pause}
+        />
       </div>
       <div className="session-progress">
         <progress
@@ -146,7 +202,7 @@ export function AyahView({
               `سورة ${surah.name}`
             )}
           </span>
-          <span>
+          <span dir="ltr">
             {arabic(last)} / {arabic(surah.count)}
           </span>
         </div>

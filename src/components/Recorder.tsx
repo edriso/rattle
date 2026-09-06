@@ -6,7 +6,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Square, Play, Pause, Trash2 } from 'lucide-react';
 import { arabic } from '../data/quran';
-export function Recorder({ position }: { position: string }) {
+export function Recorder({
+  position,
+  onBeforeAudio,
+}: {
+  position: string;
+  onBeforeAudio?: () => void;
+}) {
   const [state, setState] = useState<'idle' | 'requesting' | 'recording'>(
     'idle',
   );
@@ -65,6 +71,7 @@ export function Recorder({ position }: { position: string }) {
     return () => clearInterval(timer);
   }, [state]);
   async function start() {
+    onBeforeAudio?.();
     setError('');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       setError(
@@ -155,6 +162,7 @@ export function Recorder({ position }: { position: string }) {
       setPlaying(false);
     } else {
       try {
+        onBeforeAudio?.();
         await audio.current.play();
         setPlaying(true);
       } catch {

@@ -317,6 +317,31 @@ export function SettingsSheet({
           </SelectContent>
         </Select>
       </section>
+      <details className="shortcut-help">
+        <summary>التنقّل والاختصارات</summary>
+        <dl>
+          <div>
+            <dt>الآيات التالية</dt>
+            <dd>
+              <kbd>←</kbd> أو <kbd>إدخال</kbd>
+            </dd>
+          </div>
+          <div>
+            <dt>الآيات السابقة</dt>
+            <dd>
+              <kbd>→</kbd>
+            </dd>
+          </div>
+          <div>
+            <dt>تشغيل التلاوة وإيقافها</dt>
+            <dd>
+              <kbd>مسافة</kbd>
+            </dd>
+          </div>
+        </dl>
+        <p>اسحب الآية يمينًا للتالي، ويسارًا للسابق.</p>
+        <p>عند تحديد زر، يعمل مفتاحا الإدخال والمسافة على تفعيله.</p>
+      </details>
       <p className="field-note">
         تُحفظ الإعدادات تلقائيًا. التسجيلات على جهازك فقط، وتُحذف عند تغيير الموضع أو
         إغلاق الصفحة.

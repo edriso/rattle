@@ -26,7 +26,7 @@ npm run preview
 
 ## Phase two integration
 
-`src/data/quran.ts` contains the local catalogue, preference validation and provider boundary. Replace preview provider methods with the supplied endpoints, add cancellable requests and caching, then wire reciter playback/repeat and page images in `AyahView.tsx`. Never substitute a different verse for missing content. The selected reciter IDs are provisional and should be mapped to the supplied catalogue.
+`src/data/quran.ts` contains the local catalogue, preference validation and provider boundary. Replace preview provider methods with the supplied endpoints, add cancellable requests and caching, then wire page images in `AyahView.tsx`. The reciter play/pause and repeat controls already use `useAyahAudio` when the provider returns an audio URL (the first ayah of the displayed group). Never substitute a different verse for missing content. The selected reciter IDs are provisional and should be mapped to the supplied catalogue.
 
 Fonts are loaded from Google Fonts; recordings never leave the device. A compatible browser can optionally expose the `start_memorization` WebMCP tool. No compatible validation browser was available during implementation.
 
@@ -40,3 +40,16 @@ The workflow reads the Pages base path and passes it as `VITE_BASE_PATH`; Vite a
 VITE_BASE_PATH=/rattil/ npm run build
 VITE_BASE_PATH=/rattil/ npm run preview
 ```
+
+## Navigation
+
+The app uses Arabic reading direction: next is on the left, previous is on the right. Play/pause icons retain the standard media direction.
+
+- **Left Arrow / Enter:** next displayed ayah group.
+- **Right Arrow:** previous group.
+- **Space:** play/pause the current ayah. Audio remains unavailable until the phase-two provider supplies URLs.
+- **Swipe right over the verse:** next group; **swipe left:** previous group.
+
+Shortcuts pause while either sheet is open and ignore typing, text selection controls, modified keys and held-key repeats. Space/Enter keep native behavior on a focused button or link. Swipes require a deliberate horizontal gesture and ignore vertical scrolling, small drags, multi-touch, selected text and browser edges. Neither keyboard nor swipe navigation leaves the current surah. Shortcut help is available in Settings.
+
+Verified with automated interaction/media tests and native-browser keyboard checks plus touch emulation at phone widths (including 320 × 568); emulation does not replace testing on physical iOS/Android devices.
