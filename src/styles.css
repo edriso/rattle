@@ -1189,6 +1189,37 @@ progress::-moz-progress-bar {
   }
 }
 
+.long-session {
+  text-align: center;
+  margin-bottom: 14px;
+}
+/* Inline, so the offer reads as part of the sentence rather than as a control
+   parked under it. `.text-button` is a full-width block everywhere else. */
+.long-session .text-button {
+  display: inline;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  font-size: inherit;
+  color: var(--accent);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sheet-about {
+  border-top: 1px solid var(--border);
+  margin-top: 28px;
+  padding-top: 16px;
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+}
+.sheet-about p {
+  margin: 0;
+}
 .shortcut-help {
   display: none;
   margin-bottom: 24px;

@@ -93,11 +93,21 @@ describe('choosing a passage', () => {
     const estimate = await screen.findByRole('status');
     await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
     const before = estimate.textContent;
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'إلى الآية' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'إلى الآية' }), {
       target: { value: '10' },
     });
     await waitFor(() => expect(estimate.textContent).not.toBe(before));
     expect(estimate.textContent).toMatch(/مرة|مرات|مرتان/);
+  });
+
+  it('says what to do about a drill that would run long', async () => {
+    start({ surah: 2, ayah: 255, to: 257 });
+    render(<App />);
+    const hint = await screen.findByText(/جلسة طويلة/, {}, { timeout: 3000 });
+    expect(hint).toBeTruthy();
+    // The way out of a long drill is one tap from the sentence saying so.
+    fireEvent.click(screen.getByRole('button', { name: 'خفّف التكرار' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 
   it('offers listening alone, and hands the gap back when repeating resumes', async () => {
@@ -125,11 +135,11 @@ describe('choosing a passage', () => {
     await waitFor(() =>
       expect(
         (
-          screen.getByRole('spinbutton', {
+          screen.getByRole('textbox', {
             name: 'من الآية',
           }) as HTMLInputElement
         ).value,
-      ).toBe('5'),
+      ).toBe('٥'),
     );
   });
 

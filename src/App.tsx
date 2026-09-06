@@ -127,6 +127,7 @@ export function App() {
               update={update}
               items={review.items}
               onOpenPicker={() => setPanel('picker')}
+              onOpenSettings={() => setPanel('settings')}
               onStart={(screen) => update({ screen })}
             />
           ) : prefs.screen === 'session' ? (

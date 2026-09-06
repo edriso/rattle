@@ -201,9 +201,9 @@ describe('settings and surah picker', () => {
     await user.type(input, 'الناس');
     const option = await screen.findByRole('option', { name: /سورة الناس/ });
     fireEvent.click(option);
-    const from = screen.getByRole('spinbutton', { name: 'من الآية' });
-    const to = screen.getByRole('spinbutton', { name: 'إلى الآية' });
-    fireEvent.change(from, { target: { value: '7' } });
+    const from = screen.getByRole('textbox', { name: 'من الآية' });
+    const to = screen.getByRole('textbox', { name: 'إلى الآية' });
+    fireEvent.change(from, { target: { value: '٧' } });
     expect(
       (
         screen.getByRole('button', {
@@ -211,7 +211,7 @@ describe('settings and surah picker', () => {
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
-    fireEvent.change(from, { target: { value: '4' } });
+    fireEvent.change(from, { target: { value: '٤' } });
     fireEvent.change(to, { target: { value: '6' } });
     fireEvent.click(screen.getByRole('button', { name: 'تأكيد المقطع' }));
     await waitFor(() =>

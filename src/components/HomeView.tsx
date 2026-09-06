@@ -11,6 +11,7 @@ import {
   arabic,
   ayatCount,
   daysCount,
+  digits,
   minutesCount,
   surahs,
   timesCount,
@@ -30,17 +31,22 @@ import { daysUntil, due, type ReviewItem } from '../memorize/review';
 /** Minutes, rounded up, because a session never feels shorter than it is. */
 const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
 
+/** Past this, most people would rather trim the drill than sit through it. */
+const LONG_SESSION = 30;
+
 export function HomeView({
   prefs,
   update,
   items,
   onOpenPicker,
+  onOpenSettings,
   onStart,
 }: {
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
   items: readonly ReviewItem[];
   onOpenPicker: () => void;
+  onOpenSettings: () => void;
   onStart: (screen: 'session' | 'practice') => void;
 }) {
   const surah = surahs[prefs.surah - 1];
@@ -151,17 +157,18 @@ export function HomeView({
         </button>
 
         <div className="range-fields">
+          {/* Text rather than a number field: a number field silently throws
+              away ٢٥٥, which is what an Arabic keyboard types. */}
           <div className="ayah-field">
             <label htmlFor="from-ayah">من الآية</label>
             <input
               id="from-ayah"
-              type="number"
+              type="text"
               inputMode="numeric"
-              min={1}
-              max={surah.count}
-              value={prefs.ayah}
+              autoComplete="off"
+              value={arabic(prefs.ayah)}
               onChange={(e) =>
-                setRange(Math.trunc(Number(e.target.value)) || 1, prefs.to)
+                setRange(Number(digits(e.target.value)) || 1, prefs.to)
               }
             />
           </div>
@@ -169,13 +176,12 @@ export function HomeView({
             <label htmlFor="to-ayah">إلى الآية</label>
             <input
               id="to-ayah"
-              type="number"
+              type="text"
               inputMode="numeric"
-              min={prefs.ayah}
-              max={surah.count}
-              value={prefs.to}
+              autoComplete="off"
+              value={arabic(prefs.to)}
               onChange={(e) =>
-                setRange(prefs.ayah, Math.trunc(Number(e.target.value)) || 1)
+                setRange(prefs.ayah, Number(digits(e.target.value)) || 1)
               }
             />
           </div>
@@ -277,6 +283,17 @@ export function HomeView({
             <span>جارٍ الحساب…</span>
           )}
         </output>
+
+        {/* The estimate is a number; this is what to do about it. */}
+        {passage && minutes(passage.seconds) > LONG_SESSION && (
+          <p className="field-note long-session">
+            جلسة طويلة. ضيّق المدى، أو{' '}
+            <button className="text-button" onClick={onOpenSettings}>
+              خفّف التكرار
+            </button>
+            .
+          </p>
+        )}
 
         <button
           className="primary-button"

@@ -2,6 +2,17 @@
 
 const numberFormat = new Intl.NumberFormat('ar-EG', { useGrouping: false });
 export const arabic = (n: number) => numberFormat.format(n);
+
+/**
+ * The digits of a typed number, whichever numerals the keyboard produced.
+ * An Arabic layout types ٢٥٥ and a Latin one types 255; both mean the same
+ * ayah, and a field that takes only one of them turns a reader away.
+ */
+export const digits = (value: string) =>
+  value
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[^0-9]/g, '');
 /**
  * A number with its counted noun, following Arabic agreement: one and two
  * take their own words, three to ten take the plural, and above that the

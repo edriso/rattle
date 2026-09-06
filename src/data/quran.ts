@@ -33,6 +33,7 @@ export {
   ayatCount,
   counted,
   daysCount,
+  digits,
   minutesCount,
   normalize,
   timesCount,

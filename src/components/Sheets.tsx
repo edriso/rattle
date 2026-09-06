@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { X, Check, ChevronLeft, Minus, Plus } from 'lucide-react';
 import {
   Sheet,
@@ -23,7 +23,13 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { findReciter, paceLabel, reciters } from '../data/audio';
-import { surahs, arabic, normalize, type Preferences } from '../data/quran';
+import {
+  surahs,
+  arabic,
+  digits,
+  normalize,
+  type Preferences,
+} from '../data/quran';
 import { echoLabel, echoModes, type EchoMode } from '../memorize/session';
 import { MAX_INTERVAL } from '../memorize/review';
 import type { SchedulePlan } from '../memorize/schedule';
@@ -41,6 +47,10 @@ function Panel({
   description: string;
   children: React.ReactNode;
 }) {
+  /* Opening a panel puts the cursor on its title, not on the close button:
+     landing on «إغلاق» reads as though leaving were the thing to do, and a
+     screen reader hears the panel's name instead of "close". */
+  const heading = useRef<HTMLDivElement>(null);
   return (
     <Sheet
       open={open}
@@ -52,10 +62,11 @@ function Panel({
         side="left"
         className="rattil-sheet"
         showCloseButton={false}
+        initialFocus={heading}
         dir="rtl"
       >
         <div className="sheet-handle" />
-        <div className="sheet-heading">
+        <div className="sheet-heading" ref={heading} tabIndex={-1}>
           <SheetTitle>{title}</SheetTitle>
           <SheetClose className="icon-button" aria-label="إغلاق">
             <X size={21} />
@@ -129,8 +140,11 @@ export function Picker({
   onSelect: (surah: number, from: number, to: number) => void;
 }) {
   const [id, setId] = useState(prefs.surah);
+  /* Held as plain digits and shown in Arabic-Indic ones, so a field can be
+     emptied while it is being retyped and still be checked as a number. */
   const [from, setFrom] = useState(String(prefs.ayah));
   const [to, setTo] = useState(String(prefs.to));
+  const shown = (value: string) => (value ? arabic(Number(value)) : '');
   const selected = surahs[id - 1];
   const inRange = (value: string) =>
     Number.isInteger(Number(value)) &&
@@ -193,13 +207,12 @@ export function Picker({
             className="full-input"
             id="picker-from"
             aria-describedby={valid ? undefined : 'picker-error'}
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={1}
-            max={selected.count}
-            value={from}
+            autoComplete="off"
+            value={shown(from)}
             aria-invalid={!inRange(from)}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => setFrom(digits(e.target.value))}
           />
         </div>
         <div className="ayah-field">
@@ -208,13 +221,12 @@ export function Picker({
             className="full-input"
             id="picker-to"
             aria-describedby={valid ? undefined : 'picker-error'}
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={1}
-            max={selected.count}
-            value={to}
+            autoComplete="off"
+            value={shown(to)}
             aria-invalid={!inRange(to)}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => setTo(digits(e.target.value))}
           />
         </div>
       </div>
@@ -457,19 +469,21 @@ export function SettingsSheet({
         </div>
       </fieldset>
 
-      <p className="field-note">
-        تُجدوَل المراجعة على هذا الجهاز، ولا يمرّ على أي مقطع أكثر من{' '}
-        {arabic(MAX_INTERVAL)} يومًا دون أن يعود.
-      </p>
-      <p className="field-note">
-        لا تُحفَظ التسجيلات ولا تُرسَل. تُحذَف عند تغيير الآية.
-      </p>
-      <p className="field-note">
-        النص القرآني:{' '}
-        <a href="https://tanzil.net" target="_blank" rel="noreferrer">
-          مشروع تنزيل
-        </a>
-      </p>
+      {/* Facts about the app rather than things to set, so they close the
+          panel as a footer instead of trailing off the last setting. */}
+      <section className="sheet-about" aria-label="عن التطبيق">
+        <p>
+          تُجدوَل المراجعة على هذا الجهاز، ولا يمرّ على أي مقطع أكثر من{' '}
+          {arabic(MAX_INTERVAL)} يومًا دون أن يعود.
+        </p>
+        <p>لا تُحفَظ التسجيلات ولا تُرسَل. تُحذَف عند تغيير الآية.</p>
+        <p>
+          النص القرآني من{' '}
+          <a href="https://tanzil.net" target="_blank" rel="noreferrer">
+            مشروع تنزيل
+          </a>
+        </p>
+      </section>
       <details className="shortcut-help">
         <summary>اختصارات لوحة المفاتيح</summary>
         <dl>

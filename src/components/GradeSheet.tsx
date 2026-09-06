@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { X } from 'lucide-react';
 import {
   Sheet,
@@ -33,6 +34,8 @@ export function GradeSheet({
   onGrade: (grade: Grade) => void;
   onLeave: () => void;
 }) {
+  // The cursor opens on the question, not on the way out of it.
+  const heading = useRef<HTMLDivElement>(null);
   return (
     <Sheet
       open={open}
@@ -44,10 +47,11 @@ export function GradeSheet({
         side="left"
         className="rattil-sheet"
         showCloseButton={false}
+        initialFocus={heading}
         dir="rtl"
       >
         <div className="sheet-handle" />
-        <div className="sheet-heading">
+        <div className="sheet-heading" ref={heading} tabIndex={-1}>
           <SheetTitle>{finished ? 'تمّت الجلسة' : 'كيف كان السرد؟'}</SheetTitle>
           <SheetClose className="icon-button" aria-label="إغلاق">
             <X size={21} />
