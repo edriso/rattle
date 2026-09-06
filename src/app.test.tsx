@@ -187,6 +187,21 @@ describe('settings and surah picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'إغلاق' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
+  it('puts the surah back when the list is left without a choice', async () => {
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: /اختيار السورة، سورة الفاتحة/,
+      }),
+    );
+    const input = (await screen.findByRole('combobox')) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.click(input);
+    await user.type(input, 'الناس');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(input.value).toBe('الفاتحة'));
+  });
+
   it('opens the searchable catalogue and validates the selected verse', async () => {
     render(<App />);
     fireEvent.click(
@@ -194,13 +209,17 @@ describe('settings and surah picker', () => {
         name: /اختيار السورة، سورة الفاتحة/,
       }),
     );
-    const input = await screen.findByRole('combobox');
+    const input = (await screen.findByRole('combobox')) as HTMLInputElement;
     const user = userEvent.setup();
+    expect(input.value).toBe('الفاتحة');
+    // Opening the list empties the box: the search starts on a clear field
+    // rather than making the reader delete the surah they are already on.
     await user.click(input);
-    await user.clear(input);
+    expect(input.value).toBe('');
     await user.type(input, 'الناس');
     const option = await screen.findByRole('option', { name: /سورة الناس/ });
     fireEvent.click(option);
+    expect(input.value).toBe('الناس');
     const from = screen.getByRole('textbox', { name: 'من الآية' });
     const to = screen.getByRole('textbox', { name: 'إلى الآية' });
     fireEvent.change(from, { target: { value: '٧' } });

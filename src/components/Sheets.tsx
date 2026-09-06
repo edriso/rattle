@@ -140,6 +140,13 @@ export function Picker({
   onSelect: (surah: number, from: number, to: number) => void;
 }) {
   const [id, setId] = useState(prefs.surah);
+  /* The field is a search box that happens to show the current surah. Opening
+     it empties it, so a reader after آل عمران types straight away instead of
+     clearing البقرة first; closing it without choosing puts the name back.
+     The ref, not `selected`, is what a close reads: picking a surah closes the
+     list in the same breath, and a handler would still see the old one. */
+  const [query, setQuery] = useState(() => surahs[prefs.surah - 1].name);
+  const chosen = useRef(prefs.surah);
   /* Held as plain digits and shown in Arabic-Indic ones, so a field can be
      emptied while it is being retyped and still be checked as a number. */
   const [from, setFrom] = useState(String(prefs.ayah));
@@ -165,13 +172,19 @@ export function Picker({
       <Combobox
         items={surahs}
         value={selected}
+        inputValue={query}
+        onInputValueChange={setQuery}
+        // Typing a name and pressing Enter should take it.
+        autoHighlight
+        onOpenChange={(opening) =>
+          setQuery(opening ? '' : surahs[chosen.current - 1].name)
+        }
         itemToStringLabel={(s) => s.name}
         isItemEqualToValue={(a, b) => a.id === b.id}
-        filter={(item, query) =>
-          normalize(item.name).includes(normalize(query))
-        }
+        filter={(item, text) => normalize(item.name).includes(normalize(text))}
         onValueChange={(s) => {
           if (!s) return;
+          chosen.current = s.id;
           setId(s.id);
           setFrom('1');
           setTo(String(Math.min(s.count, 5)));
