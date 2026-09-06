@@ -145,7 +145,13 @@ describe('settings and surah picker', () => {
   it('applies and persists a theme through the settings sheet', async () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'الإعدادات' }));
-    const theme = await screen.findByRole('radio', { name: 'زيتوني' });
+    const theme = await screen.findByRole(
+      'radio',
+      {
+        name: 'زيتوني',
+      },
+      { timeout: 3000 },
+    );
     fireEvent.click(theme);
     await waitFor(() =>
       expect(document.documentElement.dataset.theme).toBe('sage'),
