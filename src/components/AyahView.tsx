@@ -10,16 +10,11 @@ import {
   Repeat2,
   Play,
   Pause,
-  BookOpen,
   Check,
 } from 'lucide-react';
-import {
-  quranProvider,
-  surahs,
-  arabic,
-  reciters,
-  type Preferences,
-} from '../data/quran';
+import { surahs, arabic, type Preferences } from '../data/quran';
+import { audioProvider, reciters } from '../data/audio';
+import { QuranVerses } from './QuranVerses';
 import { Recorder, type RecorderControls } from './Recorder';
 export function AyahView({
   prefs,
@@ -39,7 +34,7 @@ export function AyahView({
     recording.current?.pausePlayback();
     void toggle();
   };
-  const source = quranProvider.getAudioUrl(
+  const source = audioProvider.getAudioUrl(
     prefs.surah,
     prefs.ayah,
     prefs.reciter,
@@ -92,35 +87,8 @@ export function AyahView({
             <EyeOff size={27} />
             <p>اقرأ من حفظك</p>
           </div>
-        ) : prefs.mode === 'page' ? (
-          <div className="placeholder">
-            <BookOpen size={32} />
-            <p>صفحة المصحف</p>
-            <span>صور المصحف قريبًا.</span>
-          </div>
         ) : (
-          <div className="verses" key={`${prefs.surah}-${prefs.ayah}`}>
-            {Array.from({ length: last - prefs.ayah + 1 }, (_, i) => {
-              const n = prefs.ayah + i;
-              const text = quranProvider.getAyah(prefs.surah, n);
-              return text ? (
-                <p className="quran-text" key={n}>
-                  {text}{' '}
-                  <span
-                    className="ayah-number"
-                    aria-label={`الآية ${arabic(n)}`}
-                  >
-                    {arabic(n)}
-                  </span>
-                </p>
-              ) : (
-                <div className="placeholder" key={n}>
-                  <p>الآية {arabic(n)}</p>
-                  <span>النص غير متاح حاليًا.</span>
-                </div>
-              );
-            })}
-          </div>
+          <QuranVerses surah={prefs.surah} first={prefs.ayah} last={last} />
         )}
       </section>
       <button

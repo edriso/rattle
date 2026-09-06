@@ -1,4 +1,4 @@
-import { useEffect, useRef, type TouchEvent } from 'react';
+import { useEffect, useEffectEvent, useRef, type TouchEvent } from 'react';
 
 type Actions = {
   enabled: boolean;
@@ -25,66 +25,57 @@ export function usePracticeNavigation({
     id: number;
     time: number;
   } | null>(null);
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.isComposing ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey
+    )
+      return;
+    const target =
+      event.target instanceof Element ? event.target : document.activeElement;
+    if (target?.closest(editingSelector) || target?.closest('[role="dialog"]'))
+      return;
+    if (event.shiftKey) {
+      const action =
+        event.key === 'Enter'
+          ? toggleRecording
+          : event.key === ' '
+            ? toggleRecordingPlayback
+            : undefined;
+      if (action) {
+        event.preventDefault();
+        action();
+      }
+      return;
+    }
+    // Space and Enter must still activate whichever native control has focus.
+    if (
+      (event.key === ' ' || event.key === 'Enter') &&
+      target?.closest('button, a, [role="button"], summary')
+    )
+      return;
+    const action =
+      event.key === 'ArrowLeft' || event.key === 'Enter'
+        ? next
+        : event.key === 'ArrowRight'
+          ? previous
+          : event.key === ' '
+            ? toggleAudio
+            : null;
+    if (!action) return;
+    event.preventDefault();
+    action();
+  });
   useEffect(() => {
     if (!enabled) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.repeat ||
-        event.isComposing ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey
-      )
-        return;
-      const target =
-        event.target instanceof Element ? event.target : document.activeElement;
-      if (
-        target?.closest(editingSelector) ||
-        target?.closest('[role="dialog"]')
-      )
-        return;
-      if (event.shiftKey) {
-        const action =
-          event.key === 'Enter'
-            ? toggleRecording
-            : event.key === ' '
-              ? toggleRecordingPlayback
-              : undefined;
-        if (action) {
-          event.preventDefault();
-          action();
-        }
-        return;
-      }
-      // Space and Enter must still activate whichever native control has focus.
-      if (
-        (event.key === ' ' || event.key === 'Enter') &&
-        target?.closest('button, a, [role="button"], summary')
-      )
-        return;
-      const action =
-        event.key === 'ArrowLeft' || event.key === 'Enter'
-          ? next
-          : event.key === 'ArrowRight'
-            ? previous
-            : event.key === ' '
-              ? toggleAudio
-              : null;
-      if (!action) return;
-      event.preventDefault();
-      action();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [
-    enabled,
-    next,
-    previous,
-    toggleAudio,
-    toggleRecording,
-    toggleRecordingPlayback,
-  ]);
+    const listener = (event: KeyboardEvent) => onKeyDown(event);
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, [enabled]);
 
   const cancel = () => {
     gesture.current = null;

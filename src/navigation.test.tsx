@@ -10,7 +10,9 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
-import { defaults, quranProvider } from './data/quran';
+import { defaults } from './data/quran';
+import { audioProvider } from './data/audio';
+import { usePracticeNavigation } from './usePracticeNavigation';
 import { useAyahAudio } from './useAyahAudio';
 afterEach(() => {
   cleanup();
@@ -249,7 +251,7 @@ it('connects Space and the play button to the same audio and stops it on navigat
       }
     },
   );
-  vi.spyOn(quranProvider, 'getAudioUrl').mockReturnValue('/fixture.mp3');
+  vi.spyOn(audioProvider, 'getAudioUrl').mockReturnValue('/fixture.mp3');
   render(<App />);
   await act(async () => {
     fireEvent.keyDown(document.body, { key: ' ' });
@@ -268,4 +270,47 @@ it('connects Space and the play button to the same audio and stops it on navigat
   expect(position()).toBe(3);
   expect(player.pause).toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
+});
+
+it('preserves Command, Control, Option/Alt and Shift-arrow OS shortcuts', () => {
+  render(<App />);
+  for (const modifier of ['metaKey', 'ctrlKey', 'altKey']) {
+    for (const key of ['ArrowLeft', 'ArrowRight', 'Enter', ' ']) {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        [modifier]: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        document.body.dispatchEvent(event);
+      });
+      expect(event.defaultPrevented).toBe(false);
+    }
+  }
+  fireEvent.keyDown(document.body, { key: 'ArrowLeft', shiftKey: true });
+  expect(position()).toBe(2);
+});
+it('uses the latest ayah count without reinstalling the global key listener', () => {
+  const listener = vi.spyOn(document, 'addEventListener');
+  const { rerender } = renderHook(
+    ({ next }) =>
+      usePracticeNavigation({
+        enabled: true,
+        next,
+        previous: vi.fn(),
+        toggleAudio: vi.fn(),
+      }),
+    { initialProps: { next: vi.fn() } },
+  );
+  const before = listener.mock.calls.filter(
+    ([type]) => type === 'keydown',
+  ).length;
+  const next = vi.fn();
+  rerender({ next });
+  fireEvent.keyDown(document.body, { key: 'Enter', code: 'NumpadEnter' });
+  expect(next).toHaveBeenCalledOnce();
+  expect(
+    listener.mock.calls.filter(([type]) => type === 'keydown'),
+  ).toHaveLength(before);
 });

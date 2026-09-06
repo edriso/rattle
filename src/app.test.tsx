@@ -47,15 +47,15 @@ describe('catalogue and persisted state', () => {
   it('starts, hides actual verse text, navigates, and restores position', async () => {
     const view = render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'ابدأ الحفظ' }));
-    expect(screen.getByText('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')).toBeTruthy();
+    expect(screen.getByText('بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'إخفاء الآية' }));
-    expect(screen.queryByText('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')).toBeNull();
+    expect(screen.queryByText('بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'الآيات التالية' }));
-    expect(screen.getByText('الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ')).toBeTruthy();
+    expect(screen.getByText('ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ')).toBeTruthy();
     view.unmount();
     render(<App />);
     await waitFor(() =>
-      expect(screen.getByText('الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ')).toBeTruthy(),
+      expect(screen.getByText('ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ')).toBeTruthy(),
     );
     expect(screen.queryByRole('button', { name: 'ابدأ الحفظ' })).toBeNull();
   });
@@ -276,7 +276,7 @@ it('changes appearance without losing the verse or accent and restores it after 
   await waitFor(() =>
     expect(document.documentElement.dataset.appearance).toBe('light'),
   );
-  expect(screen.getByText('الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ')).toBeTruthy();
+  expect(screen.getByText('ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ')).toBeTruthy();
 });
 
 it('follows system appearance changes and unsubscribes when a fixed appearance is chosen', async () => {

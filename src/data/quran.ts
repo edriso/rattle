@@ -1,4 +1,5 @@
-// Local catalogue and a deliberately limited preview. Replace the provider in phase two.
+import { reciters } from './audio';
+// Local catalogue and validated device preferences. Audio integration is separate.
 const names =
   'الفاتحة البقرة آل_عمران النساء المائدة الأنعام الأعراف الأنفال التوبة يونس هود يوسف الرعد إبراهيم الحجر النحل الإسراء الكهف مريم طه الأنبياء الحج المؤمنون النور الفرقان الشعراء النمل القصص العنكبوت الروم لقمان السجدة الأحزاب سبأ فاطر يس الصافات ص الزمر غافر فصلت الشورى الزخرف الدخان الجاثية الأحقاف محمد الفتح الحجرات ق الذاريات الطور النجم القمر الرحمن الواقعة الحديد المجادلة الحشر الممتحنة الصف الجمعة المنافقون التغابن الطلاق التحريم الملك القلم الحاقة المعارج نوح الجن المزمل المدثر القيامة الإنسان المرسلات النبأ النازعات عبس التكوير الانفطار المطففين الانشقاق البروج الطارق الأعلى الغاشية الفجر البلد الشمس الليل الضحى الشرح التين العلق القدر البينة الزلزلة العاديات القارعة التكاثر العصر الهمزة الفيل قريش الماعون الكوثر الكافرون النصر المسد الإخلاص الفلق الناس'.split(
     ' ',
@@ -16,40 +17,14 @@ export const surahs = names.map((name, i) => ({
   name: name.replace('_', ' '),
   count: counts[i],
 }));
-export const arabic = (n: number) =>
-  new Intl.NumberFormat('ar-EG', { useGrouping: false }).format(n);
+const numberFormat = new Intl.NumberFormat('ar-EG', { useGrouping: false });
+export const arabic = (n: number) => numberFormat.format(n);
 export const normalize = (s: string) =>
   s
     .normalize('NFKD')
     .replace(/[\u064B-\u065F\u0670]/g, '')
     .replace(/[أإآ]/g, 'ا')
     .replace(/ى/g, 'ي');
-export const reciters = [
-  { id: 'ar.alafasy', name: 'مشاري العفاسي' },
-  { id: 'ar.husary', name: 'محمود خليل الحصري' },
-  { id: 'ar.abdulbasitmurattal', name: 'عبد الباسط عبد الصمد' },
-  { id: 'ar.minshawi', name: 'محمد صديق المنشاوي' },
-];
-const preview: Record<number, string[]> = {
-  1: [
-    'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-    'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
-    'الرَّحْمَٰنِ الرَّحِيمِ',
-    'مَالِكِ يَوْمِ الدِّينِ',
-    'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ',
-    'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
-    'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ',
-  ],
-};
-export const quranProvider = {
-  getAyah: (surah: number, ayah: number) => preview[surah]?.[ayah - 1] ?? null,
-  getAudioUrl: (
-    _surah: number,
-    _ayah: number,
-    _reciter: string,
-  ): string | null => null,
-  getPageUrl: (_surah: number, _ayah: number): string | null => null,
-};
 export type Preferences = {
   started: boolean;
   surah: number;
@@ -57,7 +32,6 @@ export type Preferences = {
   reciter: string;
   theme: 'gold' | 'sage' | 'blue' | 'rose';
   appearance: 'dark' | 'light' | 'system';
-  mode: 'text' | 'page';
   perView: number;
 };
 export const defaults: Preferences = {
@@ -67,7 +41,6 @@ export const defaults: Preferences = {
   reciter: reciters[0].id,
   theme: 'gold',
   appearance: 'dark',
-  mode: 'text',
   perView: 1,
 };
 export function restore(value: unknown): Preferences {
@@ -92,7 +65,6 @@ export function restore(value: unknown): Preferences {
     appearance: ['dark', 'light', 'system'].includes(p.appearance!)
       ? p.appearance!
       : defaults.appearance,
-    mode: p.mode === 'page' ? 'page' : 'text',
     perView: Number.isInteger(p.perView)
       ? Math.max(1, Math.min(5, p.perView!))
       : 1,

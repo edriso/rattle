@@ -89,7 +89,7 @@ export function App() {
             <output className="loading">جارٍ استعادة موضعك…</output>
           ) : prefs.started ? (
             <AyahView
-              key={`${prefs.surah}:${prefs.ayah}:${prefs.mode}:${prefs.perView}`}
+              key={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`}
               prefs={prefs}
               update={update}
               navigationEnabled={panel === null}

@@ -1,3 +1,4 @@
+import { reciters } from '../data/audio';
 import { useState } from 'react';
 import { X, Check, ChevronLeft } from 'lucide-react';
 import {
@@ -22,13 +23,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import {
-  surahs,
-  arabic,
-  normalize,
-  reciters,
-  type Preferences,
-} from '../data/quran';
+import { surahs, arabic, normalize, type Preferences } from '../data/quran';
 function Panel({
   open,
   onClose,
@@ -242,29 +237,6 @@ export function SettingsSheet({
         </Select>
       </section>
       <fieldset className="setting-section">
-        <legend>طريقة العرض</legend>
-        <div className="segmented">
-          {(
-            [
-              ['text', 'نص قرآني'],
-              ['page', 'صفحة المصحف'],
-            ] as const
-          ).map(([mode, label]) => (
-            <label key={mode} data-active={prefs.mode === mode}>
-              <input
-                type="radio"
-                name="mode"
-                className="sr-only"
-                checked={prefs.mode === mode}
-                onChange={() => update({ mode })}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <p className="field-note">صور المصحف قريبًا</p>
-      </fieldset>
-      <fieldset className="setting-section">
         <legend>المظهر</legend>
         <div className="segmented">
           {(
@@ -320,6 +292,12 @@ export function SettingsSheet({
       <p className="field-note">
         لا تُحفَظ التسجيلات ولا تُرسَل. تُحذَف عند تغيير الآية.
       </p>
+      <p className="field-note">
+        النص القرآني:{' '}
+        <a href="https://tanzil.net" target="_blank" rel="noreferrer">
+          مشروع تنزيل
+        </a>
+      </p>
       <details className="shortcut-help">
         <summary>اختصارات لوحة المفاتيح</summary>
         <dl>
@@ -344,17 +322,20 @@ export function SettingsSheet({
           <div>
             <dt>بدء التسجيل وإنهاؤه</dt>
             <dd>
-              <kbd>⇧ + إدخال</kbd>
+              <kbd>رفع + إدخال</kbd>
             </dd>
           </div>
           <div>
             <dt>تشغيل تسجيلك وإيقافه</dt>
             <dd>
-              <kbd>⇧ + مسافة</kbd>
+              <kbd>رفع + مسافة</kbd>
             </dd>
           </div>
         </dl>
-        <p>عند تحديد زر، يعمل مفتاحا الإدخال والمسافة على تفعيله.</p>
+        <p>
+          رفع هو مفتاح Shift. عند تحديد زر، يعمل مفتاحا الإدخال والمسافة على
+          تفعيله.
+        </p>
       </details>
     </Panel>
   );
