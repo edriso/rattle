@@ -1,4 +1,4 @@
-# رِتِّل
+# رَتِّلِ
 
 [Open the app](https://edriso.github.io/rattil/) · [Deployment workflow](https://github.com/edriso/rattil/actions/workflows/pages.yml)
 

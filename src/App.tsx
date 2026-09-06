@@ -59,9 +59,9 @@ export function App() {
         <a
           href={import.meta.env.BASE_URL}
           className="brand"
-          aria-label="رِتِّل، الصفحة الرئيسية"
+          aria-label="رَتِّلِ، الصفحة الرئيسية"
         >
-          رِتِّل<span className="brand-dot">.</span>
+          رَتِّلِ<span className="brand-dot">.</span>
         </a>
         {prefs.started ? (
           <button
