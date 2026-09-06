@@ -1,5 +1,7 @@
 # رِتِّل
 
+[Open the app](https://edriso.github.io/rattil/) · [Deployment workflow](https://github.com/edriso/rattil/actions/workflows/pages.yml)
+
 Arabic, RTL, mobile-first Quran memorization app. React 19, TypeScript, Vite, TanStack Router, Base UI/Shadcn, and semantic OKLCH themes.
 
 ## Run
@@ -26,3 +28,14 @@ npm run preview
 `src/data/quran.ts` contains the local catalogue, preference validation and provider boundary. Replace preview provider methods with the supplied endpoints, add cancellable requests and caching, then wire reciter playback/repeat and page images in `AyahView.tsx`. Never substitute a different verse for missing content. The selected reciter IDs are provisional and should be mapped to the supplied catalogue.
 
 Fonts are loaded from Google Fonts; recordings never leave the device. A compatible browser can optionally expose the `start_memorization` WebMCP tool. No compatible validation browser was available during implementation.
+
+## GitHub Pages
+
+Pushes to `main` and manual runs of `.github/workflows/pages.yml` run tests, lint and the production build before publishing to GitHub Pages. The repository Pages source must be **GitHub Actions**. No deployment secrets are required.
+
+The workflow reads the Pages base path and passes it as `VITE_BASE_PATH`; Vite assets, the router and the home link use the same base. Local development and other hosting keep `/` by default. To reproduce the project-site build locally:
+
+```sh
+VITE_BASE_PATH=/rattil/ npm run build
+VITE_BASE_PATH=/rattil/ npm run preview
+```

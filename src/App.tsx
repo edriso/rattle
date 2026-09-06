@@ -56,7 +56,11 @@ export function App() {
         انتقل إلى المحتوى
       </a>
       <header className="topbar">
-        <a href="/" className="brand" aria-label="رِتِّل، الصفحة الرئيسية">
+        <a
+          href={import.meta.env.BASE_URL}
+          className="brand"
+          aria-label="رِتِّل، الصفحة الرئيسية"
+        >
           رِتِّل<span className="brand-dot">.</span>
         </a>
         {prefs.started ? (

@@ -3,7 +3,10 @@ import ReactDOM from 'react-dom/client';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { rootRoute, indexRoute } from './routes';
 import './styles.css';
-const router = createRouter({ routeTree: rootRoute.addChildren([indexRoute]) });
+const router = createRouter({
+  basepath: import.meta.env.BASE_URL,
+  routeTree: rootRoute.addChildren([indexRoute]),
+});
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
