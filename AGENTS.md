@@ -59,6 +59,62 @@ data/            the original Quran text file, its checksum, and its provenance
 React. Everything else is plain functions and classes, so you can test it
 without a browser. Keep it that way.
 
+## Keyboard
+
+Every key lives in one file, `src/usePracticeNavigation.ts`, and both screens
+use it.
+
+| Key             | What it does                                     |
+| --------------- | ------------------------------------------------ |
+| `←` or `Enter`  | next step, or next ayat                          |
+| `→`             | previous                                         |
+| `Space` or `↑`  | play and pause, and end the echo gap early       |
+| `↓`             | play this step again, or turn looping on and off |
+| `Shift + Enter` | start or stop recording (free review)            |
+| `Shift + Space` | play your own recording                          |
+
+Two things to know before you change any of this.
+
+**A focused button owns `Space` and `Enter`.** That is how a button works in
+every browser, and taking it away would break the app for anyone using a
+keyboard or a screen reader. So once someone tabs or taps onto a button, those
+two keys no longer reach the drill. That is why each of them has an arrow that
+does the same job: no button ever claims an arrow.
+
+**Use arrows, not letters.** A shortcut made of a plain letter, number or
+symbol has to be switchable off or remappable to pass WCAG 2.1.4. Arrows,
+`Space`, `Enter`, `Esc`, `Home`, `End`, `Page Up` and `Page Down` are exempt.
+Taking `↑` and `↓` does cost the page its arrow scrolling, so leave `Page Up`,
+`Page Down`, `Home` and `End` alone. Inside a verse frame that holds more text
+than it shows, the arrows go back to reading: `scrolls()` in the hook checks
+that before the shortcut runs.
+
+If you add a key, add it in four places: the hook, the `aria-keyshortcuts` and
+`title` of the button it belongs to, the list in the settings sheet
+(`src/components/Sheets.tsx`), and the README.
+
+## The verse frame
+
+The box holding the ayat keeps its size. Ayat differ in length by a factor of
+thirty, so a box that grew with the text would move every control under it each
+time the reader moved on, and people aim at those controls. `.verse-space` in
+`src/styles.css` therefore has `flex-basis: 0`, scrolls its own overflow, and
+fades at both edges instead of cutting a line in half.
+
+Four things depend on that and are easy to break:
+
+- `flex-basis` is the length `0`, not the `0%` that `flex: 1` already sets. The
+  line looks redundant and is not: a percentage cannot resolve while the row is
+  being measured, so it falls back to the height of the text, and the longest
+  ayah pushes the controls a thousand pixels down the page again.
+- The frame is a tab stop (`tabIndex={0}`), because a scrolling box a keyboard
+  cannot reach is a box whose text a keyboard cannot read. That is why
+  `.oxlintrc.json` allows `tabIndex` on `section`.
+- The edge fade sits behind `@supports (mask-clip: no-clip)`. A plain mask is
+  clipped to the frame, and it eats the focus ring with it.
+- The line above the play controls (`.session-phase`) keeps its height while it
+  is empty. It fills and empties several times a step.
+
 ## Rules you must not break
 
 **Never change the Quran text.** The files in `src/data/surahs/` come from the

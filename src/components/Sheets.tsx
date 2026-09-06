@@ -240,6 +240,8 @@ export function SettingsSheet({
   update: (v: Partial<Preferences>) => void;
 }) {
   const reciter = findReciter(prefs.reciter);
+  // The two screens name the same keys differently, and only one records.
+  const inSession = prefs.screen === 'session';
   const setPlan = (patch: Partial<SchedulePlan>) =>
     update({ plan: { ...prefs.plan, ...patch } });
 
@@ -464,13 +466,13 @@ export function SettingsSheet({
         <summary>اختصارات لوحة المفاتيح</summary>
         <dl>
           <div>
-            <dt>التالي</dt>
+            <dt>{inSession ? 'الخطوة التالية' : 'الآيات التالية'}</dt>
             <dd>
               <kbd>←</kbd> أو <kbd>إدخال</kbd>
             </dd>
           </div>
           <div>
-            <dt>السابق</dt>
+            <dt>{inSession ? 'الخطوة السابقة' : 'الآيات السابقة'}</dt>
             <dd>
               <kbd>→</kbd>
             </dd>
@@ -478,25 +480,37 @@ export function SettingsSheet({
           <div>
             <dt>تشغيل التلاوة وإيقافها</dt>
             <dd>
-              <kbd>مسافة</kbd>
+              <kbd>مسافة</kbd> أو <kbd>↑</kbd>
             </dd>
           </div>
           <div>
-            <dt>بدء التسجيل وإنهاؤه</dt>
+            <dt>{inSession ? 'إعادة الخطوة' : 'تكرار التلاوة'}</dt>
             <dd>
-              <kbd>رفع + إدخال</kbd>
+              <kbd>↓</kbd>
             </dd>
           </div>
-          <div>
-            <dt>تشغيل تسجيلك وإيقافه</dt>
-            <dd>
-              <kbd>رفع + مسافة</kbd>
-            </dd>
-          </div>
+          {!inSession && (
+            <>
+              <div>
+                <dt>بدء التسجيل وإنهاؤه</dt>
+                <dd>
+                  <kbd>رفع + إدخال</kbd>
+                </dd>
+              </div>
+              <div>
+                <dt>تشغيل تسجيلك وإيقافه</dt>
+                <dd>
+                  <kbd>رفع + مسافة</kbd>
+                </dd>
+              </div>
+            </>
+          )}
         </dl>
         <p>
           رفع هو مفتاح Shift. عند تحديد زر، يعمل مفتاحا الإدخال والمسافة على
-          تفعيله.
+          تفعيله، فاستعمل الأسهم حينئذٍ. وإذا زاد النص على ما يسعه إطاره مرّره
+          السهمان، ويبقى التمرير على <kbd>Page Up</kbd> و<kbd>Page Down</kbd> في
+          كل حال.
         </p>
       </details>
     </Panel>

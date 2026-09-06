@@ -69,6 +69,7 @@ export function AyahView({
     next: () => move(1),
     previous: () => move(-1),
     toggleAudio: toggleReciter,
+    repeat: () => setRepeat(!repeat),
     toggleRecording: () => recording.current?.toggleRecording(),
     toggleRecordingPlayback: () => recording.current?.togglePlayback(),
   });
@@ -79,7 +80,8 @@ export function AyahView({
       </h1>
       <section
         id="current-verse"
-        tabIndex={-1}
+        // Focusable, because the frame scrolls and a keyboard has to reach it.
+        tabIndex={0}
         className="verse-space"
         aria-label={`سورة ${surah.name}، الآية ${arabic(prefs.ayah)}`}
         {...gestures}
@@ -122,6 +124,8 @@ export function AyahView({
             className={`icon-button ${repeat ? 'active' : ''}`}
             aria-label="تكرار التلاوة"
             aria-pressed={repeat}
+            aria-keyshortcuts="ArrowDown"
+            title="تكرار التلاوة (↓)"
             onClick={() => setRepeat(!repeat)}
           >
             <Repeat2 size={21} />
@@ -130,8 +134,8 @@ export function AyahView({
             className="play-main"
             id="reciter-play"
             aria-label={playing ? 'إيقاف التلاوة مؤقتًا' : 'تشغيل التلاوة'}
-            aria-keyshortcuts="Space"
-            title="تشغيل أو إيقاف (مسافة)"
+            aria-keyshortcuts="Space ArrowUp"
+            title="تشغيل أو إيقاف (مسافة أو ↑)"
             disabled={capturing}
             onClick={toggleReciter}
           >

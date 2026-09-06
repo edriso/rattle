@@ -81,18 +81,39 @@ it('keeps Space and Enter native on focused buttons', async () => {
   expect(position()).toBe(2);
   expect(screen.queryByText('التلاوة غير متاحة حاليًا.')).toBeNull();
 });
-it('claims Space for playback rather than letting it scroll or navigate', async () => {
+it('claims Space and the vertical arrows rather than letting them scroll', async () => {
   render(<App />);
+  for (const key of [' ', 'ArrowUp', 'ArrowDown']) {
+    const event = new KeyboardEvent('keydown', {
+      key,
+      bubbles: true,
+      cancelable: true,
+    });
+    await act(async () => {
+      document.body.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(true);
+  }
+  expect(position()).toBe(2);
+});
+it('leaves the vertical arrows alone where there is nothing to repeat', () => {
+  renderHook(() =>
+    usePracticeNavigation({
+      enabled: true,
+      next: vi.fn(),
+      previous: vi.fn(),
+      toggleAudio: vi.fn(),
+    }),
+  );
   const event = new KeyboardEvent('keydown', {
-    key: ' ',
+    key: 'ArrowDown',
     bubbles: true,
     cancelable: true,
   });
-  await act(async () => {
+  act(() => {
     document.body.dispatchEvent(event);
   });
-  expect(event.defaultPrevented).toBe(true);
-  expect(position()).toBe(2);
+  expect(event.defaultPrevented).toBe(false);
 });
 it('pauses shortcuts while settings or picker are opening', () => {
   render(<App />);
@@ -292,10 +313,52 @@ it('connects Space and the play button to the same audio and stops it on navigat
   expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
 });
 
+/* A tab or a tap leaves focus on a button, and that button owns Space and
+   Enter from then on. The arrows are the twins that keep the drill reachable. */
+it('plays and repeats from the arrows while a button holds the focus', async () => {
+  const player = new FakeAudio();
+  vi.stubGlobal(
+    'Audio',
+    class {
+      constructor() {
+        return player;
+      }
+    },
+  );
+  render(<App />);
+  const reveal = screen.getByRole('button', { name: 'إخفاء الآية' });
+  reveal.focus();
+  await act(async () => {
+    fireEvent.keyDown(reveal, { key: 'ArrowUp' });
+  });
+  expect(
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+  ).toBeTruthy();
+  await act(async () => {
+    fireEvent.keyDown(reveal, { key: 'ArrowUp' });
+  });
+  expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
+  fireEvent.keyDown(reveal, { key: 'ArrowDown' });
+  expect(
+    screen
+      .getByRole('button', { name: 'تكرار التلاوة' })
+      .getAttribute('aria-pressed'),
+  ).toBe('true');
+  // The ayah stayed put, and the focused button was never activated.
+  expect(position()).toBe(2);
+  expect(screen.queryByText('اقرأ من حفظك')).toBeNull();
+});
 it('preserves Command, Control, Option/Alt and Shift-arrow OS shortcuts', () => {
   render(<App />);
   for (const modifier of ['metaKey', 'ctrlKey', 'altKey']) {
-    for (const key of ['ArrowLeft', 'ArrowRight', 'Enter', ' ']) {
+    for (const key of [
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Enter',
+      ' ',
+    ]) {
       const event = new KeyboardEvent('keydown', {
         key,
         [modifier]: true,

@@ -111,6 +111,9 @@ export function SessionView({
     next: () => session?.next(),
     previous: () => session?.previous(),
     toggleAudio: () => toggle(),
+    repeat: () => {
+      if (state) session?.goTo(state.cursor.step);
+    },
   });
 
   if (failed || (passage && passage.steps.length === 0))
@@ -179,9 +182,11 @@ export function SessionView({
         </div>
       </div>
 
+      {/* Focusable, because the frame scrolls and a keyboard has to reach it. */}
       <section
         className="verse-space session-verses"
         aria-label="نص المقطع"
+        tabIndex={0}
         {...gestures}
       >
         <div className="verses">
@@ -252,6 +257,8 @@ export function SessionView({
           <button
             className="icon-button"
             aria-label="أعِد هذه الخطوة"
+            aria-keyshortcuts="ArrowDown"
+            title="أعِد هذه الخطوة (↓)"
             onClick={() => session.goTo(state.cursor.step)}
           >
             <RotateCcw size={19} />
@@ -265,8 +272,8 @@ export function SessionView({
                   ? 'إيقاف مؤقت'
                   : 'تشغيل'
             }
-            aria-keyshortcuts="Space"
-            title="تشغيل أو إيقاف (مسافة)"
+            aria-keyshortcuts="Space ArrowUp"
+            title="تشغيل أو إيقاف (مسافة أو ↑)"
             onClick={toggle}
           >
             {playing ? (

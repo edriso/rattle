@@ -275,16 +275,53 @@ label:has(input:focus-visible) {
   padding-block: 12px 0;
   min-width: 0;
 }
+/* The ayah sits in a frame, and the frame keeps its size. Ayat differ in
+   length by a factor of thirty, so a box that grew with the text would move
+   every control under it on each move, and those controls are what people aim
+   at. The frame takes the room its siblings leave and scrolls the rest.
+   `flex-basis` has to be the length `0` and not the `0%` that `flex: 1` sets:
+   a percentage cannot resolve while the row is being measured, so it falls
+   back to the size of the text and the box grows after all. `safe center`
+   centres a short passage without pushing the top of a long one out of
+   reach. */
 .verse-space {
   flex: 1;
+  flex-basis: 0;
   min-height: 180px;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
   padding: 24px 12px;
+}
+/* Fade the edge rather than chop a line in half, so a frame holding more text
+   than it shows says so. The padding is wider than the fade, so a passage that
+   fits never touches it. `no-clip` is what keeps the focus ring, which is
+   painted outside the frame, out of the mask — without it the ring vanishes. */
+@supports (mask-clip: no-clip) {
+  .verse-space {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 20px,
+      #000 calc(100% - 20px),
+      transparent
+    );
+    mask-clip: no-clip;
+  }
 }
 .verses {
   width: 100%;
+  animation: verse-in 240ms ease-out;
+}
+@keyframes verse-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
 }
 .quran-text {
   font-family: Amiri, serif;
@@ -864,10 +901,9 @@ progress::-moz-progress-bar {
   flex-shrink: 0;
 }
 .session-verses {
-  /* A joined run can outgrow the space; scrolling beats squeezing the text. */
-  overflow-y: auto;
+  /* A joined run outgrows the frame quickly, and the ayah being recited
+     scrolls itself into view, so let that ride rather than jump. */
   scroll-behavior: smooth;
-  align-items: safe center;
 }
 .session-verses .quran-text {
   transition: opacity 220ms;
@@ -880,14 +916,13 @@ progress::-moz-progress-bar {
   opacity: 1;
   color: var(--accent);
 }
+/* The line keeps its height while it is empty. It fills and empties several
+   times a step, and the controls under it must not move each time. */
 .session-phase {
   display: block;
   min-height: 24px;
   font-size: 14px;
   color: var(--muted-foreground);
-}
-.session-phase:empty {
-  min-height: 0;
 }
 .echoing {
   display: inline-flex;

@@ -278,6 +278,26 @@ describe('a talqeen session', () => {
     );
   });
 
+  it('pauses from the up arrow and offers the down arrow for the step again', async () => {
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    const pause = await screen.findByRole(
+      'button',
+      { name: 'إيقاف مؤقت' },
+      { timeout: 3000 },
+    );
+    // Space would belong to this button once it has focus, so the arrow has to
+    // reach the session on its own.
+    pause.focus();
+    fireEvent.keyDown(pause, { key: 'ArrowUp' });
+    expect(await screen.findByRole('button', { name: 'تشغيل' })).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: 'أعِد هذه الخطوة' })
+        .getAttribute('aria-keyshortcuts'),
+    ).toBe('ArrowDown');
+  });
+
   it('schedules the passage for review once it is graded', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);
