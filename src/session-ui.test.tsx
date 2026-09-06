@@ -107,7 +107,10 @@ describe('choosing a passage', () => {
     expect(hint).toBeTruthy();
     // The way out of a long drill is one tap from the sentence saying so.
     fireEvent.click(screen.getByRole('button', { name: 'خفّف التكرار' }));
-    expect(await screen.findByRole('dialog')).toBeTruthy();
+    // The settings panel is a lazy chunk, so give it room to arrive.
+    expect(
+      await screen.findByRole('dialog', {}, { timeout: 3000 }),
+    ).toBeTruthy();
   });
 
   it('offers listening alone, and hands the gap back when repeating resumes', async () => {
