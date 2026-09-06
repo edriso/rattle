@@ -185,15 +185,23 @@ label:has(input:focus-visible) {
 .muted {
   color: var(--muted-foreground);
 }
+/* The start screen is a form that should fit the screen it is on. Everything
+   inside it is spaced from one rhythm rather than from a dozen fixed numbers,
+   so a short phone closes the gaps up instead of pushing «ابدأ» off the
+   bottom, and a tall screen still breathes. The fallbacks are what every
+   other screen keeps, since `--gap` is only declared here. */
 .start-main {
+  --gap: clamp(8px, 1.5dvh, 20px);
+  --gap-sm: calc(var(--gap) * 0.5);
+  --gap-lg: calc(var(--gap) * 1.3);
   width: min(100%, 360px);
   align-self: center;
   justify-self: center;
-  padding-block: 28px 64px;
+  padding-block: var(--gap) calc(var(--gap) + 6px);
 }
 .intro {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: var(--gap-lg, 30px);
 }
 .intro h1 {
   font-family: 'Reem Kufi', sans-serif;
@@ -238,7 +246,7 @@ label:has(input:focus-visible) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 16px 0 24px;
+  margin: var(--gap, 16px) 0 var(--gap-lg, 24px);
   font-size: 14px;
   gap: 16px;
 }
@@ -271,7 +279,7 @@ label:has(input:focus-visible) {
   filter: brightness(1.08);
 }
 .save-hint {
-  margin: 14px 0 0;
+  margin: var(--gap, 14px) 0 0;
   text-align: center;
   color: var(--muted-foreground);
   font-size: 12px;
@@ -738,7 +746,7 @@ progress::-moz-progress-bar {
   background: var(--surface);
   border-radius: var(--radius);
   padding: 14px 16px 10px;
-  margin-bottom: 22px;
+  margin-bottom: var(--gap-lg, 22px);
   text-align: start;
 }
 .review-card h2 {
@@ -803,7 +811,8 @@ progress::-moz-progress-bar {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  margin: 16px 0 14px;
+  margin-block: var(--gap, 16px) var(--gap, 14px);
+  margin-inline: 0;
   text-align: start;
 }
 .range-fields .ayah-field input {
@@ -839,7 +848,7 @@ progress::-moz-progress-bar {
 }
 .grain-row {
   border: 0;
-  margin: 20px 0 0;
+  margin: var(--gap, 20px) 0 0;
   padding: 0;
 }
 .grain-row legend {
@@ -855,7 +864,7 @@ progress::-moz-progress-bar {
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px 20px;
-  margin: 20px 0 14px;
+  margin: var(--gap, 20px) 0 var(--gap-sm, 14px);
   color: var(--muted-foreground);
   font-size: 14px;
 }
@@ -871,7 +880,7 @@ progress::-moz-progress-bar {
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  margin-top: 10px;
+  margin-top: var(--gap-sm, 10px);
   border: 0;
   background: transparent;
   color: var(--muted-foreground);
@@ -1102,26 +1111,8 @@ progress::-moz-progress-bar {
     padding-inline: 4px;
     gap: 4px;
   }
-  .start-main {
-    padding-block: 20px 40px;
-  }
-  .intro {
-    margin-bottom: 22px;
-  }
   .intro h1 {
     font-size: 27px;
-  }
-  .review-card {
-    margin-bottom: 18px;
-  }
-  .range-fields .ayah-field {
-    margin-block: 12px 12px;
-  }
-  .grain-row {
-    margin-top: 16px;
-  }
-  .session-estimate {
-    margin-block: 16px 12px;
   }
   .memorizing-main {
     padding-top: 0;
@@ -1161,13 +1152,24 @@ progress::-moz-progress-bar {
     justify-content: space-between;
   }
 }
-@media (max-height: 600px) {
+/* Under a phone's worth of height the promise line gives way to the form it
+   introduces. The heading stays: it is the page's only h1, and the brand in
+   the corner is a link, not a title. */
+@media (max-height: 780px) {
+  /* Height is scarce from here down, so the rhythm gives ground faster than
+     the linear `dvh` curve would. */
   .start-main {
-    padding-block: 12px;
+    --gap: clamp(6px, 1.2dvh, 12px);
   }
-  .intro {
-    margin-bottom: 20px;
+  .intro p {
+    display: none;
   }
+  .intro h1 {
+    font-size: 26px;
+    margin-bottom: 0;
+  }
+}
+@media (max-height: 600px) {
   .verse-space {
     min-height: 140px;
     padding-block: 12px;
@@ -1189,6 +1191,9 @@ progress::-moz-progress-bar {
   }
 }
 
+.grain-note {
+  margin-top: 8px;
+}
 .long-session {
   text-align: center;
   margin-bottom: 14px;

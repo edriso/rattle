@@ -100,6 +100,22 @@ If you add a key, add it in four places: the hook, the `aria-keyshortcuts` and
 `title` of the button it belongs to, the list in the settings sheet
 (`src/components/Sheets.tsx`), and the README.
 
+## The start screen fits the screen
+
+Everything on the start screen is spaced from one rhythm, `--gap`, declared on
+`.start-main` and shrinking with the viewport's own height. It is what lets the
+form fit a phone without «ابدأ» falling off the bottom, and still breathe on a
+desktop. Two rules go with it:
+
+- Space that screen **through `--gap`**, never with a fresh fixed number, and
+  give every use a fallback (`var(--gap, 16px)`). The variable is declared
+  nowhere else, so the same rule keeps its old spacing in the sheets, which is
+  why `.ayah-field` can be shared between the start screen and the picker.
+- The old code tuned the same margins again in two media queries, which is why
+  editing the base rule appeared to do nothing. There is one place now. If a
+  short screen needs more, shrink `--gap` there rather than re-listing every
+  margin.
+
 ## The verse frame
 
 The box holding the ayat keeps its size. Ayat differ in length by a factor of

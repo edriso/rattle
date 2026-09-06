@@ -228,6 +228,14 @@ export function HomeView({
           </div>
         </fieldset>
 
+        {/* Only when it is chosen, because it is the one option whose meaning
+            is not on its face: the others say their own size. */}
+        {prefs.grain === 'phrase' && (
+          <p className="field-note grain-note">
+            تُقسَّم الآية الطويلة عند مواضع وقف القارئ، وتبقى القصيرة آيةً واحدة.
+          </p>
+        )}
+
         <fieldset className="grain-row">
           <legend className="setting-label">
             الترديد
