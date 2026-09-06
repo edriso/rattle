@@ -51,7 +51,7 @@ export function App() {
       setStorageError(true);
     }
   }, [prefs]);
-  useAppearance(prefs.appearance, true);
+  useAppearance(prefs.appearance);
   useWebMCP(setPrefs);
 
   /* Free review moves `ayah` on its own. The passage keeps its length and
@@ -152,8 +152,10 @@ export function App() {
               />
             </Suspense>
           ) : (
+            /* No key: remounting on every move reset the loop toggle and
+               revealed a hidden ayah. The recorder clears itself from its
+               `position` prop, and the audio hook follows its own sources. */
             <AyahView
-              key={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`}
               prefs={prefs}
               update={update}
               navigationEnabled={panel === null}

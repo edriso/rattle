@@ -68,6 +68,20 @@ describe('catalogue and persisted state', () => {
     );
     expect(screen.queryByRole('button', { name: /راجِع بنفسك/ })).toBeNull();
   });
+  /* Free review used to be remounted on every move, which switched looping
+     off underneath the learner. Hiding is per ayah and must still reset. */
+  it('keeps looping across a move, and shows each new ayah', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /راجِع بنفسك/ }));
+    const loop = () => screen.getByRole('button', { name: 'تكرار التلاوة' });
+    fireEvent.click(loop());
+    expect(loop().getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'إخفاء الآية' }));
+    fireEvent.click(screen.getByRole('button', { name: 'الآيات التالية' }));
+    expect(loop().getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'إخفاء الآية' })).toBeTruthy();
+  });
+
   it('stays usable, and says so, when local storage is blocked', async () => {
     const blocked = () => {
       throw new Error('blocked');

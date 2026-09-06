@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   BookOpen,
   ChevronDown,
@@ -50,17 +50,31 @@ export function HomeView({
     prefs.reciter,
     prefs.grain,
   );
-  const passage = loaded
-    ? preparePassage(
-        loaded,
-        prefs.ayah,
-        prefs.to,
-        prefs.grain,
-        prefs.plan,
-        prefs.echo,
-        reciter.pace,
-      )
-    : null;
+  /* Costing al-Baqarah whole takes milliseconds, and this screen re-renders on
+     every keystroke in the ayah fields. */
+  const passage = useMemo(
+    () =>
+      loaded
+        ? preparePassage(
+            loaded,
+            prefs.ayah,
+            prefs.to,
+            prefs.grain,
+            prefs.plan,
+            prefs.echo,
+            reciter.pace,
+          )
+        : null,
+    [
+      loaded,
+      prefs.ayah,
+      prefs.to,
+      prefs.grain,
+      prefs.plan,
+      prefs.echo,
+      reciter.pace,
+    ],
+  );
   const pending = due(items);
   const ayat = prefs.to - prefs.ayah + 1;
   /* Listening on its own is a way people use the app, not a setting turned

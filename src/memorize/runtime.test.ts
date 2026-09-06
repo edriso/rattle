@@ -239,6 +239,89 @@ describe('session runtime', () => {
     ]);
   });
 
+  /* The clock used to climb back up: a tick subtracted only the audio playing
+     at that instant, so the moment a run ended and the silence began it added
+     a whole run back on, and pausing put back whatever had been played. */
+  it('counts down without ever climbing back up', async () => {
+    const { session, audio } = build({ echo: 1 });
+    await session.start();
+    await settle();
+    const seen = [session.getSnapshot().remaining];
+    const watch = () => seen.push(session.getSnapshot().remaining);
+    audio.now += 4;
+    await vi.advanceTimersByTimeAsync(250);
+    watch();
+    // The run ends and the silence for repeating begins.
+    audio.complete(6);
+    await settle();
+    watch();
+    await vi.advanceTimersByTimeAsync(5000);
+    watch();
+    // The silence runs out and the next repetition starts.
+    await vi.advanceTimersByTimeAsync(5200);
+    await settle();
+    watch();
+    audio.now += 3;
+    await vi.advanceTimersByTimeAsync(250);
+    watch();
+    for (let i = 1; i < seen.length; i++)
+      expect(seen[i]).toBeLessThanOrEqual(seen[i - 1] + 0.001);
+    expect(seen.at(-1)).toBeLessThan(seen[0]);
+  });
+
+  it('holds the countdown still while paused', async () => {
+    const { session, audio } = build();
+    await session.start();
+    await settle();
+    audio.now += 4;
+    await vi.advanceTimersByTimeAsync(250);
+    const running = session.getSnapshot().remaining;
+    session.pause();
+    const paused = session.getSnapshot().remaining;
+    expect(paused).toBeLessThanOrEqual(running);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(session.getSnapshot().remaining).toBe(paused);
+  });
+
+  it('starts a step chosen while paused from its full length', async () => {
+    const { session, audio } = build();
+    await session.start();
+    await settle();
+    audio.now += 6;
+    session.pause();
+    const paused = session.getSnapshot().remaining;
+    session.goTo(1);
+    // The new step is not shortened by what the previous one had played.
+    expect(session.getSnapshot().remaining).toBeLessThan(paused);
+    const chosen = session.getSnapshot().remaining;
+    session.setEcho(1);
+    session.setEcho('off');
+    expect(session.getSnapshot().remaining).toBeCloseTo(chosen, 5);
+  });
+
+  /* The pause offset is measured from the start of the run, not of the
+     playback: pausing a resumed run used to store only what the second
+     playback had covered, and every further pause rewound the recitation. */
+  it('resumes further in each time it is paused again', async () => {
+    const { session, audio } = build();
+    await session.start();
+    await settle();
+    audio.now += 4;
+    session.pause();
+    await session.resume();
+    await settle();
+    expect(audio.runs.at(-1)).toEqual([
+      { url: expect.stringContaining('100001.mp3'), from: 4, to: 10 },
+    ]);
+    audio.now += 3;
+    session.pause();
+    await session.resume();
+    await settle();
+    expect(audio.runs.at(-1)).toEqual([
+      { url: expect.stringContaining('100001.mp3'), from: 7, to: 10 },
+    ]);
+  });
+
   it('restarts the current step before stepping back to the previous one', async () => {
     const { session, audio } = build();
     await session.start();

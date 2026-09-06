@@ -16,6 +16,9 @@
   --foreground: oklch(0.92 0.023 85);
   --muted-foreground: oklch(0.67 0.015 90);
   --border: oklch(0.34 0.011 100);
+  /* 1.4.11 wants 3:1 for the edge that identifies a control. `--border` is a
+     quiet separator at 1.5:1 and stays one; controls use this instead. */
+  --control-border: oklch(0.52 0.011 100);
   --accent: var(--gold);
   --accent-foreground: var(--button-ink);
   --button-ink: oklch(0.23 0.025 83);
@@ -63,6 +66,7 @@
   --foreground: oklch(0.265 0.014 85);
   --muted-foreground: oklch(0.48 0.016 85);
   --border: oklch(0.85 0.013 85);
+  --control-border: oklch(0.6 0.013 85);
   --gold: oklch(0.49 0.09 75);
   --sage: oklch(0.46 0.075 150);
   --blue: oklch(0.47 0.08 235);
@@ -101,7 +105,8 @@ button {
     background 150ms,
     color 150ms;
 }
-button:disabled {
+button:disabled,
+button[aria-disabled='true'] {
   opacity: 0.38;
   cursor: not-allowed;
 }
@@ -139,6 +144,11 @@ label:has(input:focus-visible) {
   text-decoration: none;
   flex-shrink: 0;
   line-height: 1.6;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 9px;
+  margin-inline-start: -9px;
 }
 .icon-button {
   display: inline-flex;
@@ -203,7 +213,7 @@ label:has(input:focus-visible) {
   gap: 14px;
   text-align: right;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 10px;
   padding: 12px 16px;
   color: var(--muted-foreground);
@@ -235,7 +245,7 @@ label:has(input:focus-visible) {
 .ayah-field input {
   width: 76px;
   min-height: 44px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   background: var(--surface);
   border-radius: 8px;
   color: var(--foreground);
@@ -296,6 +306,7 @@ label:has(input:focus-visible) {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
   padding: 24px 12px;
+  touch-action: pan-y pinch-zoom;
 }
 /* Fade the edge rather than chop a line in half, so a frame holding more text
    than it shows says so. The padding is wider than the fade, so a passage that
@@ -312,6 +323,11 @@ label:has(input:focus-visible) {
     );
     mask-clip: no-clip;
   }
+}
+.verse-space:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 .verses {
   width: 100%;
@@ -350,17 +366,13 @@ label:has(input:focus-visible) {
   text-align: center;
   padding: 12px;
 }
-.hidden-prompt svg,
-.placeholder svg {
+.hidden-prompt svg {
   margin: 0 auto 12px;
 }
 .hidden-prompt p,
 .placeholder p {
   font-size: 18px;
   margin: 0;
-}
-.placeholder span {
-  font-size: 14px;
 }
 .reveal-button {
   align-self: center;
@@ -407,6 +419,7 @@ label:has(input:focus-visible) {
   justify-content: center;
   gap: 18px;
   margin: 12px 0;
+  direction: rtl;
 }
 .play-main {
   width: 56px;
@@ -439,6 +452,7 @@ label:has(input:focus-visible) {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .record-button {
   display: flex;
@@ -452,6 +466,7 @@ label:has(input:focus-visible) {
   min-height: 44px;
   border-radius: 8px;
   padding: 8px;
+  min-width: 0;
 }
 .record-button:hover {
   color: var(--accent);
@@ -473,12 +488,16 @@ label:has(input:focus-visible) {
 .record-time {
   font-size: 12px;
   direction: ltr;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .recording-result {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  gap: 2px;
 }
 .session-progress {
   width: min(100%, 380px);
@@ -574,7 +593,7 @@ progress::-moz-progress-bar {
 .full-input {
   width: 100%;
   min-height: 48px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   background: var(--background);
   padding: 8px 12px;
@@ -584,7 +603,7 @@ progress::-moz-progress-bar {
   height: 50px;
   width: 100%;
   background: var(--background);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
 }
 .surah-search input {
@@ -602,6 +621,12 @@ progress::-moz-progress-bar {
 .surah-options small {
   font-size: 12px;
   color: var(--muted-foreground);
+}
+/* The highlight paints the row in the accent, and a muted count on top of it
+   cannot be read, so the count takes the row's own colour. */
+.surah-options [data-highlighted] small,
+.surah-options [data-selected] small {
+  color: inherit;
 }
 .picker-meta {
   display: flex;
@@ -628,7 +653,7 @@ progress::-moz-progress-bar {
   width: 100%;
   min-height: 48px;
   background: var(--background);
-  border-color: var(--border);
+  border-color: var(--control-border);
   padding: 8px 12px;
   font-size: 14px;
 }
@@ -680,7 +705,7 @@ progress::-moz-progress-bar {
 }
 .segmented {
   display: flex;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   padding: 3px;
   border-radius: 9px;
   background: var(--background);
@@ -796,9 +821,9 @@ progress::-moz-progress-bar {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 20px;
   background: transparent;
   color: var(--muted-foreground);
@@ -906,14 +931,16 @@ progress::-moz-progress-bar {
   scroll-behavior: smooth;
 }
 .session-verses .quran-text {
-  transition: opacity 220ms;
+  transition: color 220ms;
 }
+/* The ayat already joined step back, but they are still Quran text and the
+   learner still reads them: they take the muted colour, which meets AA, in
+   place of an opacity that did not. */
 .session-verses .quran-text[data-role='linked'] {
   font-size: clamp(21px, 2.6vw, 28px);
-  opacity: 0.5;
+  color: var(--muted-foreground);
 }
 .session-verses .quran-text[data-sounding] {
-  opacity: 1;
   color: var(--accent);
 }
 /* The line keeps its height while it is empty. It fills and empties several
@@ -968,7 +995,7 @@ progress::-moz-progress-bar {
   gap: 2px;
   min-height: 60px;
   padding: 10px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--foreground);
@@ -1162,17 +1189,6 @@ progress::-moz-progress-bar {
   }
 }
 
-.verse-space {
-  touch-action: pan-y pinch-zoom;
-}
-.verse-space:focus-visible {
-  outline: 1px solid var(--border);
-  outline-offset: 4px;
-  border-radius: 8px;
-}
-.play-controls {
-  direction: rtl;
-}
 .shortcut-help {
   display: none;
   margin-bottom: 24px;
@@ -1202,22 +1218,9 @@ progress::-moz-progress-bar {
   margin-top: 10px;
 }
 
-.recording-result {
-  margin-inline-start: auto;
-  flex-shrink: 0;
-  gap: 2px;
-}
-.record-time {
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-.record-button {
-  min-width: 0;
-}
-.record-row {
-  flex-wrap: wrap;
-}
-@media (min-width: 641px) and (hover: hover) and (pointer: fine) {
+/* Width alone, because a tablet with a keyboard reports a coarse pointer and
+   its owner is exactly who needs this list. */
+@media (min-width: 641px) {
   .shortcut-help {
     display: block;
     margin-top: 20px;

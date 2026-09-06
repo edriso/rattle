@@ -184,13 +184,19 @@ export function Recorder({
         analyser.fftSize = 256;
         ac.createMediaStreamSource(input).connect(analyser);
         const data = new Uint8Array(analyser.frequencyBinCount);
+        // Resolved once: reading a computed style inside the frame loop makes
+        // the browser recompute style sixty times a second for one colour that
+        // only changes with the theme.
+        let ctx: CanvasRenderingContext2D | null = null;
         const draw = () => {
           const el = canvas.current;
-          const ctx = el?.getContext('2d');
+          if (el && !ctx) {
+            ctx = el.getContext('2d');
+            if (ctx) ctx.fillStyle = getComputedStyle(el).color;
+          }
           if (el && ctx) {
             analyser.getByteFrequencyData(data);
             ctx.clearRect(0, 0, el.width, el.height);
-            ctx.fillStyle = getComputedStyle(el).color;
             for (let i = 0; i < 38; i++) {
               const height = Math.max(3, (data[i * 2] / 255) * 36);
               ctx.fillRect(i * 6, (40 - height) / 2, 3, height);

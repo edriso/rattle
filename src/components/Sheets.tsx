@@ -93,11 +93,13 @@ function Stepper({
         {hint && <small>{hint}</small>}
       </span>
       <span className="stepper-controls">
+        {/* `aria-disabled`, not `disabled`: a button that disables itself the
+            moment it is pressed drops the keyboard where it stands. */}
         <button
           className="icon-button"
           aria-label={`أنقص ${label}`}
-          disabled={value <= min}
-          onClick={() => onChange(value - 1)}
+          aria-disabled={value <= min}
+          onClick={() => value > min && onChange(value - 1)}
         >
           <Minus size={17} />
         </button>
@@ -105,8 +107,8 @@ function Stepper({
         <button
           className="icon-button"
           aria-label={`زد ${label}`}
-          disabled={value >= max}
-          onClick={() => onChange(value + 1)}
+          aria-disabled={value >= max}
+          onClick={() => value < max && onChange(value + 1)}
         >
           <Plus size={17} />
         </button>
@@ -161,10 +163,13 @@ export function Picker({
           setTo(String(Math.min(s.count, 5)));
         }}
       >
+        {/* No trigger button: the generated one is a tab stop with no
+            accessible name, and typing or arrowing opens the list anyway. */}
         <ComboboxInput
           id="surah-search"
           placeholder="ابحث عن سورة…"
           className="surah-search"
+          showTrigger={false}
         />
         <ComboboxContent dir="rtl" className="surah-options">
           <ComboboxEmpty>لا توجد سورة بهذا الاسم</ComboboxEmpty>
@@ -187,6 +192,7 @@ export function Picker({
           <input
             className="full-input"
             id="picker-from"
+            aria-describedby={valid ? undefined : 'picker-error'}
             type="number"
             inputMode="numeric"
             min={1}
@@ -201,6 +207,7 @@ export function Picker({
           <input
             className="full-input"
             id="picker-to"
+            aria-describedby={valid ? undefined : 'picker-error'}
             type="number"
             inputMode="numeric"
             min={1}
@@ -212,7 +219,7 @@ export function Picker({
         </div>
       </div>
       {!valid && (
-        <p className="error-text">
+        <p className="error-text" id="picker-error" role="alert">
           اختر آيتين بين ١ و{arabic(selected.count)}، والأولى قبل الأخيرة.
         </p>
       )}

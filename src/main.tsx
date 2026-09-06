@@ -1,20 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { createRouter, RouterProvider } from '@tanstack/react-router';
-import { rootRoute, indexRoute } from './routes';
+import { App } from './App';
 import './styles.css';
-const router = createRouter({
-  basepath: import.meta.env.BASE_URL,
-  routeTree: rootRoute.addChildren([indexRoute]),
-});
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router;
-  }
-}
+/* One screen, chosen from saved preferences rather than the URL, so there is
+   no router here. The title and the social tags are static and live in
+   index.html, where a crawler sees them without running any of this. */
 const app = (
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <App />
   </React.StrictMode>
 );
 

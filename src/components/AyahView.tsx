@@ -25,7 +25,13 @@ export function AyahView({
   navigationEnabled?: boolean;
   update: (v: Partial<Preferences>) => void;
 }) {
-  const [hidden, setHidden] = useState(false);
+  const surah = surahs[prefs.surah - 1];
+  const last = Math.min(surah.count, prefs.ayah + prefs.perView - 1);
+  const position = `${prefs.surah}:${prefs.ayah}:${prefs.perView}`;
+  /* Hiding belongs to the ayah in front of the learner: moving on shows the
+     new one. The loop toggle belongs to the learner and stays put. */
+  const [hiddenAt, setHiddenAt] = useState<string | null>(null);
+  const hidden = hiddenAt === position;
   const [repeat, setRepeat] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const recording = useRef<RecorderControls>(null);
@@ -34,8 +40,6 @@ export function AyahView({
     recording.current?.pausePlayback();
     void toggle();
   };
-  const surah = surahs[prefs.surah - 1];
-  const last = Math.min(surah.count, prefs.ayah + prefs.perView - 1);
   const sources = useMemo(
     () =>
       Array.from({ length: last - prefs.ayah + 1 }, (_, i) =>
@@ -98,7 +102,7 @@ export function AyahView({
       <button
         className="reveal-button"
         aria-pressed={hidden}
-        onClick={() => setHidden(!hidden)}
+        onClick={() => setHiddenAt(hidden ? null : position)}
       >
         {hidden ? <Eye size={17} /> : <EyeOff size={17} />}{' '}
         {hidden ? 'إظهار الآية' : 'إخفاء الآية'}
@@ -162,7 +166,7 @@ export function AyahView({
         <Recorder
           ref={recording}
           onCaptureChange={setCapturing}
-          position={`${prefs.surah}:${prefs.ayah}:${prefs.perView}`}
+          position={position}
           onBeforeAudio={pause}
         />
       </div>

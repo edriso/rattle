@@ -11,7 +11,7 @@ import { arabic, surahs, type Preferences } from '../data/quran';
 import { findReciter } from '../data/audio';
 import { usePracticeNavigation } from '../usePracticeNavigation';
 import { useSession } from '../memorize/useSession';
-import { preparePassage, usePassageSource } from '../memorize/usePassage';
+import { buildPassage, usePassageSource } from '../memorize/usePassage';
 import type { StepKind } from '../memorize/schedule';
 import type { Grade } from '../memorize/review';
 import { GradeSheet } from './GradeSheet';
@@ -52,27 +52,14 @@ export function SessionView({
     prefs.reciter,
     prefs.grain,
   );
+  /* The echo is deliberately absent here. A new passage builds a new session,
+     and a learner who changes the silence from the sheet mid-drill must keep
+     their place: `useSession` hands the change to the running session. */
   const passage = useMemo(
     () =>
       loaded &&
-      preparePassage(
-        loaded,
-        prefs.ayah,
-        prefs.to,
-        prefs.grain,
-        prefs.plan,
-        prefs.echo,
-        reciter.pace,
-      ),
-    [
-      loaded,
-      prefs.ayah,
-      prefs.to,
-      prefs.grain,
-      prefs.plan,
-      prefs.echo,
-      reciter.pace,
-    ],
+      buildPassage(loaded, prefs.ayah, prefs.to, prefs.grain, prefs.plan),
+    [loaded, prefs.ayah, prefs.to, prefs.grain, prefs.plan],
   );
   const config = useMemo(
     () =>
@@ -176,7 +163,14 @@ export function SessionView({
               </span>
             )}
           </output>
-          <span className="remaining" dir="ltr" aria-label="الوقت المتبقي">
+          {/* A timer, so the label names it and the digits stay its value:
+              `aria-label` on a bare span is not allowed to carry either. */}
+          <span
+            className="remaining"
+            dir="ltr"
+            role="timer"
+            aria-label="الوقت المتبقي"
+          >
             {clock(state.remaining)}
           </span>
         </div>
@@ -203,10 +197,8 @@ export function SessionView({
               >
                 {segment.text}{' '}
                 {segment.phrase === null && (
-                  <span
-                    className="ayah-number"
-                    aria-label={`الآية ${arabic(segment.ayahTo)}`}
-                  >
+                  <span className="ayah-number">
+                    <span className="sr-only">الآية </span>
                     {arabic(segment.ayahTo)}
                   </span>
                 )}
@@ -294,7 +286,15 @@ export function SessionView({
           </button>
         </div>
 
-        <button className="text-button" onClick={() => setSheet('open')}>
+        {/* Grading pauses the drill: the sheet covers the screen, and a live
+            region announcing behind it talks over the questions. */}
+        <button
+          className="text-button"
+          onClick={() => {
+            session.pause();
+            setSheet('open');
+          }}
+        >
           <Check size={16} /> أنهِ الجلسة
         </button>
       </div>

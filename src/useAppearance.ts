@@ -1,12 +1,8 @@
 import { useEffect } from 'react';
 import type { Preferences } from './data/quran';
 
-export function useAppearance(
-  appearance: Preferences['appearance'],
-  ready: boolean,
-) {
+export function useAppearance(appearance: Preferences['appearance']) {
   useEffect(() => {
-    if (!ready) return;
     const media =
       typeof window.matchMedia === 'function'
         ? window.matchMedia('(prefers-color-scheme: dark)')
@@ -30,5 +26,5 @@ export function useAppearance(
     if (appearance !== 'system') return;
     media?.addEventListener('change', apply);
     return () => media?.removeEventListener('change', apply);
-  }, [appearance, ready]);
+  }, [appearance]);
 }

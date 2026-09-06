@@ -25,9 +25,13 @@ import {
   type Step,
 } from './schedule';
 
-export type PreparedPassage = {
+/** What a drill is made of. Nothing in here depends on the echo. */
+export type Passage = {
   segments: readonly PlayableSegment[];
   steps: readonly Step[];
+};
+
+export type PreparedPassage = Passage & {
   /** Estimated seconds for the whole drill, from the reciter's pace. */
   seconds: number;
   /** How many times a segment is played across the drill. */
@@ -41,13 +45,28 @@ type Loaded = {
   timings: ReciterTimings | null;
 };
 
-const empty: PreparedPassage = {
-  segments: [],
-  steps: [],
-  seconds: 0,
-  plays: 0,
-};
+/**
+ * The segments and the schedule over them. A running session is built from
+ * this and told the echo separately, so changing the silence mid-drill adjusts
+ * it in place instead of throwing the learner back to the first step.
+ */
+export function buildPassage(
+  loaded: Loaded,
+  from: number,
+  to: number,
+  grain: Grain,
+  plan: SchedulePlan,
+): Passage {
+  const segments = buildSegments(
+    { surah: loaded.surah, from, to },
+    loaded.verses,
+    grain,
+    loaded.timings ?? undefined,
+  );
+  return { segments, steps: buildSchedule(segments.length, plan) };
+}
 
+/** The same, costed: what the start screen shows before a drill begins. */
 export function preparePassage(
   loaded: Loaded,
   from: number,
@@ -57,13 +76,7 @@ export function preparePassage(
   echo: EchoMode,
   pace: number,
 ): PreparedPassage {
-  const segments = buildSegments(
-    { surah: loaded.surah, from, to },
-    loaded.verses,
-    grain,
-    loaded.timings ?? undefined,
-  );
-  const steps = buildSchedule(segments.length, plan);
+  const { segments, steps } = buildPassage(loaded, from, to, grain, plan);
   const seconds = costSession(
     steps,
     (index) => paceEstimate(segments[index], pace),
@@ -131,5 +144,3 @@ export function usePassageSource(surah: number, reciter: string, grain: Grain) {
     retry: () => setAttempt((n) => n + 1),
   };
 }
-
-export { empty as emptyPassage };

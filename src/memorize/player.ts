@@ -166,6 +166,10 @@ export class ClipPlayer implements Audio {
    */
   play(requests: readonly PlayRequest[], onFinished: () => void): number {
     const context = this.ensureContext();
+    // Whatever is still sounding belongs to a run nobody is listening to any
+    // more. Without this, a second play leaves the first batch scheduled with
+    // no handle on it, and `stop()` can never silence it.
+    this.stop();
     const id = ++this.generation;
     let at = context.currentTime + LEAD;
     const sources: AudioBufferSourceNode[] = [];
@@ -178,6 +182,8 @@ export class ClipPlayer implements Audio {
           ? buffer.duration
           : Math.max(from, Math.min(request.to, buffer.duration));
       if (to - from <= 0) continue;
+      // Playing a recording is using it, and the cache drops what is unused.
+      this.touch(request.url);
       const source = context.createBufferSource();
       source.buffer = buffer;
       source.connect(this.gain!);

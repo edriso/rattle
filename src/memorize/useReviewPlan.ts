@@ -38,10 +38,5 @@ export function useReviewPlan() {
     [update],
   );
 
-  const forget = useCallback(
-    (id: string) => update((current) => current.filter((i) => i.id !== id)),
-    [update],
-  );
-
-  return { items, failed, complete, forget };
+  return { items, failed, complete };
 }

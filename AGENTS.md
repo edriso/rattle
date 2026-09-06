@@ -51,11 +51,16 @@ src/
   data/          the Quran text, the reciters, the timings, saved settings
   memorize/      all the memorisation logic (see src/memorize/AGENTS.md)
   components/    the screens and the panels
-  routes/        one route, only used for the page title and meta tags
-components/ui/   shadcn parts, generated. Do not hand-edit them.
+components/ui/   the eight shadcn parts the app actually uses, generated.
+                 Do not hand-edit them, and do not pull the whole library
+                 back in: `npx shadcn add <part>` fetches only what you need.
 scripts/         offline tools that build the committed data
 data/            the original Quran text file, its checksum, and its provenance
 ```
+
+There is no router. The app shows one screen at a time, chosen from the saved
+preferences, and the title and social tags are static in `index.html` where a
+crawler reads them without running any JavaScript.
 
 `src/memorize` holds the method. Only the files named `use*.ts` know about
 React. Everything else is plain functions and classes, so you can test it
@@ -177,8 +182,16 @@ header, so you cannot simply swap the URL.
   reading a ref during render, and calling `setState` straight from an effect
   body. Restructure the code instead of silencing the rule.
 - Every touch target is at least 44 by 44 pixels. Every control has a label.
-  Text meets WCAG AA contrast in both the light and the dark theme, and in all
-  four accent colours.
+  Text meets WCAG AA contrast (4.5:1) in both the light and the dark theme and
+  in all four accent colours, and every control's edge meets the 3:1 that
+  WCAG 1.4.11 asks for — that is what `--control-border` is for, and why it is
+  a different token from the quiet `--border` used for separators.
+- Do not fade text with `opacity` to show it is secondary. Opacity multiplies
+  against the background and quietly drops the contrast below AA; use
+  `--muted-foreground`, which is chosen to pass.
+- A control that becomes unavailable while it holds focus uses `aria-disabled`,
+  not `disabled`. A `disabled` button drops the keyboard on the floor the
+  moment it is pressed.
 
 ## Tests
 

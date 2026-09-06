@@ -27,6 +27,33 @@ const ladder = (grade: Grade, times: number) => {
 };
 
 describe('review scheduling', () => {
+  /* Intervals used to be added as blocks of 24 hours. In a zone that puts its
+     clocks back, that lands at 23:00 the day before: a passage recited on the
+     changeover day came due the same day, and a 35-day interval returned in
+     34. */
+  it('counts calendar days across a clock change', () => {
+    const zone = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+    try {
+      const changeover = '2025-11-02';
+      expect(schedule(null, passage, 'again', changeover).due).toBe(
+        '2025-11-03',
+      );
+      expect(due(record([], passage, 'again', changeover), changeover)).toEqual(
+        [],
+      );
+      const ceiling = schedule(
+        { ...ladder('strong', 6).item, due: '2025-10-20' },
+        passage,
+        'strong',
+        '2025-10-20',
+      );
+      expect(daysUntil(ceiling.due, '2025-10-20')).toBe(MAX_INTERVAL);
+    } finally {
+      process.env.TZ = zone;
+    }
+  });
+
   it('spaces the first recitals on a fixed ladder', () => {
     expect(ladder('good', 4).intervals).toEqual([1, 3, 7, 14]);
   });

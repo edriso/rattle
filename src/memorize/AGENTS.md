@@ -75,6 +75,10 @@ A few rules the class keeps to. Break one and something will get stuck:
   into the last fraction of a second would leave nothing to play.
 - The tick loop runs four times a second. `set()` publishes nothing when the
   numbers have not changed, or every subscriber would re-render for nothing.
+- The countdown is `cost(cursor) - spent()`. `cost` prices the repetition in
+  front of the learner whole, so `spent()` has to account for every second
+  already behind them — the audio played, the echo elapsed, and what a paused
+  run had covered. Miss one and the clock climbs back up instead of down.
 
 ## Audio
 
@@ -85,6 +89,12 @@ A few rules the class keeps to. Break one and something will get stuck:
   The clips a run needs are pinned first, so a long run cannot be cut short.
 - A fetch that fails is tried once more, and one that hangs is dropped after 20
   seconds. Without the timeout a stalled connection looks like a frozen app.
+- `play()` silences the batch it replaces. Only the sources of the newest call
+  are held, so anything left scheduled by an older one could never be stopped
+  again — two recitations at once, with no way to quiet the first.
+- The cache is ordered by **use**, not by arrival: playing a recording moves it
+  to the young end. Otherwise the ayah being drilled ages like one nothing has
+  touched since it loaded, and gets thrown out from under the drill.
 
 ## The echo
 
@@ -111,7 +121,10 @@ the subject needs:
   Without that, grading "hard" again and again drives it under 1 and the
   interval collapses to zero, and the passage is stuck as due forever.
 
-The ladder for the first four good recitals is 1, 3, 7 and 14 days. After that
+Days are added to the calendar date, never as 24-hour blocks: adding hours
+across the end of summer time lands on the previous day, which would make a
+passage due a day early. The ladder for the first four good recitals is 1, 3, 7
+and 14 days. After that
 the interval is multiplied by the easiness factor, still capped at 35.
 
 Passages that overlap are treated as one passage and merged into the range they

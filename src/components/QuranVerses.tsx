@@ -65,7 +65,8 @@ export function QuranVerses({
             {basmala && <p className="quran-text basmala">{basmala}</p>}
             <p className="quran-text">
               {text}{' '}
-              <span className="ayah-number" aria-label={`الآية ${arabic(ayah)}`}>
+              <span className="ayah-number">
+                <span className="sr-only">الآية </span>
                 {arabic(ayah)}
               </span>
             </p>

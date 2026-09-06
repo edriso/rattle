@@ -73,6 +73,10 @@ export class Session {
   private runStartedAt = 0;
   /** How far into the current run a pause happened, so it can resume there. */
   private runOffset = 0;
+  /** How far into the run the run in flight began, which a resumed run keeps. */
+  private runFrom = 0;
+  /** What the repetition had spent when it was paused, frozen for the clock. */
+  private pausedSpent = 0;
   private echoEndsAt = 0;
   private disposed = false;
   /* A browser that has seen no gesture yet may leave `resume()` pending rather
@@ -80,6 +84,7 @@ export class Session {
      a latch makes sure only the first of them actually begins the drill. */
   private unlocking: Promise<void> | null = null;
   private launched = false;
+  private resuming = false;
 
   constructor(private readonly options: MutableOptions) {
     // Distinct recordings in the order the drill first reaches them.
@@ -143,6 +148,38 @@ export class Session {
     ).total;
   }
 
+  /**
+   * Seconds of the current repetition already behind the learner: the audio
+   * played so far, plus any of the echo that has elapsed. `cost` counts the
+   * repetition whole, so without this the clock would climb back up the
+   * moment a run ended and the silence began.
+   */
+  private spent(): number {
+    switch (this.state.phase) {
+      case 'reciting':
+        return this.runFrom + clamp(this.options.audio.now - this.runStartedAt);
+      case 'echoing': {
+        const left = Math.max(0, (this.echoEndsAt - Date.now()) / 1000);
+        return (
+          this.runFrom +
+          this.runLength +
+          Math.max(0, this.state.echoLength - left)
+        );
+      }
+      case 'waiting':
+        return this.runFrom + this.runLength;
+      case 'paused':
+        return this.pausedSpent;
+      default:
+        return 0;
+    }
+  }
+
+  /** Seconds left in the drill from where the learner actually stands. */
+  private countdown() {
+    return Math.max(0, this.cost(this.state.cursor) - this.spent());
+  }
+
   /** Everything the audio layer must play for one pass over a step. */
   private requests(step: Step, skip = 0): PlayRequest[] {
     const out: PlayRequest[] = [];
@@ -177,7 +214,7 @@ export class Session {
     this.durations.set(url, seconds);
     this.set({
       loaded: this.durations.size / Math.max(1, this.urls.length),
-      remaining: this.cost(this.state.cursor),
+      remaining: this.countdown(),
     });
   }
 
@@ -236,6 +273,7 @@ export class Session {
     const endsAt = this.options.audio.play(requests, () =>
       this.afterRun(generation),
     );
+    this.runFrom = this.runOffset;
     this.runStartedAt = this.options.audio.now;
     this.runLength = Math.max(0, endsAt - this.runStartedAt);
     this.set({
@@ -279,6 +317,8 @@ export class Session {
     if (generation !== this.generation || this.disposed) return;
     const next = nextCursor(this.options.steps, this.state.cursor);
     if (!next) return this.finish();
+    this.runFrom = 0;
+    this.pausedSpent = 0;
     this.set({ cursor: next, remaining: this.cost(next) });
     void this.run();
   }
@@ -302,7 +342,7 @@ export class Session {
   setEcho(echo: EchoMode) {
     if (this.options.echo === echo) return;
     this.options.echo = echo;
-    this.set({ remaining: this.cost(this.state.cursor) });
+    this.set({ remaining: this.countdown() });
   }
 
   /** End the echo now, whether it is timed or waiting on the learner. */
@@ -317,10 +357,12 @@ export class Session {
     if (this.disposed) return;
     if (this.state.phase === 'reciting') {
       const played = clamp(this.options.audio.now - this.runStartedAt);
-      // Resuming into the last moment of a run would leave nothing to play,
-      // so a pause that close to the end restarts the run instead.
+      // Measured from the start of the run, not of this playback: a resumed
+      // run already begins part-way in, and pausing it again must not throw
+      // that part away and replay it. Resuming into the last moment would
+      // leave nothing to play, so a pause that close to the end starts over.
       const left = this.runLength - played;
-      this.runOffset = left > BREATH ? played : 0;
+      this.runOffset = left > BREATH ? this.runFrom + played : 0;
     }
     if (
       this.state.phase !== 'reciting' &&
@@ -329,19 +371,36 @@ export class Session {
       this.state.phase !== 'preparing'
     )
       return;
+    // Frozen before the phase changes, so the clock holds where it stood.
+    this.pausedSpent = this.spent();
     this.generation++;
     this.stopAudio();
     this.clearTimer();
     this.stopTicking();
-    this.set({ phase: 'paused', echoLeft: 0, echoLength: 0, sounding: null });
+    this.set({
+      phase: 'paused',
+      remaining: this.countdown(),
+      echoLeft: 0,
+      echoLength: 0,
+      sounding: null,
+    });
   }
 
   async resume() {
-    if (this.state.phase !== 'paused' && this.state.phase !== 'error') return;
-    // Coming back from a locked phone, the context may need waking first.
-    if (!this.options.audio.running)
-      await this.options.audio.unlock().catch(() => {});
-    if (this.disposed) return;
+    if (this.resuming) return;
+    const from = this.state.phase;
+    if (from !== 'paused' && from !== 'error') return;
+    // Coming back from a locked phone, the context may need waking first, and
+    // that wait can be long. The latch is what stops a second tap of the play
+    // button from starting a second recitation over the first.
+    this.resuming = true;
+    try {
+      if (!this.options.audio.running)
+        await this.options.audio.unlock().catch(() => {});
+    } finally {
+      this.resuming = false;
+    }
+    if (this.disposed || this.state.phase !== from) return;
     this.startTicking();
     void this.run();
   }
@@ -357,6 +416,9 @@ export class Session {
     this.stopAudio();
     this.clearTimer();
     this.runOffset = 0;
+    this.runFrom = 0;
+    // A step change while paused starts that step from nothing spent.
+    this.pausedSpent = 0;
     const cursor = { step: target, rep: 0 };
     this.set({ cursor, remaining: this.cost(cursor), error: null });
     if (this.state.phase === 'paused' || this.state.phase === 'idle') return;
@@ -388,32 +450,28 @@ export class Session {
         this.pause();
         return;
       }
-      const base = this.cost(this.state.cursor);
-      const spent =
-        this.state.phase === 'reciting'
-          ? clamp(this.options.audio.now - this.runStartedAt)
-          : 0;
+      const spent = this.spent();
       const echoLeft =
         this.state.phase === 'echoing'
           ? Math.max(0, (this.echoEndsAt - Date.now()) / 1000)
           : 0;
       this.set({
-        remaining: Math.max(0, base - spent),
+        remaining: Math.max(0, this.cost(this.state.cursor) - spent),
         echoLeft,
         sounding: this.soundingAt(spent),
       });
     }, TICK);
   }
 
-  /** Which segment of the run in flight is sounding `spent` seconds in. */
-  private soundingAt(spent: number): number | null {
+  /** Which segment is sounding `into` seconds into the run in flight. */
+  private soundingAt(into: number): number | null {
     if (this.state.phase !== 'reciting') return null;
     const step = this.options.steps[this.state.cursor.step];
     if (!step) return null;
-    let at = -this.runOffset;
+    let at = 0;
     for (let i = step.from; i <= step.to; i++) {
       at += this.segmentSeconds(i);
-      if (spent < at) return i;
+      if (into < at) return i;
     }
     return step.to;
   }

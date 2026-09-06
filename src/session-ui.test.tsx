@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { SessionView } from './components/SessionView';
 import { defaults, type Preferences } from './data/quran';
 import { openVerse } from './data/verse';
 import ikhlas from './data/surahs/112.json';
@@ -312,6 +313,34 @@ describe('a talqeen session', () => {
         .getByRole('button', { name: 'أعِد هذه الخطوة' })
         .getAttribute('aria-keyshortcuts'),
     ).toBe('ArrowDown');
+  });
+
+  /* The settings sheet is reachable mid-drill. Changing the silence used to
+     rebuild the session and drop the learner back on step one. */
+  it('keeps the learner in place when the silence changes mid-drill', async () => {
+    const prefs = {
+      ...defaults,
+      screen: 'session',
+      surah: 112,
+      ayah: 1,
+      to: 3,
+      echo: 1,
+    } as Preferences;
+    const noop = () => {};
+    const view = render(
+      <SessionView prefs={prefs} onExit={noop} onGraded={noop} />,
+    );
+    await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: 'الخطوة التالية' }));
+    await screen.findByText(/الخطوة ٢ من/);
+    view.rerender(
+      <SessionView
+        prefs={{ ...prefs, echo: 2 }}
+        onExit={noop}
+        onGraded={noop}
+      />,
+    );
+    expect(screen.getByText(/الخطوة ٢ من/)).toBeTruthy();
   });
 
   it('schedules the passage for review once it is graded', async () => {

@@ -13,6 +13,8 @@
    ayah is the ayah before it. So a passage that swallows an older one replaces
    it rather than sitting alongside it. */
 
+import { surahs } from '../data/quran';
+
 /** How the learner recited the passage back, worst to best. */
 export type Grade = 'again' | 'hard' | 'good' | 'strong';
 
@@ -69,9 +71,13 @@ export function today(now: Date = new Date()): string {
 
 const DAY = 86_400_000;
 
+/* Days are added to the calendar date, not to a count of milliseconds. Adding
+   24 hours across the end of summer time lands at 23:00 the day before, which
+   would make a passage due a day early — or, at the ceiling, come back in 34
+   days instead of 35. */
 const addDays = (date: string, days: number) => {
   const [y, m, d] = date.split('-').map(Number);
-  return today(new Date(new Date(y, m - 1, d).getTime() + days * DAY));
+  return today(new Date(y, m - 1, d + days));
 };
 
 /** Whole days from `date` until `to`, negative once it is overdue. */
@@ -220,14 +226,18 @@ export function restoreReview(value: unknown): ReviewItem[] {
     if (!entry || typeof entry !== 'object') continue;
     const item = entry as Partial<ReviewItem>;
     const { surah, from, to } = item;
+    const count = Number.isInteger(surah)
+      ? surahs[surah! - 1]?.count
+      : undefined;
     if (
-      !Number.isInteger(surah) ||
-      surah! < 1 ||
-      surah! > 114 ||
+      count === undefined ||
       !Number.isInteger(from) ||
       !Number.isInteger(to) ||
       from! < 1 ||
       to! < from! ||
+      // A range past the end of the surah would swallow every later passage
+      // through the overlap merge, so it is dropped rather than trimmed.
+      to! > count ||
       !isDate(item.due) ||
       !isDate(item.last)
     )
