@@ -38,29 +38,20 @@ export function AyahView({
     });
   return (
     <>
-      <div className="session-heading">
-        <span className="eyebrow">وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا</span>
-        <h1>سورة {surah.name}</h1>
-        <p>
-          الآية {arabic(prefs.ayah)}
-          {last > prefs.ayah ? ` – ${arabic(last)}` : ''}{' '}
-          <span>من {arabic(surah.count)}</span>
-        </p>
-      </div>
+      <h1 className="sr-only">
+        سورة {surah.name}، الآية {arabic(prefs.ayah)}
+      </h1>
       <section className="verse-space" aria-label="موضع الحفظ">
-        <div className="verse-corner top-right" />
-        <div className="verse-corner bottom-left" />
         {hidden ? (
           <div className="hidden-prompt">
             <EyeOff size={27} />
-            <p>الآية في قلبك الآن</p>
-            <span>ردّدها، ثم اكشفها لتراجع حفظك</span>
+            <p>اقرأ من حفظك</p>
           </div>
         ) : prefs.mode === 'page' ? (
           <div className="placeholder">
             <BookOpen size={32} />
             <p>صفحة المصحف</p>
-            <span>ستظهر صورة الصفحة هنا عند توفر المصحف.</span>
+            <span>صور المصحف قريبًا.</span>
           </div>
         ) : (
           <div className="verses" key={`${prefs.surah}-${prefs.ayah}`}>
@@ -80,7 +71,7 @@ export function AyahView({
               ) : (
                 <div className="placeholder" key={n}>
                   <p>الآية {arabic(n)}</p>
-                  <span>نص هذه الآية سيتوفر قريبًا.</span>
+                  <span>النص غير متاح حاليًا.</span>
                 </div>
               );
             })}
@@ -93,13 +84,13 @@ export function AyahView({
         onClick={() => setHidden(!hidden)}
       >
         {hidden ? <Eye size={17} /> : <EyeOff size={17} />}{' '}
-        {hidden ? 'إظهار الآية' : 'إخفاء الآية لاختبار حفظك'}
+        {hidden ? 'إظهار الآية' : 'إخفاء الآية'}
       </button>
       <div className="practice-controls">
         <div className="reciter-caption">
           <span className="status-dot" />
           {reciters.find((r) => r.id === prefs.reciter)?.name}
-          <span className="preview-badge">التلاوة قريبًا</span>
+          <span className="preview-badge">قريبًا</span>
         </div>
         <div className="play-controls">
           <button
@@ -121,11 +112,7 @@ export function AyahView({
           <button
             className="play-main"
             aria-label="تشغيل التلاوة"
-            onClick={() =>
-              setNotice(
-                'التلاوة غير متاحة في النسخة التجريبية. يمكنك تسجيل صوتك الآن.',
-              )
-            }
+            onClick={() => setNotice('التلاوة غير متاحة حاليًا.')}
           >
             <Play size={24} fill="currentColor" />
           </button>
@@ -153,10 +140,10 @@ export function AyahView({
           <span>
             {last === surah.count ? (
               <>
-                <Check size={14} /> وصلت إلى نهاية السورة
+                <Check size={14} /> نهاية السورة
               </>
             ) : (
-              'كل آية، خطوة أقرب'
+              `سورة ${surah.name}`
             )}
           </span>
           <span>

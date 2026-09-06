@@ -48,9 +48,7 @@ describe('catalogue and persisted state', () => {
     const view = render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'ابدأ الحفظ' }));
     expect(screen.getByText('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'إخفاء الآية لاختبار حفظك' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'إخفاء الآية' }));
     expect(screen.queryByText('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'الآيات التالية' }));
     expect(screen.getByText('الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ')).toBeTruthy();
@@ -100,10 +98,10 @@ describe('private recording', () => {
     });
     vi.stubGlobal('MediaRecorder', class {});
     render(<Recorder position="1:1" />);
-    fireEvent.click(screen.getByRole('button', { name: 'سمّع بصوتك' }));
+    fireEvent.click(screen.getByRole('button', { name: 'تسجيل صوتك' }));
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(
-      (screen.getByRole('button', { name: 'سمّع بصوتك' }) as HTMLButtonElement)
+      (screen.getByRole('button', { name: 'تسجيل صوتك' }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
   });
@@ -121,7 +119,7 @@ describe('private recording', () => {
     });
     vi.stubGlobal('MediaRecorder', class {});
     const view = render(<Recorder position="1:1" />);
-    fireEvent.click(screen.getByRole('button', { name: 'سمّع بصوتك' }));
+    fireEvent.click(screen.getByRole('button', { name: 'تسجيل صوتك' }));
     view.rerender(<Recorder position="1:2" />);
     resolve({ getTracks: () => [{ stop }] });
     await waitFor(() => expect(stop).toHaveBeenCalledOnce());
@@ -170,7 +168,7 @@ describe('settings and surah picker', () => {
     await user.type(input, 'الناس');
     const option = await screen.findByRole('option', { name: /سورة الناس/ });
     fireEvent.click(option);
-    const ayah = screen.getByLabelText('ابدأ من الآية');
+    const ayah = screen.getByRole('spinbutton', { name: 'ابدأ من الآية' });
     fireEvent.change(ayah, { target: { value: '7' } });
     expect(
       (
@@ -229,15 +227,85 @@ it('keeps recordings in memory and releases their URL on position change', async
     },
   );
   const view = render(<Recorder position="1:1" />);
-  fireEvent.click(screen.getByRole('button', { name: 'سمّع بصوتك' }));
+  fireEvent.click(screen.getByRole('button', { name: 'تسجيل صوتك' }));
   fireEvent.click(await screen.findByRole('button', { name: 'إنهاء التسجيل' }));
   expect(
-    await screen.findByRole('button', { name: 'استمع إلى تسجيلك' }),
+    await screen.findByRole('button', { name: 'تشغيل التسجيل' }),
   ).toBeTruthy();
   expect(createURL).toHaveBeenCalledOnce();
   expect(stopTrack).toHaveBeenCalled();
   expect(localStorage.length).toBe(0);
   view.rerender(<Recorder position="1:2" />);
   expect(revokeURL).toHaveBeenCalledWith('blob:private-recording');
-  expect(screen.queryByRole('button', { name: 'استمع إلى تسجيلك' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'تشغيل التسجيل' })).toBeNull();
+});
+
+it('restores older saved progress with the default dark appearance', () => {
+  expect(
+    restore({ started: true, surah: 24, ayah: 9, theme: 'rose' }),
+  ).toMatchObject({
+    started: true,
+    surah: 24,
+    ayah: 9,
+    theme: 'rose',
+    appearance: 'dark',
+  });
+  expect(restore({ appearance: 'invalid' }).appearance).toBe('dark');
+});
+
+it('changes appearance without losing the verse or accent and restores it after remount', async () => {
+  localStorage.setItem(
+    'rattil:v1',
+    JSON.stringify({ ...defaults, started: true, ayah: 2, theme: 'blue' }),
+  );
+  const view = render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: 'الإعدادات' }));
+  fireEvent.click(await screen.findByRole('radio', { name: 'فاتح' }));
+  await waitFor(() =>
+    expect(document.documentElement.dataset.appearance).toBe('light'),
+  );
+  expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+    ayah: 2,
+    theme: 'blue',
+    appearance: 'light',
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'إغلاق' }));
+  view.unmount();
+  render(<App />);
+  await waitFor(() =>
+    expect(document.documentElement.dataset.appearance).toBe('light'),
+  );
+  expect(screen.getByText('الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ')).toBeTruthy();
+});
+
+it('follows system appearance changes and unsubscribes when a fixed appearance is chosen', async () => {
+  let listener: (() => void) | undefined;
+  const media = {
+    matches: false,
+    addEventListener: vi.fn((_name: string, callback: () => void) => {
+      listener = callback;
+    }),
+    removeEventListener: vi.fn(),
+  };
+  window.matchMedia = vi.fn().mockReturnValue(media);
+  localStorage.setItem(
+    'rattil:v1',
+    JSON.stringify({ ...defaults, appearance: 'system' }),
+  );
+  render(<App />);
+  await waitFor(() =>
+    expect(document.documentElement.dataset.appearance).toBe('light'),
+  );
+  media.matches = true;
+  listener?.();
+  expect(document.documentElement.dataset.appearance).toBe('dark');
+  fireEvent.click(screen.getByRole('button', { name: 'الإعدادات' }));
+  fireEvent.click(await screen.findByRole('radio', { name: 'فاتح' }));
+  await waitFor(() =>
+    expect(document.documentElement.dataset.appearance).toBe('light'),
+  );
+  expect(media.removeEventListener).toHaveBeenCalledWith(
+    'change',
+    expect.any(Function),
+  );
 });

@@ -62,9 +62,7 @@ function Panel({
             <X size={21} />
           </SheetClose>
         </div>
-        <SheetDescription className="sheet-description">
-          {description}
-        </SheetDescription>
+        <SheetDescription className="sr-only">{description}</SheetDescription>
         {children}
       </SheetContent>
     </Sheet>
@@ -158,9 +156,7 @@ export function Picker({
         تأكيد الموضع
         <ChevronLeft size={20} />
       </button>
-      <p className="phase-note">
-        تتوفّر الفاتحة للمعاينة. بقية النصوص والتلاوات ستتوفر قريبًا.
-      </p>
+      <p className="phase-note">الفاتحة متاحة للمعاينة. بقية السور قريبًا.</p>
     </Panel>
   );
 }
@@ -179,12 +175,38 @@ export function SettingsSheet({
     <Panel
       open={open}
       onClose={onClose}
-      title="على طريقتك"
-      description="تفاصيل صغيرة، لتكون رحلتك أكثر راحة."
+      title="الإعدادات"
+      description="تخصيص المظهر والحفظ."
     >
+      <fieldset className="setting-section">
+        <legend>المظهر</legend>
+        <div className="segmented">
+          {(
+            [
+              ['light', 'فاتح'],
+              ['dark', 'داكن'],
+              ['system', 'تلقائي'],
+            ] as const
+          ).map(([appearance, label]) => (
+            <label
+              key={appearance}
+              data-active={prefs.appearance === appearance}
+            >
+              <input
+                className="sr-only"
+                type="radio"
+                name="appearance"
+                checked={prefs.appearance === appearance}
+                onChange={() => update({ appearance })}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <section className="setting-section">
         <div className="setting-label" id="reciter-label">
-          صوت التلاوة
+          القارئ
         </div>
         <Select
           value={prefs.reciter}
@@ -208,10 +230,10 @@ export function SettingsSheet({
             ))}
           </SelectContent>
         </Select>
-        <p className="field-note">التلاوات الصوتية ستتوفر قريبًا</p>
+        <p className="field-note">التلاوات قريبًا</p>
       </section>
       <fieldset className="setting-section">
-        <legend>لون المساحة</legend>
+        <legend>اللون</legend>
         <div className="swatches">
           {(
             [
@@ -258,7 +280,7 @@ export function SettingsSheet({
             </label>
           ))}
         </div>
-        <p className="field-note">صور المصحف ستتوفر قريبًا</p>
+        <p className="field-note">صور المصحف قريبًا</p>
       </fieldset>
       <section className="setting-section">
         <div className="setting-label" id="count-label">
@@ -277,20 +299,27 @@ export function SettingsSheet({
             <SelectValue>
               {prefs.perView === 1
                 ? 'آية واحدة'
-                : `${arabic(prefs.perView)} آيات`}
+                : prefs.perView === 2
+                  ? 'آيتان'
+                  : `${arabic(prefs.perView)} آيات`}
             </SelectValue>
           </SelectTrigger>
           <SelectContent dir="rtl">
             {[1, 2, 3, 4, 5].map((n) => (
               <SelectItem key={n} value={String(n)}>
-                {n === 1 ? 'آية واحدة' : `${arabic(n)} آيات`}
+                {n === 1
+                  ? 'آية واحدة'
+                  : n === 2
+                    ? 'آيتان'
+                    : `${arabic(n)} آيات`}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </section>
-      <p className="save-hint">
-        <Check size={15} /> تُحفظ إعداداتك تلقائيًا على جهازك
+      <p className="field-note">
+        تُحفظ الإعدادات تلقائيًا. التسجيلات على جهازك فقط، وتُحذف عند تغيير الموضع أو
+        إغلاق الصفحة.
       </p>
     </Panel>
   );

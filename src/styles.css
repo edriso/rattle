@@ -16,8 +16,9 @@
   --foreground: oklch(0.92 0.023 85);
   --muted-foreground: oklch(0.67 0.015 90);
   --border: oklch(0.34 0.011 100);
-  --accent: oklch(0.78 0.105 83);
-  --accent-foreground: oklch(0.23 0.025 83);
+  --accent: var(--gold);
+  --accent-foreground: var(--button-ink);
+  --button-ink: oklch(0.23 0.025 83);
   --gold: oklch(0.78 0.105 83);
   --sage: oklch(0.78 0.085 150);
   --blue: oklch(0.78 0.075 235);
@@ -33,15 +34,12 @@
 }
 :root[data-theme='sage'] {
   --accent: var(--sage);
-  --accent-foreground: oklch(0.23 0.025 150);
 }
 :root[data-theme='blue'] {
   --accent: var(--blue);
-  --accent-foreground: oklch(0.23 0.025 235);
 }
 :root[data-theme='rose'] {
   --accent: var(--rose);
-  --accent-foreground: oklch(0.23 0.025 15);
 }
 @theme inline {
   --color-background: var(--background);
@@ -57,12 +55,27 @@
   --color-accent-foreground: var(--accent-foreground);
   --font-sans: 'IBM Plex Sans Arabic', sans-serif;
 }
+:root[data-appearance='light'] {
+  color-scheme: light;
+  --background: oklch(0.98 0.008 85);
+  --surface: oklch(0.998 0.003 85);
+  --surface-raised: oklch(0.945 0.011 85);
+  --foreground: oklch(0.265 0.014 85);
+  --muted-foreground: oklch(0.48 0.016 85);
+  --border: oklch(0.85 0.013 85);
+  --gold: oklch(0.49 0.09 75);
+  --sage: oklch(0.46 0.075 150);
+  --blue: oklch(0.47 0.08 235);
+  --rose: oklch(0.48 0.1 15);
+  --button-ink: oklch(0.99 0.004 85);
+  --destructive: oklch(0.5 0.15 25);
+  --shadow: oklch(0.2 0.01 85 / 0.18);
+}
 * {
   box-sizing: border-box;
 }
 html {
   background: var(--background);
-  scroll-behavior: smooth;
 }
 body {
   margin: 0;
@@ -85,133 +98,103 @@ label {
 button {
   cursor: pointer;
   transition:
-    background 0.18s,
-    color 0.18s,
-    transform 0.18s;
+    background 150ms,
+    color 150ms;
 }
 button:disabled {
-  opacity: 0.36;
+  opacity: 0.38;
   cursor: not-allowed;
-}
-button:active:not(:disabled) {
-  transform: translateY(1px);
 }
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 label:has(input:focus-visible) {
   outline: 2px solid var(--accent);
-  outline-offset: 5px;
+  outline-offset: 4px;
 }
 ::selection {
   background: var(--accent);
   color: var(--accent-foreground);
 }
 .app-shell {
-  max-width: 1080px;
-  margin: auto;
-  padding: 0 48px;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  width: min(100%, 800px);
+  margin-inline: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: env(safe-area-inset-top) 32px max(16px, env(safe-area-inset-bottom));
 }
 .topbar {
-  height: 110px;
+  min-height: 76px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
-  gap: 16px;
+  gap: 12px;
 }
 .brand {
   font-family: 'Reem Kufi', sans-serif;
-  font-size: 36px;
-  color: var(--foreground);
-  line-height: 1;
-  text-decoration: none;
-}
-.brand-dot {
+  font-size: 30px;
   color: var(--accent);
-}
-.header-note {
-  font-size: 14px;
-  color: var(--muted-foreground);
+  text-decoration: none;
+  flex-shrink: 0;
+  line-height: 1.6;
 }
 .icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   background: transparent;
   border: 0;
-  border-radius: 50%;
+  border-radius: 10px;
   color: var(--muted-foreground);
 }
-.icon-button:hover {
+.icon-button:hover:not(:disabled) {
   background: var(--surface-raised);
   color: var(--foreground);
 }
-.gear {
-  border: 1px solid var(--border);
+.position-button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 8px;
+  font-size: 14px;
+}
+.position-button:hover {
+  background: var(--surface-raised);
+}
+.muted {
+  color: var(--muted-foreground);
 }
 .start-main {
-  width: 100%;
-  max-width: 430px;
-  margin: 0 auto;
-  flex: 1;
-  padding: 58px 0 42px;
+  width: min(100%, 360px);
+  align-self: center;
+  justify-self: center;
+  padding-block: 28px 64px;
 }
 .intro {
   text-align: center;
-}
-.book-emblem {
-  width: 64px;
-  height: 64px;
-  border: 1px solid color-mix(in oklch, var(--accent) 27%, transparent);
-  border-radius: 20px;
-  margin: 0 auto 25px;
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  background: color-mix(in oklch, var(--accent) 4%, transparent);
-}
-.eyebrow {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  color: var(--accent);
-  margin: 0 0 15px;
+  margin-bottom: 30px;
 }
 .intro h1 {
   font-family: 'Reem Kufi', sans-serif;
-  font-size: clamp(34px, 4vw, 44px);
   font-weight: 400;
-  line-height: 1.65;
+  font-size: 30px;
+  margin: 0 0 8px;
+}
+.intro p {
   margin: 0;
-}
-.intro h1 span {
-  color: var(--accent);
-}
-.intro-copy {
   color: var(--muted-foreground);
   font-size: 16px;
-  line-height: 1.95;
-  margin: 15px 0 34px;
-}
-.start-form {
-  padding: 0 13px;
-}
-.field-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 15px;
-  margin-bottom: 13px;
-}
-.tiny-label {
-  font-size: 12px;
-  color: var(--muted-foreground);
 }
 .surah-field {
   width: 100%;
@@ -221,10 +204,10 @@ label:has(input:focus-visible) {
   text-align: right;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 18px;
-  color: var(--accent);
-  min-height: 83px;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--muted-foreground);
+  min-height: 76px;
 }
 .surah-field:hover {
   border-color: var(--accent);
@@ -235,26 +218,22 @@ label:has(input:focus-visible) {
 }
 .surah-field small {
   font-size: 12px;
-  color: var(--muted-foreground);
 }
 .surah-field strong {
   color: var(--foreground);
   font-weight: 500;
-  font-size: 19px;
+  font-size: 18px;
 }
 .ayah-field {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 15px 0 24px;
+  margin: 16px 0 24px;
   font-size: 14px;
   gap: 16px;
 }
-.muted {
-  color: var(--muted-foreground);
-}
 .ayah-field input {
-  width: 73px;
+  width: 76px;
   min-height: 44px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -266,138 +245,52 @@ label:has(input:focus-visible) {
 .primary-button {
   width: 100%;
   border: 0;
-  min-height: 56px;
-  border-radius: 10px;
+  min-height: 52px;
+  border-radius: 9px;
   background: var(--accent);
   color: var(--accent-foreground);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  font-weight: 600;
-  font-size: 17px;
+  gap: 12px;
+  font-weight: 500;
+  font-size: 16px;
+  padding: 10px 16px;
 }
-.primary-button:hover {
-  filter: brightness(1.07);
+.primary-button:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 .save-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--muted-foreground);
-  margin: 16px 0 0;
-}
-.status-dot {
-  width: 5px;
-  height: 5px;
-  background: var(--accent);
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-.start-ornament {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 37px;
-  color: color-mix(in oklch, var(--accent) 55%, transparent);
-  font-size: 21px;
-}
-.start-ornament span {
-  width: 40px;
-  height: 1px;
-  background: var(--border);
-}
-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-  border-top: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
-  padding: 24px 0 28px;
+  margin: 14px 0 0;
+  text-align: center;
   color: var(--muted-foreground);
   font-size: 12px;
-}
-footer > span:first-child {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.footer-brand {
-  font-family: Amiri, serif;
-  font-size: 15px;
-}
-.position-button {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: center;
-  color: var(--foreground);
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 14px;
-}
-.position-button:hover {
-  background: var(--surface);
 }
 .memorizing-main {
-  width: 100%;
-  max-width: 660px;
-  margin: auto;
-  flex: 1;
-  padding: 44px 0 35px;
+  width: min(100%, 640px);
+  justify-self: center;
+  display: flex;
+  flex-direction: column;
   text-align: center;
-}
-.session-heading h1 {
-  font-family: Amiri, serif;
-  font-size: 31px;
-  margin: 6px 0 0;
-}
-.session-heading > p {
-  font-size: 13px;
-  color: var(--accent);
-  margin: 0;
-}
-.session-heading > p span {
-  color: var(--muted-foreground);
-  margin-right: 5px;
+  padding-block: 12px 0;
+  min-width: 0;
 }
 .verse-space {
-  min-height: 260px;
-  position: relative;
+  flex: 1;
+  min-height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 26px 0 12px;
-  padding: 42px 25px;
+  padding: 24px 12px;
 }
-.verse-corner {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  border-color: color-mix(in oklch, var(--accent) 35%, transparent);
-  border-style: solid;
-}
-.top-right {
-  top: 6px;
-  right: 0;
-  border-width: 1px 1px 0 0;
-}
-.bottom-left {
-  bottom: 6px;
-  left: 0;
-  border-width: 0 0 1px 1px;
+.verses {
+  width: 100%;
 }
 .quran-text {
   font-family: Amiri, serif;
-  font-size: clamp(29px, 4.1vw, 43px);
-  line-height: 2.1;
-  margin: 10px 0;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 2;
+  margin: 12px 0;
   overflow-wrap: break-word;
 }
 .ayah-number {
@@ -405,16 +298,35 @@ footer > span:first-child {
   align-items: center;
   justify-content: center;
   vertical-align: middle;
-  border: 1px solid color-mix(in oklch, var(--accent) 60%, transparent);
+  border: 1px solid var(--border);
   color: var(--accent);
   border-radius: 50%;
-  min-width: 32px;
-  height: 38px;
-  font-size: 20px;
-  margin-inline: 5px;
+  min-width: 30px;
+  height: 34px;
+  font-size: 18px;
+  margin-inline: 6px;
   line-height: 1;
 }
+.hidden-prompt,
+.placeholder {
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 12px;
+}
+.hidden-prompt svg,
+.placeholder svg {
+  margin: 0 auto 12px;
+}
+.hidden-prompt p,
+.placeholder p {
+  font-size: 18px;
+  margin: 0;
+}
+.placeholder span {
+  font-size: 14px;
+}
 .reveal-button {
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -425,67 +337,79 @@ footer > span:first-child {
   font-size: 14px;
   border-radius: 8px;
   min-height: 44px;
+  flex-shrink: 0;
 }
 .reveal-button:hover {
   color: var(--accent);
-  background: var(--surface);
+  background: var(--surface-raised);
 }
 .practice-controls {
-  max-width: 430px;
-  margin: 22px auto 0;
+  width: min(100%, 380px);
+  margin: 12px auto 0;
+  flex-shrink: 0;
 }
 .reciter-caption {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   color: var(--muted-foreground);
   font-size: 13px;
 }
+.status-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
 .preview-badge {
   font-size: 12px;
-  background: var(--surface-raised);
-  border-radius: 4px;
-  padding: 1px 6px;
+  color: var(--muted-foreground);
+}
+.preview-badge::before {
+  content: '·';
+  margin-inline-end: 8px;
 }
 .play-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 21px;
-  margin: 16px 0 23px;
+  gap: 18px;
+  margin: 12px 0;
 }
 .play-main {
-  width: 62px;
-  height: 62px;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
   border-radius: 50%;
   border: 0;
   background: var(--accent);
   color: var(--accent-foreground);
   display: grid;
   place-items: center;
-  box-shadow: 0 0 35px color-mix(in oklch, var(--accent) 8%, transparent);
 }
 .play-main svg {
   margin-left: 3px;
 }
 .play-balance {
   width: 44px;
+  flex-shrink: 0;
 }
 .active {
   color: var(--accent);
   background: var(--surface-raised);
 }
 .record-section {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 17px;
-  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
 }
 .record-row {
   display: flex;
   align-items: center;
-  gap: 15px;
+  justify-content: center;
+  gap: 12px;
 }
 .record-button {
   display: flex;
@@ -493,13 +417,14 @@ footer > span:first-child {
   gap: 8px;
   flex-shrink: 0;
   background: transparent;
-  color: var(--foreground);
+  color: var(--muted-foreground);
   border: 0;
   font-size: 14px;
   min-height: 44px;
-  padding: 0;
+  border-radius: 8px;
+  padding: 8px;
 }
-.record-button svg {
+.record-button:hover {
   color: var(--accent);
 }
 .recording,
@@ -507,7 +432,6 @@ footer > span:first-child {
   color: var(--destructive);
 }
 .waveform {
-  position: relative;
   flex: 1;
   min-width: 0;
   height: 40px;
@@ -517,41 +441,20 @@ footer > span:first-child {
   width: 100%;
   height: 40px;
 }
-.wave-idle {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 3px;
-  color: var(--muted-foreground);
-  opacity: 0.45;
-}
-.wave-idle i {
-  width: 2px;
-  border-radius: 2px;
-  background: currentColor;
-}
-.record-note {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  margin: 4px 0 0;
-}
 .record-time {
   font-size: 12px;
+  direction: ltr;
 }
 .recording-result {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid var(--border);
-  margin-top: 10px;
-  padding-top: 8px;
+  gap: 8px;
 }
 .text-button {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   background: transparent;
   border: 0;
   color: var(--accent);
@@ -559,58 +462,41 @@ footer > span:first-child {
   font-size: 14px;
 }
 .session-progress {
-  max-width: 430px;
-  margin: 28px auto 0;
+  width: min(100%, 380px);
+  margin: 14px auto 0;
+  flex-shrink: 0;
 }
 .progress-track {
-  height: 3px;
-  background: var(--surface-raised);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.progress-track > span {
   display: block;
-  background: var(--accent);
-  height: 100%;
-  transition: width 0.3s;
+  width: 100%;
+  height: 2px;
+  appearance: none;
+  border: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--surface-raised);
 }
-.session-progress > div:last-child {
+progress::-webkit-progress-bar {
+  background: var(--surface-raised);
+}
+progress::-webkit-progress-value {
+  background: var(--accent);
+}
+progress::-moz-progress-bar {
+  background: var(--accent);
+}
+.session-progress > div {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
+  gap: 16px;
+  margin-top: 6px;
   font-size: 12px;
   color: var(--muted-foreground);
 }
-.session-progress > div:last-child > span {
+.session-progress > div > span {
   display: flex;
   align-items: center;
   gap: 5px;
-}
-.hidden-prompt,
-.placeholder {
-  color: var(--muted-foreground);
-  text-align: center;
-}
-.hidden-prompt svg,
-.placeholder svg {
-  margin: 0 auto 14px;
-  color: var(--accent);
-}
-.hidden-prompt p,
-.placeholder p {
-  font-size: 20px;
-  margin: 5px 0;
-}
-.hidden-prompt span,
-.placeholder span {
-  font-size: 14px;
-}
-.verses {
-  width: 100%;
-  animation: appear 0.25s ease-out;
-}
-.placeholder {
-  padding: 20px;
 }
 .skip-link {
   position: fixed;
@@ -620,31 +506,34 @@ footer > span:first-child {
   background: var(--accent);
   color: var(--accent-foreground);
   padding: 10px;
-  transform: translateY(-150%);
+  transform: translateY(-160%);
 }
 .skip-link:focus {
   transform: translateY(0);
 }
 .loading {
+  display: block;
   text-align: center;
-  padding: 100px 0;
   color: var(--muted-foreground);
 }
 .storage-notice,
 .error-text {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--destructive);
 }
 .storage-notice {
+  display: block;
   text-align: center;
+  margin-top: 8px;
 }
 .rattil-sheet[data-slot='sheet-content'] {
-  width: 440px;
+  width: 400px;
   max-width: 100%;
   background: var(--surface);
-  padding: 32px;
+  padding: 24px;
   gap: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-color: var(--border);
   font-family: 'IBM Plex Sans Arabic', sans-serif;
 }
@@ -652,40 +541,37 @@ footer > span:first-child {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 .sheet-heading [data-slot='sheet-title'] {
-  font-size: 25px;
+  font-size: 22px;
   font-family: 'Reem Kufi', sans-serif;
   font-weight: 400;
-}
-.sheet-description {
-  line-height: 1.8;
-  margin: 5px 0 32px;
 }
 .sheet-handle {
   display: none;
 }
 .setting-label {
   display: block;
-  font-size: 15px;
-  margin-bottom: 12px;
+  font-size: 14px;
+  margin-bottom: 10px;
 }
 .full-input {
   width: 100%;
-  min-height: 50px;
+  min-height: 48px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--background);
-  padding: 9px 15px;
+  padding: 8px 12px;
   color: var(--foreground);
 }
 .surah-search[data-slot='input-group'] {
-  height: 54px;
+  height: 50px;
   width: 100%;
   background: var(--background);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 8px;
 }
 .surah-search input {
   font-size: 16px;
@@ -695,7 +581,7 @@ footer > span:first-child {
   border: 1px solid var(--border);
 }
 .surah-options [data-slot='combobox-item'] {
-  min-height: 48px;
+  min-height: 44px;
   justify-content: space-between;
   font-size: 16px;
 }
@@ -708,44 +594,44 @@ footer > span:first-child {
   justify-content: space-between;
   font-size: 12px;
   color: var(--muted-foreground);
-  margin: 9px 0 30px;
+  margin: 8px 0 24px;
 }
 .sheet-action {
   margin-top: 24px;
 }
 .phase-note {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted-foreground);
-  line-height: 1.9;
-  margin: 20px 0;
+  line-height: 1.8;
+  margin: 16px 0 0;
 }
 .setting-section {
   border: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 0 0 26px;
+  padding: 0;
   margin: 0 0 24px;
   min-width: 0;
 }
 .setting-section legend {
   padding: 0;
-  font-size: 15px;
-  margin-bottom: 16px;
+  font-size: 14px;
+  margin-bottom: 10px;
 }
 .setting-select[data-slot='select-trigger'] {
   width: 100%;
-  min-height: 50px;
+  min-height: 48px;
   background: var(--background);
   border-color: var(--border);
-  padding: 10px 13px;
-  font-size: 15px;
+  padding: 8px 12px;
+  font-size: 14px;
 }
 .setting-select [data-slot='select-value'] {
   text-align: right;
 }
 .field-note {
+  display: block;
   font-size: 12px;
   color: var(--muted-foreground);
-  margin: 9px 0 0;
+  margin: 8px 0 0;
 }
 .swatches {
   display: flex;
@@ -755,7 +641,7 @@ footer > span:first-child {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
   cursor: pointer;
   font-size: 12px;
   color: var(--muted-foreground);
@@ -766,8 +652,8 @@ footer > span:first-child {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: var(--background);
-  border: 5px solid var(--surface);
+  color: var(--accent-foreground);
+  border: 6px solid var(--surface);
 }
 .swatch-label:has(input:checked) .swatch {
   outline: 1px solid var(--accent);
@@ -787,13 +673,13 @@ footer > span:first-child {
 .segmented {
   display: flex;
   border: 1px solid var(--border);
-  padding: 4px;
-  border-radius: 10px;
+  padding: 3px;
+  border-radius: 9px;
   background: var(--background);
 }
 .segmented label {
   flex: 1;
-  padding: 9px 4px;
+  padding: 8px 4px;
   min-height: 44px;
   text-align: center;
   border-radius: 6px;
@@ -803,7 +689,7 @@ footer > span:first-child {
 }
 .segmented [data-active='true'] {
   background: var(--surface-raised);
-  color: var(--accent);
+  color: var(--foreground);
 }
 [data-slot='select-item'] {
   min-height: 44px;
@@ -811,156 +697,81 @@ footer > span:first-child {
 }
 [data-slot='sheet-overlay'] {
   background: var(--shadow);
-  backdrop-filter: blur(5px);
-}
-@keyframes appear {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@media (min-height: 950px) {
-  .start-main {
-    padding-top: 90px;
-  }
-  .memorizing-main {
-    padding-top: 70px;
-  }
-  .verse-space {
-    min-height: 320px;
-  }
+  backdrop-filter: blur(4px);
 }
 @media (max-width: 640px) {
   .app-shell {
-    padding: 0 23px;
+    padding-inline: 20px;
   }
   .topbar {
-    height: 85px;
+    min-height: 64px;
     gap: 8px;
   }
   .brand {
-    font-size: 31px;
-  }
-  .header-note {
-    font-size: 12px;
-  }
-  .gear {
-    min-width: 44px;
-    min-height: 44px;
-  }
-  .start-main {
-    padding: 40px 0 25px;
-    max-width: 390px;
-  }
-  .book-emblem {
-    width: 57px;
-    height: 57px;
-    border-radius: 17px;
-    margin-bottom: 23px;
-  }
-  .intro h1 {
-    font-size: 36px;
-  }
-  .intro-copy {
-    margin-bottom: 30px;
-  }
-  .start-form {
-    padding: 0 3px;
-  }
-  .start-ornament {
-    margin-top: 28px;
-  }
-  footer {
-    justify-content: center;
-    padding: 20px 0 max(20px, env(safe-area-inset-bottom));
-    font-size: 12px;
-  }
-  .footer-brand {
-    display: none;
+    font-size: 27px;
   }
   .position-button {
-    font-size: 12px;
-    padding: 8px 2px;
-    gap: 5px;
+    font-size: 13px;
+    padding-inline: 4px;
+    gap: 4px;
+  }
+  .start-main {
+    padding-block: 24px 48px;
   }
   .memorizing-main {
-    padding: 32px 0 25px;
-  }
-  .session-heading h1 {
-    font-size: 29px;
+    padding-top: 0;
   }
   .verse-space {
-    min-height: 235px;
-    padding: 30px 13px;
-    margin-top: 22px;
+    padding-inline: 4px;
   }
   .quran-text {
-    font-size: 32px;
-    line-height: 2.1;
+    font-size: clamp(28px, 8vw, 36px);
   }
   .play-controls {
-    gap: 16px;
-  }
-  .practice-controls {
-    margin-top: 18px;
+    gap: clamp(8px, 4vw, 18px);
   }
   .rattil-sheet[data-slot='sheet-content'] {
     inset: auto 0 0;
     width: 100%;
     max-width: none;
-    max-height: 90svh;
+    max-height: 90vh;
+    max-height: 90dvh;
     height: auto;
-    border-radius: 24px 24px 0 0;
-    padding: 14px 24px max(28px, env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    padding: 12px 24px max(24px, env(safe-area-inset-bottom));
     border: 1px solid var(--border);
   }
   .sheet-handle {
     display: block;
-    width: 34px;
+    width: 32px;
     height: 4px;
     background: var(--border);
-    border-radius: 5px;
-    margin: 0 auto 15px;
+    border-radius: 4px;
+    margin: 0 auto 12px;
   }
-  .sheet-description {
-    margin-bottom: 25px;
-  }
-  .setting-section {
-    padding-bottom: 20px;
+  .sheet-heading {
     margin-bottom: 20px;
-  }
-  .sheet-heading [data-slot='sheet-title'] {
-    font-size: 22px;
-  }
-  .record-section {
-    padding: 11px 13px;
-  }
-  .session-progress {
-    margin-top: 22px;
   }
   .swatches {
     justify-content: space-between;
   }
 }
-@media (max-width: 360px) {
-  .app-shell {
-    padding: 0 17px;
+@media (max-height: 600px) {
+  .start-main {
+    padding-block: 12px;
   }
-  .intro h1 {
-    font-size: 31px;
+  .intro {
+    margin-bottom: 20px;
   }
-  .play-controls {
-    gap: 10px;
+  .verse-space {
+    min-height: 140px;
+    padding-block: 12px;
   }
-  .record-row {
-    gap: 8px;
+  .practice-controls {
+    margin-top: 4px;
   }
-  .quran-text {
-    font-size: 28px;
+  .session-progress {
+    margin-top: 8px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -971,26 +782,4 @@ footer > span:first-child {
     animation: none !important;
     transition: none !important;
   }
-}
-
-progress.progress-track {
-  display: block;
-  width: 100%;
-  appearance: none;
-  border: 0;
-  background: var(--surface-raised);
-}
-progress::-webkit-progress-bar {
-  background: var(--surface-raised);
-}
-progress::-webkit-progress-value {
-  background: var(--accent);
-}
-progress::-moz-progress-bar {
-  background: var(--accent);
-}
-output.field-note,
-output.loading,
-output.storage-notice {
-  display: block;
 }

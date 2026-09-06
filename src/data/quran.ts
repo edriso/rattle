@@ -56,6 +56,7 @@ export type Preferences = {
   ayah: number;
   reciter: string;
   theme: 'gold' | 'sage' | 'blue' | 'rose';
+  appearance: 'dark' | 'light' | 'system';
   mode: 'text' | 'page';
   perView: number;
 };
@@ -65,6 +66,7 @@ export const defaults: Preferences = {
   ayah: 1,
   reciter: reciters[0].id,
   theme: 'gold',
+  appearance: 'dark',
   mode: 'text',
   perView: 1,
 };
@@ -87,6 +89,9 @@ export function restore(value: unknown): Preferences {
     theme: ['gold', 'sage', 'blue', 'rose'].includes(p.theme!)
       ? p.theme!
       : defaults.theme,
+    appearance: ['dark', 'light', 'system'].includes(p.appearance!)
+      ? p.appearance!
+      : defaults.appearance,
     mode: p.mode === 'page' ? 'page' : 'text',
     perView: Number.isInteger(p.perView)
       ? Math.max(1, Math.min(5, p.perView!))

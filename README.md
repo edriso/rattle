@@ -18,7 +18,8 @@ npm run preview
 - One TanStack route at `/`, Arabic route metadata and font links in the root route.
 - All 114 Surah names and verse counts, Arabic search that ignores vowel marks and normalizes hamza.
 - Al-Fatihah preview text. Other verses, reciter audio and Mushaf images are explicitly marked as unavailable placeholders. No Quran API requests are made yet.
-- Four accent themes, 1–5 verses per view, text/page mode, reciter selection, hide/reveal and bounded navigation.
+- Four accent colors and persistent light/dark/system appearance, 1–5 verses per view, text/page mode, reciter selection, hide/reveal and bounded navigation.
+- Minimal viewport-height layout with concise Modern Standard Arabic. Long passages, enlarged text and small landscape screens can scroll without clipping controls.
 - Versioned, validated device-local preferences loaded after mount. Nothing is uploaded.
 - Microphone recording, live analyser waveform, playback and deletion. Recording blobs exist in memory only and are released when changing position or leaving the page. A secure context and browser microphone permission are required.
 - Keyboard-operable sheets and selectors, reduced motion, focus indicators and RTL layouts.

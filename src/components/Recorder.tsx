@@ -183,11 +183,11 @@ export function Recorder({ position }: { position: string }) {
               : state === 'requesting'
                 ? 'بانتظار الميكروفون…'
                 : url
-                  ? 'أعد التسجيل'
-                  : 'سمّع بصوتك'}
+                  ? 'إعادة التسجيل'
+                  : 'تسجيل صوتك'}
           </span>
         </button>
-        <div className="waveform">
+        <div className="waveform" hidden={state !== 'recording'}>
           <canvas
             width={228}
             height={40}
@@ -199,16 +199,6 @@ export function Recorder({ position }: { position: string }) {
             }
             role="img"
           />
-          {state !== 'recording' && (
-            <div className="wave-idle" aria-hidden="true">
-              {Array.from({ length: 30 }, (_, i) => (
-                <i
-                  key={i}
-                  style={{ height: `${4 + Math.sin(i * 1.7) ** 2 * 14}px` }}
-                />
-              ))}
-            </div>
-          )}
         </div>
         {state === 'recording' && (
           <span className="record-time" role="timer">
@@ -230,7 +220,7 @@ export function Recorder({ position }: { position: string }) {
           />
           <button className="text-button" onClick={() => void playback()}>
             {playing ? <Pause size={17} /> : <Play size={17} />}{' '}
-            {playing ? 'إيقاف مؤقت' : 'استمع إلى تسجيلك'}
+            {playing ? 'إيقاف مؤقت' : 'تشغيل التسجيل'}
           </button>
           <button
             className="icon-button"
@@ -241,9 +231,6 @@ export function Recorder({ position }: { position: string }) {
           </button>
         </div>
       )}
-      <p className="record-note">
-        تسجيلك خاص بك، ويُحذف عند تغيير الموضع أو إغلاق الصفحة
-      </p>
       {error && (
         <p className="error-text" role="alert">
           {error}
