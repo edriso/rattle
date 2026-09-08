@@ -462,6 +462,16 @@ label:has(input:focus-visible) {
   width: 44px;
   flex-shrink: 0;
 }
+/* Ending the learner's own turn early. It takes the accent that «ردّد الآن»
+   above it takes, so the one control that belongs to that turn looks like it,
+   and it stands in the slot that otherwise only balances the row, so the
+   transport does not move when it appears. */
+.skip-echo {
+  color: var(--accent);
+}
+.skip-echo:hover:not(:disabled) {
+  color: var(--accent);
+}
 .active {
   color: var(--accent);
   background: var(--surface-raised);

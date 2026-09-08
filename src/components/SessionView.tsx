@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
   Pause,
   Play,
   RotateCcw,
@@ -122,14 +123,22 @@ export function SessionView({
 
   const step = passage.steps[state.cursor.step];
   const run = passage.segments.slice(step.from, step.to + 1);
-  const playing = state.phase === 'reciting' || state.phase === 'preparing';
+  /* The drill is running through the learner's own turn as much as through
+     the recitation: the silence is timed, the clock is moving, and the whole
+     thing carries on by itself when it ends. So the turn counts as running,
+     and the main button stops it. «أنا أتحكّم» is the exception, because
+     there the drill really is halted until the learner says otherwise. */
+  const running =
+    state.phase === 'reciting' ||
+    state.phase === 'preparing' ||
+    state.phase === 'echoing';
+  const holding = state.phase === 'waiting';
   const total = passage.steps.length;
 
   function toggle() {
     if (!session || !state) return;
-    if (state.phase === 'echoing' || state.phase === 'waiting')
-      session.continue();
-    else if (playing) session.pause();
+    if (holding) session.continue();
+    else if (running) session.pause();
     else if (state.phase === 'idle') void session.start();
     // A finished drill plays again from its first step.
     else if (state.phase === 'done') session.goTo(0);
@@ -258,23 +267,35 @@ export function SessionView({
           <button
             className="play-main"
             aria-label={
-              state.phase === 'echoing' || state.phase === 'waiting'
-                ? 'تابِع الآن'
-                : playing
-                  ? 'إيقاف مؤقت'
-                  : 'تشغيل'
+              holding ? 'تابِع الآن' : running ? 'إيقاف مؤقت' : 'تشغيل'
             }
             aria-keyshortcuts="Space ArrowUp"
             title="تشغيل أو إيقاف (مسافة أو ↑)"
             onClick={toggle}
           >
-            {playing ? (
+            {running ? (
               <Pause size={24} fill="currentColor" />
             ) : (
               <Play size={24} fill="currentColor" />
             )}
           </button>
-          <span className="play-balance" aria-hidden="true" />
+          {/* Ending the turn early, in the slot that was holding the row's
+              balance. It appears only while a timed silence is running,
+              because that is the one phase where the main button is doing
+              something else: «أنا أتحكّم» puts «تابِع» on the main button,
+              and every other phase has nothing to continue past. */}
+          {state.phase === 'echoing' ? (
+            <button
+              className="icon-button skip-echo"
+              aria-label="تابِع الآن"
+              title="تابِع الآن"
+              onClick={() => session.continue()}
+            >
+              <ChevronsLeft size={22} />
+            </button>
+          ) : (
+            <span className="play-balance" aria-hidden="true" />
+          )}
           <button
             className="icon-button"
             aria-label="الخطوة التالية"

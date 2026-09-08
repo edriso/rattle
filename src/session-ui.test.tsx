@@ -342,6 +342,75 @@ describe('a talqeen session', () => {
     );
   });
 
+  /* A recitation that actually finishes, so the drill reaches the learner's
+     own turn. The shared fake never ends a source, which is what every other
+     test here wants; this one needs the phase after the recitation. */
+  class EndingAudioContext extends FakeAudioContext {
+    createBufferSource() {
+      const source = {
+        buffer: null as unknown,
+        onended: null as (() => void) | null,
+        connect: () => {},
+        // `onended` is assigned right after `start()` returns, so a timeout
+        // of zero is late enough to find it there.
+        start: () => setTimeout(() => source.onended?.(), 0),
+        stop: () => {},
+        disconnect: () => {},
+      };
+      return source;
+    }
+  }
+
+  /* The learner's turn is part of the drill: the silence is timed and the
+     clock is running through it. It used to be the one stretch of a session
+     that could not be stopped, because the only control on the screen was
+     «تابِع», and somebody who wanted to stop had to wait for the reciter to
+     start again and then catch him. */
+  it('stops during the learner own turn, and offers to end it early', async () => {
+    vi.stubGlobal('AudioContext', EndingAudioContext);
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3, echo: 1 });
+    render(<App />);
+    expect(
+      await screen.findByText('ردّد الآن', {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    // The main button stops the clock, and «تابِع» is its own control beside
+    // it rather than the thing the main button has been turned into.
+    const skip = screen.getByRole('button', { name: 'تابِع الآن' });
+    expect(skip.className).toContain('skip-echo');
+    const pause = screen.getByRole('button', { name: 'إيقاف مؤقت' });
+    expect(pause.className).toContain('play-main');
+    fireEvent.click(pause);
+    expect(await screen.findByText('متوقّفة')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'تشغيل' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'تابِع الآن' })).toBeNull();
+  });
+
+  it('ends the turn early from the button beside the main one', async () => {
+    vi.stubGlobal('AudioContext', EndingAudioContext);
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3, echo: 2 });
+    render(<App />);
+    await screen.findByText('ردّد الآن', {}, { timeout: 3000 });
+    const first = screen.getByText(/التكرار ١ من/);
+    expect(first).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'تابِع الآن' }));
+    // Which moves the drill on rather than skipping the whole step.
+    expect(await screen.findByText(/التكرار ٢ من/)).toBeTruthy();
+  });
+
+  /* «أنا أتحكّم» is the one phase where nothing is running, so there the main
+     button is the way on and there is nothing to stop. */
+  it('puts continuing on the main button when the learner holds the drill', async () => {
+    vi.stubGlobal('AudioContext', EndingAudioContext);
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3, echo: 'manual' });
+    render(<App />);
+    expect(
+      await screen.findByText('ردّد، ثم تابِع', {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    const main = screen.getByRole('button', { name: 'تابِع الآن' });
+    expect(main.className).toContain('play-main');
+    expect(screen.queryByRole('button', { name: 'إيقاف مؤقت' })).toBeNull();
+  });
+
   it('pauses from the up arrow and offers the down arrow for the step again', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);
