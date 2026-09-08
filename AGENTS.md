@@ -4,7 +4,7 @@ Notes for anyone, human or AI, working on Rattil.
 
 ## What this app is
 
-Rattil (`رَتِّلِ`) helps people memorise the Quran. It is a small web app. It has
+Rattil (`رَتِّل`) helps people memorise the Quran. It is a small web app. It has
 no server, no database, and no accounts. Everything runs in the browser, and
 everything the user does stays on their own device.
 
