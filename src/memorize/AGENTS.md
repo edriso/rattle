@@ -66,7 +66,11 @@ and both are easy to undo by accident:
   moment before he breathes, so the clip would otherwise open on about a second
   of silence. A clip that starts at the top of a recording is left alone: that
   silence is the breath between one ayah and the next, and trimming it would
-  run them together.
+  run them together. Two consequences, both small and both deliberate: the
+  countdown prices a clip by the content it asks for rather than the sound
+  that came out of it, so it runs a little long; and a run resumed after a
+  pause repeats at most the silence that was trimmed from the clip it was
+  inside.
 
 ## The runtime
 
