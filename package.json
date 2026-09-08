@@ -15,6 +15,7 @@
     "test": "vitest run",
     "prepare:quran": "node scripts/prepare-quran.mjs",
     "prepare:timings": "node scripts/prepare-timings.ts && oxfmt src/data/timings",
+    "assets": "node scripts/make-assets.ts",
     "verify:cuts": "node scripts/verify-cuts.ts && oxfmt src/data/timings"
   },
   "dependencies": {

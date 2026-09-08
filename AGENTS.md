@@ -43,6 +43,7 @@ header comment.
 npm run prepare:quran
 npm run prepare:timings
 npm run verify:cuts        # then measure those cuts against the recordings
+npm run assets             # the share card and the icons, in headless Chrome
 ```
 
 ## Where things are
@@ -272,13 +273,20 @@ carry-over fail the suite loudly instead of passing quietly.
 already, from `rattil` to `rattle`, and the only thing that broke was one
 deploy that had run a minute earlier. `vite.config.ts` takes `base` from
 `VITE_BASE_PATH`, the workflow takes that from `actions/configure-pages`, and
-the mirror builds with `./` so it does not care at all. Two consequences:
+the mirror builds with `./` so it does not care at all. Three consequences:
 
 - **An absolute path in `index.html` is a bug.** Vite rewrites the paths it
   processes, but not one you write by hand: `href="/favicon.svg"` asked
   `edriso.github.io` for a file that lives under `/rattle/`, so the Pages copy
   had no icon at all while the custom domain, being at a root, looked fine.
-  Use `%BASE_URL%`, which Vite substitutes per build.
+  Use `%BASE_URL%`, which Vite substitutes per build. The manifest, the
+  apple-touch-icon and `og:image` all go through it.
+- **Inside `public/manifest.webmanifest` every path is relative**, and
+  `%BASE_URL%` is no help there because Vite copies that file without reading
+  it. A manifest resolves its paths against its own URL, so `"start_url": "."`
+  and `"src": "icon-192.png"` are right under `/rattle/`, right at a domain
+  root, and right at a path this repository has never heard of; `/icon-192.png`
+  is right only at the root. Chrome parses it with no errors from all three.
 - Do not put the repository's name in a build script, a document's example
   command, or a test. The pre-push check in the README uses `/subpath/` for
   exactly this reason.
