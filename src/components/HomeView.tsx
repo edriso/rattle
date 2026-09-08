@@ -329,9 +329,10 @@ export function HomeView({
         <Repetitions plan={prefs.plan} onChange={setPlan} />
 
         {/* What the drill will cost, and beside it the one other thing that
-            decides it: a deliberate reciter takes half again as long as a
-            swift one over the same passage. The output is named, because a
-            reader hearing «نحو ٣ دقائق» needs to know what it is costing. */}
+            decides it: the most deliberate mushaf here takes over three times
+            as long as the swiftest over the same passage, 0.659 seconds per
+            letter against 0.201. The output is named, because a reader
+            hearing «نحو ٣ دقائق» needs to know what it is costing. */}
         <div className="estimate-row">
           <output className="session-estimate" aria-label="تقدير الجلسة">
             {failed ? (
