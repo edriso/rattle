@@ -53,6 +53,34 @@ describe('catalogue and persisted state', () => {
       to: 5,
     });
   });
+  /* Cutting inside an ayah needs that reciter's word timings, and not every
+     mushaf has them. A pair the app cannot drill used to fail the whole
+     session with «تعذّر تحميل النص». */
+  it('never pairs phrase drilling with a reciter who has no word timings', async () => {
+    expect(restore({ reciter: 'ayman-sowaid', grain: 'phrase' })).toMatchObject({
+      reciter: 'ayman-sowaid',
+      grain: 1,
+    });
+    expect(restore({ reciter: 'husary', grain: 'phrase' })).toMatchObject({
+      grain: 'phrase',
+    });
+    // And changing the reciter under a session carries the grain with it.
+    localStorage.setItem(
+      'rattil:v1',
+      JSON.stringify({ ...defaults, grain: 'phrase', reciter: 'husary' }),
+    );
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'الإعدادات' }));
+    await user.click(await screen.findByRole('combobox', { name: 'القارئ' }));
+    await user.click(await screen.findByRole('option', { name: /أيمن سويد/ }));
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+        reciter: 'ayman-sowaid',
+        grain: 1,
+      }),
+    );
+  });
   it('reviews freely, hides actual verse text, navigates, and restores position', async () => {
     const view = render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /راجِع بنفسك/ }));
