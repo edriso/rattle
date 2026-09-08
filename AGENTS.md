@@ -279,14 +279,29 @@ the mirror builds with `./` so it does not care at all. Three consequences:
   processes, but not one you write by hand: `href="/favicon.svg"` asked
   `edriso.github.io` for a file that lives under `/rattle/`, so the Pages copy
   had no icon at all while the custom domain, being at a root, looked fine.
-  Use `%BASE_URL%`, which Vite substitutes per build. The manifest, the
-  apple-touch-icon and `og:image` all go through it.
+  Use `%BASE_URL%`, which Vite substitutes per build. The favicon, the
+  manifest and the apple-touch-icon all go through it.
 - **Inside `public/manifest.webmanifest` every path is relative**, and
   `%BASE_URL%` is no help there because Vite copies that file without reading
   it. A manifest resolves its paths against its own URL, so `"start_url": "."`
   and `"src": "icon-192.png"` are right under `/rattle/`, right at a domain
   root, and right at a path this repository has never heard of; `/icon-192.png`
   is right only at the root. Chrome parses it with no errors from all three.
+- **The share card is the one thing that must be absolute**, and it is still
+  not written down anywhere. A link scraper is not a browser and will not
+  resolve a relative address; Meta's documentation for WhatsApp link previews
+  asks for "an absolute URL for an image", and X, LinkedIn, Slack and Telegram
+  are documented the same way. A relative `og:image` does work in an unfurler
+  that runs a real Chrome, which is how it shipped looking fine. So
+  `index.html` carries `%SHARE_CARD%`, `vite.config.ts` fills it from
+  `VITE_SITE_URL`, and the workflow takes that from `configure-pages`, which
+  reports the address the deployment is going to: a fork gets a card of its
+  own with nothing configured. The mirror answers on a domain only its owner
+  knows, so that one is named in `vars.MIRROR_URL` beside `MIRROR_REPO`, and
+  falls back to the Pages address if it is unset. Unset everywhere, the path
+  stays relative, which is right for a local build. Removing the token from
+  `index.html` fails the build rather than shipping a card addressed
+  `%SHARE_CARD%`.
 - Do not put the repository's name in a build script, a document's example
   command, or a test. The pre-push check in the README uses `/subpath/` for
   exactly this reason.

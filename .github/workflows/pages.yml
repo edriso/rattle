@@ -37,6 +37,12 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          # A link scraper is not a browser and will not resolve a relative
+          # address, so the share card needs an absolute one. This is where it
+          # comes from, and why no domain is written into the repository:
+          # `configure-pages` reports the address this deployment is going to,
+          # so a fork gets a card of its own with nothing configured.
+          VITE_SITE_URL: ${{ steps.pages.outputs.base_url }}
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
@@ -47,6 +53,11 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_PATH: ./
+          # The mirror answers on a domain of its own, which only its owner
+          # knows, so it is named in MIRROR_URL beside MIRROR_REPO. Unset, the
+          # card falls back to the Pages address: still absolute, still an
+          # image that exists, only served from the other copy.
+          VITE_SITE_URL: ${{ vars.MIRROR_URL || steps.pages.outputs.base_url }}
       - name: Upload mirror
         if: ${{ vars.MIRROR_REPO != '' }}
         uses: actions/upload-artifact@v4
