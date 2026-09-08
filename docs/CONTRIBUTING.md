@@ -73,7 +73,7 @@ machine that walks it) → `player.ts` (Web Audio).
 | Change spacing or a colour | `src/styles.css` | The Style section, and the two start-screen sections |
 | Add or change a reciter | `src/data/audio.ts`, then regenerate timings | "Data" in AGENTS.md and [data/README.md](../data/README.md) |
 | Change the drill's steps or counts | `src/memorize/schedule.ts` | [src/memorize/AGENTS.md](../src/memorize/AGENTS.md) |
-| Change where a verse is cut | `src/memorize/phrases.ts` | "Rules you must not break" — this one is strict |
+| Change where a verse is cut | `src/memorize/phrases.ts` | "Rules you must not break". This one is strict |
 | Change playback, pausing, the clock | `src/memorize/runtime.ts` | The transport section in AGENTS.md |
 | Add a keyboard shortcut | `src/usePracticeNavigation.ts` | The Keyboard section. It lists **four** places to update |
 | Change the review schedule | `src/memorize/review.ts` | It is SM-2 with a 35-day ceiling |
@@ -102,7 +102,7 @@ records it separately, so the audio does not have it. Always go through
 with audio. This surprises everybody once.
 
 **3. Numbers need Arabic grammar, and there are helpers for it.** Never write
-`` `${n} آيات` `` — use `ayatCount(n)` and friends from `src/data/arabic.ts`.
+`` `${n} آيات` ``. Use `ayatCount(n)` and friends from `src/data/arabic.ts`.
 Arabic agreement changes with the number: one and two have their own words,
 three to ten take a plural, and eleven upward goes back to the singular. The
 surah list said «٧ آية» for al-Fatiha for months because somebody wrote it by
@@ -126,8 +126,8 @@ Every one of these is checkable, and some are covered by tests:
 - Every touch target at least 44 by 44 pixels.
 - Every control has a label. Icon-only buttons carry `aria-label`.
 - Text meets 4.5:1 contrast **in both appearances and all four accent
-  colours** — that is eight combinations, and a fix that only works in dark
-  mode is not a fix. Control edges meet the 3:1 of WCAG 1.4.11, which is what
+  colours**, which is eight combinations. A fix that only works in dark mode
+  is not a fix. Control edges meet the 3:1 of WCAG 1.4.11, which is what
   `--control-border` is for.
 - Never dim text with `opacity`. It multiplies against the background and
   drops the contrast below AA. Use `--muted-foreground`, or
@@ -155,7 +155,7 @@ Two habits worth having:
 that passes against the old code is not testing your fix. The quickest way to
 check is `git stash push -- <the file you fixed>`, run the test, `git stash
 pop`. Several tests in this repo exist only because a bug got through once,
-and the comment above them says which — write that comment.
+and the comment above them says which. Write that comment.
 
 **Give lazy panels room.** The settings and picker are separate chunks, so a
 query for something inside them needs `{ timeout: 3000 }`. A test that passes
@@ -164,7 +164,7 @@ on your machine and fails in CI is usually this.
 ## Committing
 
 - Short imperative subject line, no full stop. Say what changed and, in the
-  body, **why** — the body is where this repository keeps its reasoning, so
+  body, **why**. The body is where this repository keeps its reasoning, so
   it is worth more than the subject.
 - No AI signatures. No "Generated with" lines, no `Co-Authored-By: Claude`.
 - Do not add a licence header to a file, and do not add a credit-us line
