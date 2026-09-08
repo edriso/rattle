@@ -194,12 +194,50 @@ describe('settings and surah picker', () => {
         name: /اختيار السورة، سورة الفاتحة/,
       }),
     );
-    const input = (await screen.findByRole('combobox')) as HTMLInputElement;
+    const input = (await screen.findByRole('combobox', {
+      name: 'السورة',
+    })) as HTMLInputElement;
     const user = userEvent.setup();
     await user.click(input);
     await user.type(input, 'الناس');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(input.value).toBe('الفاتحة'));
+  });
+
+  /* Somebody who knows the verse and not its number is who the openings in
+     that list are for. */
+  it('finds an ayah by its own words', async () => {
+    localStorage.setItem(
+      'rattil:v1',
+      JSON.stringify({ ...defaults, surah: 2, ayah: 1, to: 5 }),
+    );
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: /اختيار السورة، سورة البقرة/ }),
+    );
+    const from = (await screen.findByRole('combobox', {
+      name: 'من الآية',
+    })) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.click(from);
+    await user.type(from, 'الله لا اله الا هو الحي القيوم');
+    const option = await screen.findByRole('option', { name: /٢٥٥/ });
+    fireEvent.click(option);
+    await waitFor(() => expect(from.value).toBe('٢٥٥'));
+    // The far end of the passage came along, rather than being left behind
+    // the ayah it was on with an error to clear.
+    expect(
+      (screen.getByRole('combobox', { name: 'إلى الآية' }) as HTMLInputElement)
+        .value,
+    ).toBe('٢٥٥');
+    fireEvent.click(screen.getByRole('button', { name: 'تأكيد المقطع' }));
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+        surah: 2,
+        ayah: 255,
+        to: 255,
+      }),
+    );
   });
 
   it('opens the searchable catalogue and validates the selected verse', async () => {
@@ -209,7 +247,9 @@ describe('settings and surah picker', () => {
         name: /اختيار السورة، سورة الفاتحة/,
       }),
     );
-    const input = (await screen.findByRole('combobox')) as HTMLInputElement;
+    const input = (await screen.findByRole('combobox', {
+      name: 'السورة',
+    })) as HTMLInputElement;
     const user = userEvent.setup();
     expect(input.value).toBe('الفاتحة');
     // Opening the list empties the box: the search starts on a clear field
@@ -220,8 +260,8 @@ describe('settings and surah picker', () => {
     const option = await screen.findByRole('option', { name: /سورة الناس/ });
     fireEvent.click(option);
     expect(input.value).toBe('الناس');
-    const from = screen.getByRole('textbox', { name: 'من الآية' });
-    const to = screen.getByRole('textbox', { name: 'إلى الآية' });
+    const from = screen.getByRole('combobox', { name: 'من الآية' });
+    const to = screen.getByRole('combobox', { name: 'إلى الآية' });
     fireEvent.change(from, { target: { value: '٧' } });
     expect(
       (

@@ -55,10 +55,23 @@ export const minutesCount = (n: number) =>
 export const daysCount = (n: number) =>
   counted(n, { one: 'يوم', two: 'يومان', few: 'أيام', many: 'يومًا' });
 
+/**
+ * The form of Arabic text this app searches by. Everything a plain keyboard
+ * cannot type goes: harakat, the dagger alef, the mushaf's waqf marks and
+ * small letters, the tatweel. Hamza and alef-wasla fold to a bare alef and
+ * the alef maksura to ya, and the spaces the stripped marks leave behind
+ * close up, so a phrase typed across one of them still matches.
+ *
+ * The escapes are numeric on purpose: a bidirectional editor reorders a
+ * character range on screen, so a range typed as Arabic letters can be saved
+ * differently from how it reads.
+ */
 export const normalize = (s: string) =>
   s
     .normalize('NFKD')
-    .replace(/[\u064B-\u065F\u0670]/g, '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ى/g, 'ي');
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, '')
+    .replace(/[\u0623\u0625\u0622\u0671]/g, '\u0627')
+    .replace(/\u0649/g, '\u064A')
+    .replace(/\s+/g, ' ')
+    .trim();
 /** Which of the two ways of working the app is showing. */

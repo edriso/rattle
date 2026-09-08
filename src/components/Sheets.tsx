@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Check, ChevronLeft } from 'lucide-react';
 import {
   Sheet,
@@ -23,6 +23,7 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { findReciter, paceLabel, reciters } from '../data/audio';
+import { cachedSurah, loadSurah, openVerse } from '../data/text';
 import {
   surahs,
   arabic,
@@ -80,6 +81,156 @@ function Panel({
   );
 }
 
+/** An ayah of the chosen surah: its number, and enough of its opening to be
+    recognised by somebody who knows the verse and not the number. */
+type AyahChoice = {
+  ayah: number;
+  head: string;
+  /** The whole verse, folded for searching, so a half-remembered phrase from
+      the middle of it finds the ayah too. */
+  search: string;
+};
+
+/** Words of the opening shown in the list. Seven is what fits one line on a
+    phone; the rest is what the search looks through. */
+const HEAD_WORDS = 7;
+
+const opening = (text: string) => {
+  const words = text.split(' ').filter(Boolean);
+  return words.length > HEAD_WORDS
+    ? `${words.slice(0, HEAD_WORDS).join(' ')}…`
+    : words.join(' ');
+};
+
+/**
+ * The chosen surah's verses, or null until they arrive. Nothing waits on them:
+ * the ayah fields work as number fields meanwhile, and a surah whose text
+ * cannot be loaded simply never shows its openings.
+ */
+function useVerses(surah: number) {
+  const [result, setResult] = useState<{
+    id: number;
+    verses?: readonly string[];
+  }>(() => ({ id: surah, verses: cachedSurah(surah) }));
+  /* Read through the module cache during render rather than reaching for it in
+     the effect, so a surah already in memory has its openings on first paint. */
+  const verses =
+    cachedSurah(surah) ?? (result.id === surah ? result.verses : undefined);
+  useEffect(() => {
+    if (verses) return;
+    let active = true;
+    void loadSurah(surah).then(
+      (text) => {
+        if (active) setResult({ id: surah, verses: text });
+      },
+      () => {
+        if (active) setResult({ id: surah });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [surah, verses]);
+  return verses;
+}
+
+/**
+ * One end of the passage, chosen by number or by the verse itself. Typing a
+ * number takes it, as the plain field it replaces did; anybody who knows the
+ * ayah and not its number reads down the list or searches its words instead.
+ * The value is held as plain digits so the field can be empty while it is
+ * being retyped and still be checked as a number.
+ */
+function AyahField({
+  id,
+  label,
+  value,
+  items,
+  invalid,
+  describedBy,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  items: readonly AyahChoice[];
+  invalid: boolean;
+  describedBy?: string;
+  onChange: (digits: string) => void;
+}) {
+  const shown = value ? arabic(Number(value)) : '';
+  /* What is typed matters only while the list is open. Closed, the field shows
+     the number the passage actually holds, so a close never has to restore
+     anything and can never restore something stale: choosing an ayah closes
+     the list in the same breath, and a handler holding the old number would
+     put it straight back. */
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const chosen = items[Number(value) - 1] ?? null;
+
+  return (
+    <div className="ayah-field">
+      <label htmlFor={id}>{label}</label>
+      <Combobox
+        items={items}
+        value={chosen}
+        inputValue={open ? typed : shown}
+        onInputValueChange={(text) => {
+          setTyped(text);
+          const numerals = digits(text);
+          // Typing a number takes it; emptying the field takes nothing, which
+          // is what puts the range in error rather than guessing at one.
+          if (numerals || !text.trim()) onChange(numerals);
+        }}
+        autoHighlight
+        onOpenChange={(next, details) => {
+          setOpen(next);
+          /* Opening on a tap starts the search on an empty field, so nobody
+             deletes ٢٥٥ before looking for ٢٦١. Opening because the reader has
+             begun typing must keep what they typed. */
+          if (next && details.reason !== 'input-change') setTyped('');
+        }}
+        itemToStringLabel={(item) => arabic(item.ayah)}
+        isItemEqualToValue={(a, b) => a.ayah === b.ayah}
+        filter={(item, text) => {
+          const typed = digits(text);
+          if (typed) return String(item.ayah).startsWith(typed);
+          const words = normalize(text.trim());
+          return !words || item.search.includes(words);
+        }}
+        onValueChange={(item) => {
+          if (item) onChange(String(item.ayah));
+        }}
+      >
+        {/* No trigger button: the generated one is a tab stop with no
+            accessible name, and typing or arrowing opens the list anyway. */}
+        <ComboboxInput
+          id={id}
+          className="ayah-search"
+          inputMode="numeric"
+          autoComplete="off"
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          showTrigger={false}
+        />
+        <ComboboxContent dir="rtl" className="ayah-options">
+          <ComboboxEmpty>لا توجد آية بهذا الرقم أو النص</ComboboxEmpty>
+          <ComboboxList>
+            {(item: AyahChoice) => (
+              <ComboboxItem key={item.ayah} value={item}>
+                <span className="ayah-option-number">
+                  {arabic(item.ayah)}
+                </span>
+                <span className="ayah-option-head">{item.head}</span>
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </div>
+  );
+}
+
 export function Picker({
   open,
   onClose,
@@ -103,8 +254,24 @@ export function Picker({
      emptied while it is being retyped and still be checked as a number. */
   const [from, setFrom] = useState(String(prefs.ayah));
   const [to, setTo] = useState(String(prefs.to));
-  const shown = (value: string) => (value ? arabic(Number(value)) : '');
   const selected = surahs[id - 1];
+  /* Every ayah of the chosen surah, so either field can be read down rather
+     than typed into. Costing al-Baqarah whole is a couple of milliseconds and
+     happens once per surah, not per keystroke. */
+  const verses = useVerses(id);
+  const choices = useMemo(
+    () =>
+      Array.from({ length: selected.count }, (_, i) => {
+        const raw = verses?.[i];
+        const text = raw ? openVerse(id, i + 1, raw).text : '';
+        return {
+          ayah: i + 1,
+          head: opening(text),
+          search: normalize(text),
+        };
+      }),
+    [id, selected.count, verses],
+  );
   const inRange = (value: string) =>
     Number.isInteger(Number(value)) &&
     Number(value) >= 1 &&
@@ -166,34 +333,29 @@ export function Picker({
         السورة {arabic(id)} من ١١٤ <span>{arabic(selected.count)} آية</span>
       </div>
       <div className="range-fields">
-        <div className="ayah-field">
-          <label htmlFor="picker-from">من الآية</label>
-          <input
-            className="full-input"
-            id="picker-from"
-            aria-describedby={valid ? undefined : 'picker-error'}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            value={shown(from)}
-            aria-invalid={!inRange(from)}
-            onChange={(e) => setFrom(digits(e.target.value))}
-          />
-        </div>
-        <div className="ayah-field">
-          <label htmlFor="picker-to">إلى الآية</label>
-          <input
-            className="full-input"
-            id="picker-to"
-            aria-describedby={valid ? undefined : 'picker-error'}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            value={shown(to)}
-            aria-invalid={!inRange(to)}
-            onChange={(e) => setTo(digits(e.target.value))}
-          />
-        </div>
+        <AyahField
+          id="picker-from"
+          label="من الآية"
+          value={from}
+          items={choices}
+          invalid={!inRange(from)}
+          describedBy={valid ? undefined : 'picker-error'}
+          onChange={(digits_) => {
+            setFrom(digits_);
+            // A passage cannot end before it starts, so the far end gives way
+            // rather than leaving the reader with an error to clear.
+            if (digits_ && Number(to) < Number(digits_)) setTo(digits_);
+          }}
+        />
+        <AyahField
+          id="picker-to"
+          label="إلى الآية"
+          value={to}
+          items={choices}
+          invalid={!inRange(to)}
+          describedBy={valid ? undefined : 'picker-error'}
+          onChange={setTo}
+        />
       </div>
       {!valid && (
         <p className="error-text" id="picker-error" role="alert">
