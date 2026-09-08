@@ -50,10 +50,10 @@ class FakeAudioContext {
 }
 
 const start = (prefs: Partial<Preferences>) =>
-  localStorage.setItem('rattil:v1', JSON.stringify({ ...defaults, ...prefs }));
+  localStorage.setItem('rattle:v1', JSON.stringify({ ...defaults, ...prefs }));
 
 const plan = () =>
-  JSON.parse(localStorage.getItem('rattil:review:v1') ?? 'null');
+  JSON.parse(localStorage.getItem('rattle:review:v1') ?? 'null');
 
 beforeEach(() => {
   localStorage.clear();
@@ -118,7 +118,7 @@ describe('choosing a passage', () => {
     await user.type(to, '١٢');
     expect(to.value).toBe('١٢');
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!).to).toBe(12),
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!).to).toBe(12),
     );
     // Leaving the field shows the number the passage actually holds.
     fireEvent.blur(to);
@@ -198,7 +198,7 @@ describe('choosing a passage', () => {
     fireEvent.click(counts);
     await waitFor(() =>
       expect(
-        JSON.parse(localStorage.getItem('rattil:v1')!).plan.singleReps,
+        JSON.parse(localStorage.getItem('rattle:v1')!).plan.singleReps,
       ).toBe(defaults.plan.singleReps - 1),
     );
     // All three, and each showing what it is set to.
@@ -217,10 +217,10 @@ describe('choosing a passage', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'أستمع فقط' }));
     // Dropping the gaps is most of the session, so the estimate must follow.
     await waitFor(() => expect(estimate.textContent).not.toBe(repeating));
-    expect(JSON.parse(localStorage.getItem('rattil:v1')!).echo).toBe('off');
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!).echo).toBe('off');
     fireEvent.click(screen.getByRole('radio', { name: /أستمع وأُردّد/ }));
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!).echo).toBe(2),
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!).echo).toBe(2),
     );
   });
 
@@ -248,7 +248,7 @@ describe('choosing a passage', () => {
       await screen.findByRole('button', { name: 'الآيات التالية' }),
     );
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         ayah: 2,
         to: 4,
       }),
@@ -267,7 +267,7 @@ describe('choosing a passage', () => {
   it('lists what is due, most overdue first, and loads it when picked', async () => {
     start({ surah: 1, ayah: 1, to: 3 });
     localStorage.setItem(
-      'rattil:review:v1',
+      'rattle:review:v1',
       JSON.stringify([
         {
           surah: 2,
@@ -299,7 +299,7 @@ describe('choosing a passage', () => {
     expect(due[0].textContent).toContain('البقرة');
     fireEvent.click(due[1]);
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         surah: 112,
         ayah: 1,
         to: 4,
@@ -335,7 +335,7 @@ describe('the browser tool', () => {
       to: 4,
     });
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         screen: 'session',
         surah: 112,
         ayah: 1,
@@ -690,7 +690,7 @@ describe('a talqeen session', () => {
       reps: 1,
       interval: 1,
     });
-    expect(JSON.parse(localStorage.getItem('rattil:v1')!).screen).toBe('home');
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!).screen).toBe('home');
   });
 
   it('leaves without scheduling when the learner says so', async () => {
@@ -707,7 +707,7 @@ describe('a talqeen session', () => {
       await screen.findByRole('button', { name: 'اخرج دون جدولة' }),
     );
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!).screen).toBe(
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!).screen).toBe(
         'home',
       ),
     );

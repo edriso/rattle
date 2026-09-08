@@ -23,11 +23,11 @@ beforeEach(() => {
   localStorage.clear();
   window.getSelection()?.removeAllRanges();
   localStorage.setItem(
-    'rattil:v1',
+    'rattle:v1',
     JSON.stringify({ ...defaults, screen: 'practice', ayah: 2 }),
   );
 });
-const position = () => JSON.parse(localStorage.getItem('rattil:v1')!).ayah;
+const position = () => JSON.parse(localStorage.getItem('rattle:v1')!).ayah;
 const touch = (x: number, y: number, id = 1) => ({
   clientX: x,
   clientY: y,
@@ -162,7 +162,7 @@ it('preserves browser edge gestures and verse text selection', () => {
 });
 it('uses the visible group boundary for keyboard and swipe navigation', () => {
   localStorage.setItem(
-    'rattil:v1',
+    'rattle:v1',
     JSON.stringify({ ...defaults, screen: 'practice', ayah: 1, perView: 5 }),
   );
   render(<App />);
@@ -355,7 +355,7 @@ it('does not restart a recitation the phone itself paused', async () => {
 
 it('stops the recitation on a move for a reader who has asked it to', async () => {
   localStorage.setItem(
-    'rattil:v1',
+    'rattle:v1',
     JSON.stringify({
       ...defaults,
       screen: 'practice',

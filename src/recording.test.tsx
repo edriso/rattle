@@ -49,7 +49,7 @@ async function record() {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem(
-    'rattil:v1',
+    'rattle:v1',
     JSON.stringify({ ...defaults, screen: 'practice' }),
   );
   stopTrack.mockClear();
@@ -98,7 +98,7 @@ it('records with Shift+Enter, ignores repeated stop, and plays with Shift+Space'
     key(' ');
   });
   expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce();
-  expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toEqual({
+  expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toEqual({
     ...defaults,
     screen: 'practice',
   });

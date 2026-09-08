@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { Recorder } from './components/Recorder';
 import { defaults, normalize, restore, surahs } from './data/quran';
 import { reciters } from './data/audio';
+import { readRenamed } from './data/storage';
 afterEach(cleanup);
 beforeEach(() => {
   localStorage.clear();
@@ -23,6 +24,93 @@ describe('catalogue and persisted state', () => {
     expect(surahs.reduce((n, s) => n + s.count, 0)).toBe(6236);
     expect(normalize('آل عِمْرَان')).toBe(normalize('ال عمران'));
   });
+  /* The app was Rattil before it was Rattle, and both storage keys carried
+     the old name. A reader who used it before the rename must not open it
+     afterwards and find a fresh app: the review plan in particular is weeks
+     of their work, and there is no server to migrate it for them. */
+  describe('the keys the rename left behind', () => {
+    it('carries a pre-rename position and review plan across, once', async () => {
+      localStorage.setItem(
+        'rattil:v1',
+        JSON.stringify({
+          ...defaults,
+          surah: 24,
+          ayah: 30,
+          to: 31,
+          theme: 'blue',
+        }),
+      );
+      /* A real item, and overdue, so what is asserted is that the plan is
+         usable and not merely that a string moved: `restoreReview` drops an
+         entry whose `due` is not a `YYYY-MM-DD` date, which the first draft
+         of this test did not know and so proved nothing. */
+      localStorage.setItem(
+        'rattil:review:v1',
+        JSON.stringify([
+          {
+            id: '24:30-31',
+            surah: 24,
+            from: 30,
+            to: 31,
+            reps: 1,
+            ease: 2.5,
+            interval: 3,
+            due: '2020-01-01',
+            last: '2019-12-29',
+            lapses: 0,
+          },
+        ]),
+      );
+      render(<App />);
+      // The position came through.
+      expect(
+        await screen.findByRole(
+          'button',
+          { name: 'اختيار السورة، سورة النور' },
+          { timeout: 3000 },
+        ),
+      ).toBeTruthy();
+      // And so did the plan, all the way to the screen that offers it back,
+      // which is what proves `restoreReview` accepted it rather than that a
+      // string was copied from one key to another.
+      expect(await screen.findByText('مراجعة اليوم')).toBeTruthy();
+      expect(screen.getByText(/متأخّرة/)).toBeTruthy();
+      await waitFor(() =>
+        expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
+          surah: 24,
+          ayah: 30,
+          to: 31,
+          theme: 'blue',
+        }),
+      );
+      expect(
+        JSON.parse(localStorage.getItem('rattle:review:v1')!),
+      ).toHaveLength(1);
+      // And the old names are gone, so this happens exactly once.
+      expect(localStorage.getItem('rattil:v1')).toBeNull();
+      expect(localStorage.getItem('rattil:review:v1')).toBeNull();
+    });
+
+    it('prefers what is under the new name when both exist', () => {
+      localStorage.setItem(
+        'rattil:v1',
+        JSON.stringify({ ...defaults, surah: 24 }),
+      );
+      localStorage.setItem(
+        'rattle:v1',
+        JSON.stringify({ ...defaults, surah: 36 }),
+      );
+      expect(readRenamed('rattle:v1', 'rattil:v1')).toContain('"surah":36');
+      // Nothing was moved, so the old value is left exactly where it was.
+      expect(localStorage.getItem('rattil:v1')).toContain('"surah":24');
+    });
+
+    it('has nothing to say to somebody arriving for the first time', () => {
+      expect(readRenamed('rattle:v1', 'rattil:v1')).toBeNull();
+      expect(localStorage.length).toBe(0);
+    });
+  });
+
   it('rejects corrupt preferences and bounds valid numeric values', () => {
     expect(restore(null)).toEqual(defaults);
     expect(
@@ -69,7 +157,7 @@ describe('catalogue and persisted state', () => {
     });
     // And changing the reciter under a session carries the grain with it.
     localStorage.setItem(
-      'rattil:v1',
+      'rattle:v1',
       JSON.stringify({ ...defaults, grain: 'phrase', reciter: 'husary' }),
     );
     render(<App />);
@@ -91,7 +179,7 @@ describe('catalogue and persisted state', () => {
       ),
     );
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         reciter: 'ayman-sowaid',
         grain: 1,
       }),
@@ -122,7 +210,7 @@ describe('catalogue and persisted state', () => {
       await screen.findByRole('option', { name: /العفاسي/ }, { timeout: 3000 }),
     );
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!).reciter).toBe(
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!).reciter).toBe(
         'alafasy',
       ),
     );
@@ -192,7 +280,7 @@ describe('catalogue and persisted state', () => {
   });
   it('does not pass the last verse', async () => {
     localStorage.setItem(
-      'rattil:v1',
+      'rattle:v1',
       JSON.stringify({ ...defaults, screen: 'practice', surah: 114, ayah: 6 }),
     );
     render(<App />);
@@ -277,7 +365,7 @@ describe('settings and surah picker', () => {
     await waitFor(() =>
       expect(document.documentElement.dataset.theme).toBe('sage'),
     );
-    expect(JSON.parse(localStorage.getItem('rattil:v1')!).theme).toBe('sage');
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!).theme).toBe('sage');
     fireEvent.click(screen.getByRole('button', { name: 'إغلاق' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
@@ -304,7 +392,7 @@ describe('settings and surah picker', () => {
      that list are for. */
   it('finds an ayah by its own words', async () => {
     localStorage.setItem(
-      'rattil:v1',
+      'rattle:v1',
       JSON.stringify({ ...defaults, surah: 2, ayah: 1, to: 5 }),
     );
     render(<App />);
@@ -331,7 +419,7 @@ describe('settings and surah picker', () => {
     ).toBe('٢٥٥');
     fireEvent.click(screen.getByRole('button', { name: 'تأكيد المقطع' }));
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         surah: 2,
         ayah: 255,
         to: 255,
@@ -375,7 +463,7 @@ describe('settings and surah picker', () => {
     fireEvent.change(to, { target: { value: '6' } });
     fireEvent.click(screen.getByRole('button', { name: 'تأكيد المقطع' }));
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         surah: 114,
         ayah: 4,
         to: 6,
@@ -453,7 +541,7 @@ it('carries a store written before the two modes existed into free review', () =
 
 it('changes appearance without losing the verse or accent and restores it after remount', async () => {
   localStorage.setItem(
-    'rattil:v1',
+    'rattle:v1',
     JSON.stringify({ ...defaults, screen: 'practice', ayah: 2, theme: 'blue' }),
   );
   const view = render(<App />);
@@ -462,7 +550,7 @@ it('changes appearance without losing the verse or accent and restores it after 
   await waitFor(() =>
     expect(document.documentElement.dataset.appearance).toBe('light'),
   );
-  expect(JSON.parse(localStorage.getItem('rattil:v1')!)).toMatchObject({
+  expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
     ayah: 2,
     theme: 'blue',
     appearance: 'light',
@@ -487,7 +575,7 @@ it('follows system appearance changes and unsubscribes when a fixed appearance i
   };
   window.matchMedia = vi.fn().mockReturnValue(media);
   localStorage.setItem(
-    'rattil:v1',
+    'rattle:v1',
     JSON.stringify({ ...defaults, appearance: 'system' }),
   );
   render(<App />);

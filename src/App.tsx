@@ -11,6 +11,7 @@ import {
   arabic,
   type Preferences,
 } from './data/quran';
+import { readRenamed } from './data/storage';
 import { useWebMCP } from './webmcp';
 import { useAppearance } from './useAppearance';
 import { useReviewPlan } from './memorize/useReviewPlan';
@@ -28,17 +29,13 @@ const SettingsSheet = lazy(() =>
   import('./components/Sheets').then((m) => ({ default: m.SettingsSheet })),
 );
 
-/* Still `rattil`, and it has to stay that way. The app was renamed but this
-   is not a name, it is the address somebody's saved position and settings are
-   already at, on their own device, where nothing here can go and migrate it.
-   Renaming the key would silently hand every existing reader a fresh app.
-   The same goes for the review plan's key and for the copy of this string in
-   `index.html`, which reads the theme before the bundle arrives. */
-const STORAGE = 'rattil:v1';
+const STORAGE = 'rattle:v1';
+/** What the key was called before the app was renamed. See `readRenamed`. */
+const WAS_STORAGE = 'rattil:v1';
 
 function stored(): Preferences {
   try {
-    return restore(JSON.parse(localStorage.getItem(STORAGE) ?? 'null'));
+    return restore(JSON.parse(readRenamed(STORAGE, WAS_STORAGE) ?? 'null'));
   } catch {
     return defaults;
   }

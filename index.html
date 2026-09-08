@@ -41,9 +41,10 @@
       :root[data-appearance='light'] .boot-shell { color: #6f6a60; }
     </style>
     <script>
-      // `rattil:v1` is deliberate after the rename: see the note in App.tsx.
+      // Runs before the bundle, so it reads both names: the bundle is what
+      // carries a pre-rename value across. See readRenamed in data/storage.ts.
       try {
-        const saved = JSON.parse(localStorage.getItem('rattil:v1') || 'null');
+        const saved = JSON.parse(localStorage.getItem('rattle:v1') || localStorage.getItem('rattil:v1') || 'null');
         if (saved && ['gold', 'sage', 'blue', 'rose'].includes(saved.theme)) document.documentElement.dataset.theme = saved.theme;
         const appearance = saved?.appearance;
         const dark = appearance === 'dark' || (appearance !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
