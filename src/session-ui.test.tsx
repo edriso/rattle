@@ -460,6 +460,70 @@ describe('a talqeen session', () => {
     expect(screen.getByText(/الخطوة ٢ من/)).toBeTruthy();
   });
 
+  /* Nothing in the settings sheet may cost the learner their place. The
+     silence is handed to the running session; the reciter rebuilds the drill,
+     and the drill is the same drill in a different voice, so the cursor goes
+     with it. Somebody who asks to be read to more slowly on step three of
+     nine should not be sent back to step one. */
+  it('keeps the learner in place when the reciter changes mid-drill', async () => {
+    const prefs = {
+      ...defaults,
+      screen: 'session',
+      surah: 112,
+      ayah: 1,
+      to: 3,
+    } as Preferences;
+    const noop = () => {};
+    const view = render(
+      <SessionView prefs={prefs} onExit={noop} onGraded={noop} />,
+    );
+    await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: 'الخطوة التالية' }));
+    fireEvent.click(screen.getByRole('button', { name: 'الخطوة التالية' }));
+    await screen.findByText(/الخطوة ٣ من/);
+    view.rerender(
+      <SessionView
+        prefs={{ ...prefs, reciter: 'shuraim' }}
+        onExit={noop}
+        onGraded={noop}
+      />,
+    );
+    expect(
+      await screen.findByText(/الخطوة ٣ من/, {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    expect(screen.getByText('سعود الشريم')).toBeTruthy();
+  });
+
+  /* But a change that makes a different drill has no step to carry a cursor
+     to, and says so rather than pretending: the joins decide what every step
+     after the first one even is. */
+  it('starts over when the joins change, and says it will', async () => {
+    const prefs = {
+      ...defaults,
+      screen: 'session',
+      surah: 112,
+      ayah: 1,
+      to: 4,
+    } as Preferences;
+    const noop = () => {};
+    const view = render(
+      <SessionView prefs={prefs} onExit={noop} onGraded={noop} />,
+    );
+    await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: 'الخطوة التالية' }));
+    await screen.findByText(/الخطوة ٢ من/);
+    view.rerender(
+      <SessionView
+        prefs={{ ...prefs, plan: { ...prefs.plan, linkBack: 0 } }}
+        onExit={noop}
+        onGraded={noop}
+      />,
+    );
+    expect(
+      await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 }),
+    ).toBeTruthy();
+  });
+
   it('schedules the passage for review once it is graded', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);

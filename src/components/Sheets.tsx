@@ -493,6 +493,12 @@ export function SettingsSheet({
         <p className="field-note">
           ضمّ كل المقاطع السابقة يجعل الجلسة تطول بسرعة كبيرة كلما زاد المدى.
           وأمّا مرات التكرار ففي الصفحة الأولى.
+          {/* Everything else here is safe to change mid-drill: the silence is
+              handed to the running session, and the reciter carries the
+              learner's place with him. This one decides what every step after
+              the first one is, so there is no place to carry, and saying so
+              is better than a progress bar that jumps back unexplained. */}
+          {inSession && ' وتغييرها الآن تبدأ الجلسة من أوّلها.'}
         </p>
       </section>
 
