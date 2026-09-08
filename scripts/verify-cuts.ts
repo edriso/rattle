@@ -40,9 +40,28 @@ const DETECT = 0.15;
 /** A silence has to be at least this long to be a place the reciter stopped
     rather than a consonant closure or a breath inside a phrase. */
 const MIN_SILENCE = 250;
-/** How far from its current position a cut may be moved to reach a silence.
-    Wider than this and it is a different boundary, not the same one measured. */
-const WINDOW = 1500;
+/**
+ * How far from its current position a cut may be moved to reach a silence.
+ * Wider than this and it is a different boundary, not the same one measured.
+ *
+ * 1500 was sized for an error of a few hundred milliseconds, which is what the
+ * first recitations measured. Minshawi's two want about a second, and at 1500
+ * their largest move sat exactly on the edge: the window was clipping the
+ * answer rather than bounding it. 2500 is where his murattal's median stops
+ * moving (971ms at a window of 1500, 1002 at 2500, 1002 at 3500) and it takes
+ * the ayat it can place from 82% of a 60-ayah sample to 88%.
+ *
+ * Widening it costs the recitations already measured nothing, and that is not
+ * a judgement call: every cut in a verified file already sits inside a pause,
+ * so `judge` returns `kept` and never reaches this. Read-only over all of
+ * Husary and all of Abdul Basit's mujawwad at 2500, both come back 100% kept,
+ * 0 moved, 0 unfounded.
+ *
+ * What it does not do is give those four back the cuts they dropped at 1500,
+ * because a dropped cut is not in the file to reconsider. Recovering those
+ * means `prepare:timings --force` and then measuring again.
+ */
+const WINDOW = 2500;
 /**
  * How far inside the pause the cut is placed, measured from whichever edge it
  * arrived at: far enough in that a word tail fading under the threshold is not

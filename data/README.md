@@ -66,7 +66,7 @@ Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and D
 
 ### Cuts measured against the audio
 
-`scripts/verify-cuts.ts` replaces the constant with a measurement, for the reciters it has been run on. For every ayah that splits it fetches that reciter's own per-ayah MP3 once, asks `ffmpeg` where the silences are (`silencedetect` at -40 dBFS), and then, for each cut, either leaves it alone because it already falls in a pause of 250 ms or more, moves it 80 ms into the nearest such pause, or drops it because there is none within 1.5 s, which means the text said the reciter stops there and the recording says he does not.
+`scripts/verify-cuts.ts` replaces the constant with a measurement, for the reciters it has been run on. For every ayah that splits it fetches that reciter's own per-ayah MP3 once, asks `ffmpeg` where the silences are (`silencedetect` at -40 dBFS), and then, for each cut, either leaves it alone because it already falls in a pause of 250 ms or more, moves it 80 ms into the nearest such pause, or drops it because there is none within `WINDOW` of it, which means the text said the reciter stops there and the recording says he does not.
 
 Run it from the repository root, reading only, and it prints what it would change:
 
@@ -88,7 +88,7 @@ Measured over the whole mushaf, four recitations so far:
 | moved into one | 1,688 (79.5%) | 68 (3.2%) | 1,419 (72.1%) | 1,751 (88.9%) |
 | median move | **+406 ms** | +106 ms | +347 ms | **−432 ms** |
 | which way | 1,686 later | 64 later | 1,399 later | 1,674 **earlier** |
-| no pause within 1.5 s | 65 (3.1%) | 7 (0.3%) | 207 (10.5%) | 213 (10.8%) |
+| no pause in the window | 65 (3.1%) | 7 (0.3%) | 207 (10.5%) | 213 (10.8%) |
 | ayat that split | 1,552 → 1,489 | 1,546 → 1,539 | 1,458 → 1,270 | 1,489 → 1,284 |
 
 Three findings, and the first is the one that matters.
@@ -142,7 +142,19 @@ Hearing these five would take a detector that follows the voice rather than the 
 
 ### Two are measurable and only need running
 
-Minshawi's murattal and mujawwad both pass the mastering check comfortably, and a 60-ayah sample places 88% and 53% of their cuts. Both need roughly 350 MB of downloads and twenty minutes, `node scripts/verify-cuts.ts minshawi --write`. Read the sample first: both press their largest move against the 1.5 s window, which means their true offset is *past* it and `WINDOW` needs widening before the full run is worth the bandwidth. Minshawi's murattal wants a median +971 ms and the mujawwad +861 ms, three times the constant, so a window sized for a 300 ms error is the wrong instrument for them.
+Minshawi's murattal and mujawwad both pass the mastering check comfortably, and both want a median offset near **a second**, three times the constant. That is why `WINDOW` is now 2500 ms and not 1500: at 1500 their largest move sat exactly on the edge, so the window was clipping the measurement rather than bounding it. Widened, a 60-ayah sample places 88% of the murattal's ayat and 65% of the mujawwad's.
+
+| window | Minshawi murattal | median | Minshawi (المجوّد) | median |
+| --- | --- | --- | --- | --- |
+| 1500 ms | 49/60 ayat | 971 ms | 30/60 | 861 ms |
+| 2500 ms | 53/60 | 1002 ms | 39/60 | 984 ms |
+| 3500 ms | 54/60 | 1002 ms | 41/60 | 1045 ms |
+
+The murattal's median settles by 2500, which is the sign the distribution is being described rather than cut off; the mujawwad's is still climbing at 3500, and at 65% it sits below `MIN_YIELD` and would need `--force` and a decision about whether losing a third of its ayat is a finding about melodic recitation or a fault in the method. Abdul Basit's mujawwad lost a seventh, so a third is not obviously either.
+
+**So the murattal is the one worth running**: `node scripts/verify-cuts.ts minshawi --write`, about 350 MB and twenty minutes.
+
+Two things the wider window does *not* do. It cannot disturb a verified file, because every cut in one already sits inside a pause, so the window is never consulted; read-only runs over all of Husary and all of Abdul Basit's mujawwad at 2500 come back 100% kept. And for the same reason it cannot give those four back the cuts they dropped at 1500, because a dropped cut is no longer in the file to reconsider. Between 3% and 11% of each was dropped for having no pause in a 1.5 s window, and on the Minshawi evidence roughly a third of those would fall inside 2500. Recovering them means `npm run prepare:timings -- --force` to write the boundaries again from the text, then `npm run verify:cuts` to measure them at the wider window: free on audio, since the recordings are cached, but it re-derives all four from the API.
 
 Ayman Sowaid has no published word timings, so there is nothing to measure. `verified` in each timing file says which recitations have been measured.
 

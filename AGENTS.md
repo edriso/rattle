@@ -624,10 +624,12 @@ Good next steps, roughly in order of value:
    the refusal can be checked. Both guards are pinned by a table in
    `scripts/verify-cuts.test.ts` holding what each recitation actually
    measured, so moving `MIN_RANGE` or `NOISE` tells you by name which
-   recitations you just broke. And before spending Minshawi's 350 MB, widen
-   `WINDOW`: both of his press their largest move against it, which means
-   their real offset is past it, near a second rather than the 300 ms the
-   window was sized for.
+   recitations you just broke. `WINDOW` has already been widened to 2500 ms for
+   them, on the evidence in `data/README.md`: both of Minshawi's want a median
+   offset near a second, and at 1500 their largest move sat exactly on the
+   edge. His murattal then places 88% of a sample and is worth the bandwidth;
+   his mujawwad places 65%, below `MIN_YIELD`, and needs a decision before
+   `--force` rather than after.
 2. Highlight each word as it is recited. The committed timing data already has
    what this needs.
 3. Give the review plan its own screen. Today the home screen shows only the

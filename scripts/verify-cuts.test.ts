@@ -204,6 +204,20 @@ describe('whether a level gate can hear a recitation at all', () => {
     expect(ear.measurable).toBe(false);
   });
 
+  /** Median absolute move per recitation, from the runs recorded in
+      data/README.md, and from 60-ayah samples for Minshawi's two. */
+  const OFFSETS = [406, 106, 347, 432, 1002, 1045];
+
+  it('bounds a correction rather than truncating it', () => {
+    // A window near a recitation's own median offset is not a bound, it is a
+    // clip, and it hides how wrong the constant was instead of measuring it:
+    // at 1500 Minshawi's largest move landed exactly on the edge and his
+    // median rose the moment it was widened. Twice the largest median any
+    // recitation has measured is the margin that keeps the distribution
+    // described rather than cut off.
+    expect(WINDOW).toBeGreaterThanOrEqual(2 * Math.max(...OFFSETS));
+  });
+
   it('keeps the write floor under every yield a real run has managed', () => {
     // Measured: abdulbasit 59/60, minshawi 49/60, abdulbasit-mujawwad
     // 1284/1489. The collapses it has to catch were 0/60 and 2/60.
