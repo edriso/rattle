@@ -42,12 +42,15 @@ function Panel({
   onClose,
   title,
   description,
+  landOn,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   description: string;
+  /** Where the cursor goes, when it is not the panel's own name. */
+  landOn?: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }) {
   /* Opening a panel puts the cursor on its title, not on the close button:
@@ -65,7 +68,7 @@ function Panel({
         side="left"
         className="rattil-sheet"
         showCloseButton={false}
-        initialFocus={heading}
+        initialFocus={landOn ?? heading}
         dir="rtl"
       >
         <div className="sheet-handle" />
@@ -382,13 +385,19 @@ export function SettingsSheet({
   onClose,
   prefs,
   update,
+  landOn = 'title',
 }: {
   open: boolean;
   onClose: () => void;
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
+  /** What the panel was opened to reach. The start screen's reciter button
+      opens this same panel, and a reader who tapped a reciter should not have
+      to find him again. */
+  landOn?: 'title' | 'reciter';
 }) {
   const reciter = findReciter(prefs.reciter);
+  const reciterTrigger = useRef<HTMLButtonElement>(null);
   // The two screens name the same keys differently, and only one records.
   const inSession = prefs.screen === 'session';
   const setPlan = (patch: Partial<SchedulePlan>) =>
@@ -400,6 +409,7 @@ export function SettingsSheet({
       onClose={onClose}
       title="الإعدادات"
       description="القارئ، وطريقة التكرار، والمظهر."
+      landOn={landOn === 'reciter' ? reciterTrigger : undefined}
     >
       <section className="setting-section">
         <div className="setting-label" id="reciter-label">
@@ -412,6 +422,7 @@ export function SettingsSheet({
           }}
         >
           <SelectTrigger
+            ref={reciterTrigger}
             className="setting-select"
             aria-labelledby="reciter-label"
           >

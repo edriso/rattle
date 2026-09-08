@@ -266,9 +266,7 @@ export function SessionView({
           </button>
           <button
             className="play-main"
-            aria-label={
-              holding ? 'تابِع الآن' : running ? 'إيقاف مؤقت' : 'تشغيل'
-            }
+            aria-label={holding ? 'تابِع الآن' : running ? 'إيقاف مؤقت' : 'تشغيل'}
             aria-keyshortcuts="Space ArrowUp"
             title="تشغيل أو إيقاف (مسافة أو ↑)"
             onClick={toggle}

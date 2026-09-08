@@ -914,19 +914,27 @@ progress::-moz-progress-bar {
 }
 .range-fields {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
+/* The label beside the box, not over it: «من الآية ١» reads as one phrase,
+   and the line it was taking above is a whole row of a form that has to fit
+   a phone. `min-width: 0` so the box gives way before the row does. */
 .range-fields .ayah-field {
-  flex: 1;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  margin-block: var(--gap, 16px) var(--gap, 14px);
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-block: var(--gap, 16px) 0;
   margin-inline: 0;
   text-align: start;
 }
+.range-fields .ayah-field label {
+  flex-shrink: 0;
+}
 .range-fields .ayah-field input {
   width: 100%;
+  min-width: 0;
 }
 .chip-row {
   display: flex;
@@ -934,7 +942,7 @@ progress::-moz-progress-bar {
   align-items: center;
   gap: 8px;
   border: 0;
-  margin: 0;
+  margin: var(--gap, 20px) 0 0;
   padding: 0;
 }
 
@@ -990,13 +998,15 @@ progress::-moz-progress-bar {
   color: var(--muted-foreground);
   font-size: 14px;
 }
-/* Its chevron is the shared rule at the end of this file, with the one the
-   shortcut list uses. */
-.reps-toggle {
+/* The reciter, on the same line as the minutes his pace decides. It keeps
+   its own name short and lets the estimate wrap, because the estimate is two
+   short numbers and a name is not divisible. */
+.reciter-pick {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   flex-shrink: 0;
+  max-width: 60%;
   min-height: 44px;
   padding-inline: 10px;
   border: 0;
@@ -1005,15 +1015,14 @@ progress::-moz-progress-bar {
   color: var(--muted-foreground);
   font-size: 13px;
 }
-.reps-toggle:hover {
+.reciter-pick span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reciter-pick:hover {
   color: var(--foreground);
   background: var(--surface-raised);
-}
-.reps-toggle[aria-expanded='true'] {
-  color: var(--foreground);
-}
-.reps .stepper:first-child {
-  padding-top: 0;
 }
 .session-estimate span {
   display: inline-flex;
@@ -1174,10 +1183,63 @@ progress::-moz-progress-bar {
 }
 
 /* ── Repetition counts ───────────────────────────────────────────────── */
-/* The panel the estimate's row opens. It sits directly above «ابدأ», where
-   the numbers it holds are next to the estimate they move. */
+/* Three counts side by side, directly above the estimate they move. Three
+   columns and not three rows because this form has to fit a phone whole: the
+   rows cost 150px and the columns cost 85. */
 .reps {
-  margin-bottom: var(--gap-sm, 8px);
+  border: 0;
+  padding: 0;
+  margin: var(--gap, 20px) 0 0;
+  min-width: 0;
+}
+.reps legend {
+  padding: 0;
+  margin-bottom: 2px;
+}
+.reps-row {
+  display: flex;
+  align-items: end;
+}
+/* Even thirds, and `min-width: 0` so a long label shrinks the column rather
+   than pushing the row wider than the screen. */
+.reps-row .stepper {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.stepper-compact {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  padding-block: 0;
+}
+.stepper-compact .stepper-label {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+/* Each count is drawn as one control, because three bare triples of «− ٣ +»
+   in a row leave less space between one count's minus and the next count's
+   plus than between either and its own number, and the eye groups by
+   proximity. The border is the same one every other box on this form uses,
+   so it clears 1.4.11's 3:1 without anything new. */
+.stepper-compact .stepper-controls {
+  gap: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 9px;
+}
+/* Narrower than the 44px a row-shaped stepper gives them, because three of
+   these have to share the width of a phone: 40 wide by 44 tall is still a
+   target well over the 24px WCAG 2.5.8 asks for, and the height a finger
+   reaches for has not moved. The floor is what a 320px screen leaves, so the
+   row shrinks with the viewport rather than overflowing it. */
+.stepper-compact .stepper-controls .icon-button {
+  width: clamp(30px, 9.5vw, 38px);
+  border-radius: 8px;
+}
+.stepper-compact .stepper-controls output {
+  min-width: 24px;
+  font-size: 16px;
 }
 .shortcut-help summary {
   cursor: pointer;
@@ -1197,8 +1259,7 @@ progress::-moz-progress-bar {
    is right-to-left throughout, so closed points along the reading direction.
    No opacity on it: it is what says whether the section is open, and 1.4.11
    wants 3:1 for that, which multiplying against the background gives up. */
-.shortcut-help summary::after,
-.reps-toggle::after {
+.shortcut-help summary::after {
   content: '';
   width: 7px;
   height: 7px;
@@ -1208,8 +1269,7 @@ progress::-moz-progress-bar {
   transition: transform 160ms;
   flex-shrink: 0;
 }
-.shortcut-help[open] summary::after,
-.reps-toggle[aria-expanded='true']::after {
+.shortcut-help[open] summary::after {
   transform: rotate(45deg);
 }
 .stepper {
@@ -1256,9 +1316,6 @@ progress::-moz-progress-bar {
     font-size: 13px;
     padding-inline: 4px;
     gap: 4px;
-  }
-  .intro h1 {
-    font-size: 27px;
   }
   .memorizing-main {
     padding-top: 0;
@@ -1312,17 +1369,25 @@ progress::-moz-progress-bar {
     min-height: 64px;
     padding-block: 8px;
   }
-  .intro h1 {
-    font-size: 26px;
-    margin-bottom: 0;
-  }
 }
-/* Below the phone, the promise line gives way to the form it introduces. The
-   heading stays: it is the page's only h1, and the brand in the corner is a
-   link, not a title. */
-@media (max-height: 843px) {
-  .intro p {
-    display: none;
+/* Below the tablet, the heading and its promise line give way to the form
+   they introduce, to the accessible tree rather than off the page: the h1 is
+   still the first thing a screen reader reaches, and it is still the page's
+   only one. What justifies moving it is that the brand in the corner already
+   says which app this is and the form under it is self-evidently a form for
+   choosing a passage, so the 70px buys a row of controls that has nowhere
+   else to come from. */
+@media (max-height: 900px) {
+  .intro {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
   }
 }
 /* Shorter still, which is most phones once the browser's own bars are on the
@@ -1333,8 +1398,19 @@ progress::-moz-progress-bar {
   .topbar {
     min-height: 56px;
   }
-  .intro h1 {
-    font-size: 21px;
+  .reps {
+    margin-top: var(--gap-sm, 8px);
+  }
+  .reps legend {
+    margin-bottom: 0;
+  }
+  .stepper-compact .stepper-label {
+    line-height: 1.35;
+  }
+  /* The line that says the position is kept, in the sheet's «عن التطبيق»
+     where it is a fact about the app rather than a caption on a form. */
+  .save-hint {
+    display: none;
   }
   .surah-field {
     min-height: 56px;
@@ -1346,11 +1422,15 @@ progress::-moz-progress-bar {
   .grain-row legend {
     margin-bottom: 3px;
   }
-  .range-fields .ayah-field {
-    margin-block: var(--gap, 16px) var(--gap-sm, 7px);
-  }
   .primary-button {
     min-height: 48px;
+  }
+}
+/* Smaller than any phone still sold, and what a phone in landscape reports.
+   The blocks close up to each other; nothing inside them moves. */
+@media (max-height: 700px) {
+  .grain-row {
+    margin-top: var(--gap-sm, 7px);
   }
 }
 @media (max-height: 600px) {

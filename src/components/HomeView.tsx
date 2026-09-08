@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import {
+  AudioLines,
   BookOpen,
   ChevronDown,
   ChevronLeft,
@@ -35,9 +36,6 @@ const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
 
 /** Past this, most people would rather trim the drill than sit through it. */
 const LONG_SESSION = 30;
-
-/** The panel the estimate's own row opens, named once for both ends. */
-const REPS = 'repetition-counts';
 
 /** What is left to choose from for a mushaf with no published word timings. */
 const ayahGrains = grains.filter((grain) => grain !== 'phrase');
@@ -94,12 +92,14 @@ export function HomeView({
   update,
   items,
   onOpenPicker,
+  onOpenReciter,
   onStart,
 }: {
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
   items: readonly ReviewItem[];
   onOpenPicker: () => void;
+  onOpenReciter: () => void;
   onStart: (screen: 'session' | 'practice') => void;
 }) {
   const surah = surahs[prefs.surah - 1];
@@ -142,7 +142,6 @@ export function HomeView({
      restores the gap the learner had chosen, which is why it is kept. */
   const repeating = prefs.echo !== 'off';
   const lastGap = useRef<EchoMode>(repeating ? prefs.echo : 1);
-  const [counts, setCounts] = useState(false);
   const setPlan = (patch: Partial<SchedulePlan>) =>
     update({ plan: { ...prefs.plan, ...patch } });
 
@@ -327,11 +326,12 @@ export function HomeView({
           </div>
         </fieldset>
 
-        {/* What the drill will cost, and beside it the three numbers that
-            decide it. They share this row because the form has to fit the
-            screen, and because the estimate is what sends anybody looking
-            for them. The output is named: a reader hearing «نحو ٣ دقائق»
-            needs to know what it is costing. */}
+        <Repetitions plan={prefs.plan} onChange={setPlan} />
+
+        {/* What the drill will cost, and beside it the one other thing that
+            decides it: a deliberate reciter takes half again as long as a
+            swift one over the same passage. The output is named, because a
+            reader hearing «نحو ٣ دقائق» needs to know what it is costing. */}
         <div className="estimate-row">
           <output className="session-estimate" aria-label="تقدير الجلسة">
             {failed ? (
@@ -355,33 +355,24 @@ export function HomeView({
               <span>جارٍ الحساب…</span>
             )}
           </output>
-          {/* Not «مرات التكرار»: the estimate beside it counts the plays in
-              «مرة» and «مرات», and the same counted noun on two things one
-              row apart is the confusion «طول المدى» was written to end. */}
+          {/* The short name, because this is one line of a phone shared with
+              the estimate. The pace band is not repeated here: it is what the
+              estimate beside it is already saying, in minutes. */}
           <button
-            className="reps-toggle"
-            aria-expanded={counts}
-            aria-controls={REPS}
-            onClick={() => setCounts(!counts)}
+            className="reciter-pick"
+            aria-label={`القارئ، ${reciter.name}`}
+            onClick={onOpenReciter}
           >
-            ضبط التكرار
+            <AudioLines size={15} />
+            <span>{reciter.short}</span>
+            <ChevronDown size={15} />
           </button>
         </div>
-        <Repetitions
-          id={REPS}
-          plan={prefs.plan}
-          open={counts}
-          onChange={setPlan}
-        />
 
         {/* The estimate is a number; this is what to do about it. */}
         {passage && minutes(passage.seconds) > LONG_SESSION && (
           <p className="field-note long-session">
-            جلسة طويلة. ضيّق المدى، أو{' '}
-            <button className="text-button" onClick={() => setCounts(true)}>
-              خفّف التكرار
-            </button>
-            .
+            جلسة طويلة. ضيّق المدى، أو خفّف مرات التكرار.
           </p>
         )}
 

@@ -11,6 +11,7 @@ import { App } from './App';
 import userEvent from '@testing-library/user-event';
 import { Recorder } from './components/Recorder';
 import { defaults, normalize, restore, surahs } from './data/quran';
+import { reciters } from './data/audio';
 afterEach(cleanup);
 beforeEach(() => {
   localStorage.clear();
@@ -96,6 +97,56 @@ describe('catalogue and persisted state', () => {
       }),
     );
   });
+  /* Who recites is a session choice: it decides how long the sitting will
+     take and whether «جملة» can be offered at all. So it is on the start
+     screen beside the estimate its pace moves, and tapping it puts the
+     cursor on the reciter rather than on the panel's name. */
+  it('reaches the reciter from the start screen', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    const pick = await screen.findByRole('button', { name: /القارئ، محمود/ });
+    /* The short name on the screen, because it shares one line of a phone
+       with the estimate, and the whole name in the accessible name, so
+       nothing is lost to somebody who cannot see which of them it is. */
+    expect(pick.textContent).toBe('الحصري');
+    expect(pick.getAttribute('aria-label')).toBe('القارئ، محمود خليل الحصري');
+    await user.click(pick);
+    const select = await screen.findByRole(
+      'combobox',
+      { name: 'القارئ' },
+      { timeout: 3000 },
+    );
+    await waitFor(() => expect(document.activeElement).toBe(select));
+    await user.click(select);
+    await user.click(
+      await screen.findByRole('option', { name: /العفاسي/ }, { timeout: 3000 }),
+    );
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattil:v1')!).reciter).toBe(
+        'alafasy',
+      ),
+    );
+    // And the gear still opens the same panel on its own name.
+    await user.click(screen.getByRole('button', { name: 'إغلاق' }));
+    await user.click(screen.getByRole('button', { name: 'الإعدادات' }));
+    await waitFor(() =>
+      expect(document.activeElement).not.toBe(
+        screen.getByRole('combobox', { name: 'القارئ' }),
+      ),
+    );
+  });
+
+  /* Every reciter has to have a name short enough for that row, and it has
+     to be a real name rather than the full one cut off somewhere. */
+  it('gives every reciter a short name that is part of his name', () => {
+    for (const reciter of reciters) {
+      expect(reciter.short.length).toBeLessThanOrEqual(21);
+      expect(reciter.short.length).toBeGreaterThan(3);
+      for (const word of reciter.short.replace(/[()]/g, ' ').split(/\s+/))
+        if (word) expect(reciter.name).toContain(word);
+    }
+  });
+
   it('reviews freely, hides actual verse text, navigates, and restores position', async () => {
     const view = render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /راجِع بنفسك/ }));

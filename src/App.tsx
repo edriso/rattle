@@ -40,7 +40,13 @@ function stored(): Preferences {
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences>(stored);
-  const [panel, setPanel] = useState<'picker' | 'settings' | null>(null);
+  /* «reciter» is the settings sheet opened from the start screen's reciter
+     button rather than from the gear: same panel, but the cursor lands on the
+     reciter instead of on the panel's name, so a reader who asked for one
+     thing is put in front of that thing. */
+  const [panel, setPanel] = useState<'picker' | 'settings' | 'reciter' | null>(
+    null,
+  );
   const [storageError, setStorageError] = useState(false);
   const review = useReviewPlan();
 
@@ -131,6 +137,7 @@ export function App() {
               update={update}
               items={review.items}
               onOpenPicker={() => setPanel('picker')}
+              onOpenReciter={() => setPanel('reciter')}
               onStart={(screen) => update({ screen })}
             />
           ) : prefs.screen === 'session' ? (
@@ -185,12 +192,13 @@ export function App() {
               }}
             />
           )}
-          {panel === 'settings' && (
+          {(panel === 'settings' || panel === 'reciter') && (
             <SettingsSheet
               open
               onClose={() => setPanel(null)}
               prefs={prefs}
               update={update}
+              landOn={panel === 'reciter' ? 'reciter' : 'title'}
             />
           )}
         </Suspense>

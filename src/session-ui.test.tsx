@@ -130,19 +130,20 @@ describe('choosing a passage', () => {
     render(<App />);
     const hint = await screen.findByText(/جلسة طويلة/, {}, { timeout: 3000 });
     expect(hint).toBeTruthy();
-    // The way out of a long drill is one tap from the sentence saying so, and
-    // it opens the counts on this screen rather than sending the reader to a
-    // panel to look for them.
-    fireEvent.click(screen.getByRole('button', { name: 'خفّف التكرار' }));
-    const counts = await screen.findByRole('button', {
-      name: 'أنقِص مرات التلقين',
-    });
+    /* And the way out is already on the screen the sentence is on: the three
+       counts are drawn, not hidden behind anything that has to be found and
+       opened first. This is the request the reading group made in those
+       words, so it is asserted rather than left to a stylesheet. */
+    const counts = screen.getByRole('button', { name: 'أنقِص مرات التلقين' });
     fireEvent.click(counts);
     await waitFor(() =>
       expect(
         JSON.parse(localStorage.getItem('rattil:v1')!).plan.singleReps,
       ).toBe(defaults.plan.singleReps - 1),
     );
+    // All three, and each showing what it is set to.
+    for (const name of ['مرات التلقين', 'مرات الوصل', 'مرات السرد'])
+      expect(screen.getByRole('status', { name })).toBeTruthy();
   });
 
   it('offers listening alone, and hands the gap back when repeating resumes', async () => {

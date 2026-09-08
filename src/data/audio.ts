@@ -11,6 +11,14 @@
 export type Reciter = {
   id: string;
   name: string;
+  /**
+   * The name where there is only room for a name: the start screen carries
+   * the reciter beside the estimate his pace decides, on one line of a phone.
+   * Required rather than derived, because which part of a name is the
+   * recognisable part is a judgement about that name and not a rule about
+   * strings, and a truncated «محمد صديق المنش…» helps nobody.
+   */
+  short: string;
   /** EveryAyah folder holding one MP3 per ayah, named `SSSAAA.mp3`. */
   folder: string;
   /**
@@ -53,6 +61,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'minshawi-mujawwad',
     name: 'محمد صديق المنشاوي (المجوّد)',
+    short: 'المنشاوي (المجوّد)',
     folder: 'Minshawy_Mujawwad_64kbps',
     // The mirror does not carry the 64 kbps cut. Measured over twelve ayat
     // from 2 to 391 seconds, the folder it does carry runs a bounded 26 to
@@ -66,6 +75,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'abdulbasit-mujawwad',
     name: 'عبد الباسط عبد الصمد (المجوّد)',
+    short: 'عبد الباسط (المجوّد)',
     folder: 'Abdul_Basit_Mujawwad_128kbps',
     kbps: 128,
     recitation: 1,
@@ -74,6 +84,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'husary-muallim',
     name: 'محمود خليل الحصري (المعلّم)',
+    short: 'الحصري (المعلّم)',
     folder: 'Husary_Muallim_128kbps',
     kbps: 128,
     recitation: 12,
@@ -82,6 +93,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'husary',
     name: 'محمود خليل الحصري',
+    short: 'الحصري',
     folder: 'Husary_64kbps',
     kbps: 64,
     recitation: 6,
@@ -90,6 +102,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'ayman-sowaid',
     name: 'أيمن سويد',
+    short: 'أيمن سويد',
     folder: 'Ayman_Sowaid_64kbps',
     kbps: 64,
     /* No `recitation`: Quran.com publishes no word timings for this mushaf,
@@ -106,6 +119,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'abdulbasit',
     name: 'عبد الباسط عبد الصمد',
+    short: 'عبد الباسط',
     folder: 'Abdul_Basit_Murattal_64kbps',
     kbps: 64,
     recitation: 2,
@@ -114,6 +128,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'alafasy',
     name: 'مشاري راشد العفاسي',
+    short: 'العفاسي',
     folder: 'Alafasy_128kbps',
     kbps: 128,
     recitation: 7,
@@ -122,6 +137,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'minshawi',
     name: 'محمد صديق المنشاوي',
+    short: 'المنشاوي',
     folder: 'Minshawy_Murattal_128kbps',
     kbps: 128,
     recitation: 9,
@@ -130,6 +146,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'shatri',
     name: 'أبو بكر الشاطري',
+    short: 'الشاطري',
     folder: 'Abu_Bakr_Ash-Shaatree_128kbps',
     kbps: 128,
     recitation: 4,
@@ -138,6 +155,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'dussary',
     name: 'ياسر الدوسري',
+    short: 'الدوسري',
     folder: 'Yasser_Ad-Dussary_128kbps',
     kbps: 128,
     recitation: 97,
@@ -146,6 +164,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'sudais',
     name: 'عبد الرحمن السديس',
+    short: 'السديس',
     folder: 'Abdurrahmaan_As-Sudais_64kbps',
     mirror: 'Abdurrahmaan_As-Sudais_192kbps',
     kbps: 64,
@@ -155,6 +174,7 @@ export const reciters: readonly Reciter[] = [
   {
     id: 'shuraim',
     name: 'سعود الشريم',
+    short: 'الشريم',
     folder: 'Saood_ash-Shuraym_64kbps',
     mirror: 'Saood_ash-Shuraym_128kbps',
     kbps: 64,

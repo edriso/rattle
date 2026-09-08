@@ -15,6 +15,7 @@ export function Stepper({
   min,
   max,
   zeroLabel,
+  compact = false,
   onChange,
 }: {
   label: string;
@@ -26,6 +27,13 @@ export function Stepper({
   min: number;
   max: number;
   zeroLabel?: string;
+  /**
+   * A column rather than a row, for three of these side by side on a phone.
+   * The hint stops being drawn and is only spoken, because there is no line
+   * under a 110px label to draw it on; it is still on `aria-describedby`, so
+   * nothing is lost to a screen reader, only to the eye.
+   */
+  compact?: boolean;
   onChange: (value: number) => void;
 }) {
   const shown = value === 0 && zeroLabel ? zeroLabel : arabic(value);
@@ -33,10 +41,14 @@ export function Stepper({
      rather than left on the screen for whoever can see it. */
   const described = useId();
   return (
-    <div className="stepper">
+    <div className={compact ? 'stepper stepper-compact' : 'stepper'}>
       <span className="stepper-label">
         {label}
-        {hint && <small id={described}>{hint}</small>}
+        {hint && (
+          <small id={described} className={compact ? 'sr-only' : undefined}>
+            {hint}
+          </small>
+        )}
       </span>
       <span className="stepper-controls">
         {/* `aria-disabled`, not `disabled`: a button that disables itself the
