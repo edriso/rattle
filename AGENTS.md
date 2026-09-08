@@ -338,11 +338,14 @@ publishes word timings for his mushaf, and his pace had to be measured from
 the recordings' own lengths instead.
 
 Both scripts run with plain `node` (Node 22 strips the types). Read
-`data/README.md` before you touch either. If you add a reciter, or change the
-splitting rules in `phrases.ts`, run `npm run prepare:timings` again, and
-  then `npm run verify:cuts` after it: `prepare:timings` writes the
-  boundaries from the text and the constant, which discards the measurement,
-  and the `verified` date in each file is how you tell. See `data/README.md`.
+`data/README.md` before you touch either.
+
+Adding a reciter is just `npm run prepare:timings`: a file carrying a
+`verified` date is left alone and named, since that script writes boundaries
+from the text and a constant and cannot reproduce a measurement made by
+listening. Changing the splitting rules in `phrases.ts`, or `LAG`, does
+invalidate a measurement, so that case is `npm run prepare:timings -- --force`
+followed by `npm run verify:cuts`, in that order.
 
 Audio itself is **not** committed. It is fetched from `everyayah.com`, one MP3
 per ayah. That host sends `access-control-allow-origin: *`, which is what lets

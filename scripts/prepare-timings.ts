@@ -22,7 +22,7 @@
    correction; data/README.md records how it was measured and what it does not
    fix.  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { reciters } from '../src/data/audio.ts';
 import { openVerse } from '../src/data/verse.ts';
@@ -217,6 +217,17 @@ if (
 async function generate() {
   mkdirSync(OUT, { recursive: true });
   const generated = new Date().toISOString().slice(0, 10);
+  /* A file that has been measured against the audio is not something this
+     script can reproduce: those boundaries came from listening to about
+     350 MB of recording per reciter, and everything here can offer instead is
+     the text and a constant. So a `verified` file is left alone and named
+     rather than quietly overwritten, which means adding a reciter needs no
+     flag and costs nothing that was measured.
+
+     `--force` is for the case that really does invalidate a measurement, a
+     change to the splitting rules in `src/memorize/phrases.ts` or to `LAG`:
+     pass it, then run `npm run verify:cuts` again to measure what it wrote. */
+  const force = process.argv.includes('--force');
   const paces: string[] = [];
   for (const reciter of reciters) {
     /* A recitation nobody has published word timings for. Its audio is played
@@ -227,9 +238,22 @@ async function generate() {
       );
       continue;
     }
+    const out = new URL(`${reciter.id}.json`, OUT);
+    if (!force && existsSync(out)) {
+      const { verified } = JSON.parse(readFileSync(out, 'utf8')) as {
+        verified?: string;
+      };
+      if (verified) {
+        console.log(
+          `${reciter.id.padEnd(20)} measured against the audio on ${verified}, left as it is` +
+            ` (--force overwrites it, and then it needs measuring again)`,
+        );
+        continue;
+      }
+    }
     const { bounds, report } = await build(reciter);
     writeFileSync(
-      new URL(`${reciter.id}.json`, OUT),
+      out,
       /* Indented, because a diff of this file should say which ayat changed.
          `npm run prepare:timings` runs the formatter over the output afterwards,
          which is what collapses the short arrays to a line an ayah. */

@@ -75,7 +75,7 @@ node scripts/verify-cuts.ts husary          # one reciter
 node scripts/verify-cuts.ts --write         # every reciter with a file
 ```
 
-It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files per reciter, so it caches them under `work/audio/` (git-ignored) and a second run costs nothing. A file it has measured carries a `verified` date. **Re-running `prepare:timings` discards that**, because it writes the boundaries again from the text and the constant; run the verification after it.
+It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files per reciter, so it caches them under `work/audio/` (git-ignored) and a second run costs nothing. A file it has measured carries a `verified` date, and `prepare:timings` now **leaves such a file alone and says so**, because it cannot reproduce what is in it: those boundaries came from listening to the recordings, and all that script has is the text and a constant. So adding a reciter needs no flag and costs nothing that was measured. `--force` overwrites anyway, which is right for a change to the splitting rules or to `LAG`, and then the file needs measuring again.
 
 Two properties worth knowing. It is **idempotent**: a second pass over a verified file changes nothing, because every cut already sits in a measured pause, which is a useful self-check. And it is **all or nothing per ayah**, because `buildSegments` only cuts an ayah that has exactly one boundary per gap between its phrases: a partial set is not something the app can use, so an ayah that loses one cut loses them all.
 
@@ -146,7 +146,7 @@ Minshawi's murattal and mujawwad both pass the mastering check comfortably, and 
 
 Ayman Sowaid has no published word timings, so there is nothing to measure. `verified` in each timing file says which recitations have been measured.
 
-Re-run `prepare:timings` only when a reciter is added, or the splitting rules in `src/memorize/phrases.ts` change, or `LAG` changes; then re-run the verification. The committed output is what the app ships.
+Re-run `prepare:timings` only when a reciter is added, or the splitting rules in `src/memorize/phrases.ts` change, or `LAG` changes. Adding a reciter needs nothing else. A rules change needs `--force`, because the measured files are measured against the old rules, and then `npm run verify:cuts` to measure them against the new ones. The committed output is what the app ships.
 
 ## Updating
 
