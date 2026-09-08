@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
@@ -27,6 +27,8 @@ import {
 } from '../memorize/session';
 import { preparePassage, usePassageSource } from '../memorize/usePassage';
 import { daysUntil, due, type ReviewItem } from '../memorize/review';
+import type { SchedulePlan } from '../memorize/schedule';
+import { Repetitions } from './Repetitions';
 
 /** Minutes, rounded up, because a session never feels shorter than it is. */
 const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
@@ -34,19 +36,62 @@ const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
 /** Past this, most people would rather trim the drill than sit through it. */
 const LONG_SESSION = 30;
 
+/** The panel the estimate's own row opens, named once for both ends. */
+const REPS = 'repetition-counts';
+
+/**
+ * One end of the passage. The number it shows is the passage's own, so typing
+ * past the end of the surah snaps back to it; but an empty field is a moment
+ * in the middle of retyping rather than a value, so it is allowed to stay
+ * empty while it is being typed in and gets its number back on the way out.
+ * That is the whole reason this holds any state: the field used to refuse to
+ * go blank, and a reader who wanted ٦ had to select the ١ before typing over
+ * it. Text rather than a number field, because a number field silently throws
+ * away ٢٥٥, which is what an Arabic keyboard types.
+ */
+function AyahField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const [blank, setBlank] = useState(false);
+  return (
+    <div className="ayah-field">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        value={blank ? '' : arabic(value)}
+        onChange={(event) => {
+          const typed = digits(event.target.value);
+          setBlank(event.target.value.trim() === '');
+          if (typed) onChange(Number(typed));
+        }}
+        onBlur={() => setBlank(false)}
+      />
+    </div>
+  );
+}
+
 export function HomeView({
   prefs,
   update,
   items,
   onOpenPicker,
-  onOpenSettings,
   onStart,
 }: {
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
   items: readonly ReviewItem[];
   onOpenPicker: () => void;
-  onOpenSettings: () => void;
   onStart: (screen: 'session' | 'practice') => void;
 }) {
   const surah = surahs[prefs.surah - 1];
@@ -88,6 +133,9 @@ export function HomeView({
      restores the gap the learner had chosen, which is why it is kept. */
   const repeating = prefs.echo !== 'off';
   const lastGap = useRef<EchoMode>(repeating ? prefs.echo : 1);
+  const [counts, setCounts] = useState(false);
+  const setPlan = (patch: Partial<SchedulePlan>) =>
+    update({ plan: { ...prefs.plan, ...patch } });
 
   const setRange = (from: number, to: number) => {
     const start = Math.max(1, Math.min(surah.count, from));
@@ -157,38 +205,25 @@ export function HomeView({
         </button>
 
         <div className="range-fields">
-          {/* Text rather than a number field: a number field silently throws
-              away ٢٥٥, which is what an Arabic keyboard types. */}
-          <div className="ayah-field">
-            <label htmlFor="from-ayah">من الآية</label>
-            <input
-              id="from-ayah"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              value={arabic(prefs.ayah)}
-              onChange={(e) =>
-                setRange(Number(digits(e.target.value)) || 1, prefs.to)
-              }
-            />
-          </div>
-          <div className="ayah-field">
-            <label htmlFor="to-ayah">إلى الآية</label>
-            <input
-              id="to-ayah"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              value={arabic(prefs.to)}
-              onChange={(e) =>
-                setRange(prefs.ayah, Number(digits(e.target.value)) || 1)
-              }
-            />
-          </div>
+          <AyahField
+            id="from-ayah"
+            label="من الآية"
+            value={prefs.ayah}
+            onChange={(from) => setRange(from, prefs.to)}
+          />
+          <AyahField
+            id="to-ayah"
+            label="إلى الآية"
+            value={prefs.to}
+            onChange={(to) => setRange(prefs.ayah, to)}
+          />
         </div>
 
+        {/* The label is on the screen and not only in the accessible tree:
+            these set how many ayat the passage covers, and a reader took them
+            for repetition counts, which are two rows further down. */}
         <fieldset className="chip-row">
-          <legend className="sr-only">طول المقطع</legend>
+          <legend className="setting-label">طول المدى</legend>
           {[3, 5, 10].map((n) => (
             <button
               key={n}
@@ -270,33 +305,55 @@ export function HomeView({
           </div>
         </fieldset>
 
-        <output className="session-estimate">
-          {failed ? (
-            <>
-              تعذّر تحميل النص.{' '}
-              <button className="text-button" onClick={retry}>
-                إعادة المحاولة
-              </button>
-            </>
-          ) : passage ? (
-            <>
-              <span>
-                <Clock size={15} /> نحو {minutesCount(minutes(passage.seconds))}
-              </span>
-              <span>
-                <Repeat size={15} /> {timesCount(passage.plays)}
-              </span>
-            </>
-          ) : (
-            <span>جارٍ الحساب…</span>
-          )}
-        </output>
+        {/* What the drill will cost, and beside it the three numbers that
+            decide it. They share this row because the form has to fit the
+            screen, and because the estimate is what sends anybody looking
+            for them. The output is named: a reader hearing «نحو ٣ دقائق»
+            needs to know what it is costing. */}
+        <div className="estimate-row">
+          <output className="session-estimate" aria-label="تقدير الجلسة">
+            {failed ? (
+              <>
+                تعذّر تحميل النص.{' '}
+                <button className="text-button" onClick={retry}>
+                  إعادة المحاولة
+                </button>
+              </>
+            ) : passage ? (
+              <>
+                <span>
+                  <Clock size={15} /> نحو{' '}
+                  {minutesCount(minutes(passage.seconds))}
+                </span>
+                <span>
+                  <Repeat size={15} /> {timesCount(passage.plays)}
+                </span>
+              </>
+            ) : (
+              <span>جارٍ الحساب…</span>
+            )}
+          </output>
+          <button
+            className="reps-toggle"
+            aria-expanded={counts}
+            aria-controls={REPS}
+            onClick={() => setCounts(!counts)}
+          >
+            مرات التكرار
+          </button>
+        </div>
+        <Repetitions
+          id={REPS}
+          plan={prefs.plan}
+          open={counts}
+          onChange={setPlan}
+        />
 
         {/* The estimate is a number; this is what to do about it. */}
         {passage && minutes(passage.seconds) > LONG_SESSION && (
           <p className="field-note long-session">
             جلسة طويلة. ضيّق المدى، أو{' '}
-            <button className="text-button" onClick={onOpenSettings}>
+            <button className="text-button" onClick={() => setCounts(true)}>
               خفّف التكرار
             </button>
             .

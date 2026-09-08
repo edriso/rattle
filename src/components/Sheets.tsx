@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, Check, ChevronLeft, Minus, Plus } from 'lucide-react';
+import { X, Check, ChevronLeft } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -33,6 +33,7 @@ import {
 import { echoLabel, echoModes, type EchoMode } from '../memorize/session';
 import { MAX_INTERVAL } from '../memorize/review';
 import type { SchedulePlan } from '../memorize/schedule';
+import { Stepper } from './Stepper';
 
 function Panel({
   open,
@@ -76,55 +77,6 @@ function Panel({
         {children}
       </SheetContent>
     </Sheet>
-  );
-}
-
-function Stepper({
-  label,
-  hint,
-  value,
-  min,
-  max,
-  zeroLabel,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  value: number;
-  min: number;
-  max: number;
-  zeroLabel?: string;
-  onChange: (value: number) => void;
-}) {
-  const shown = value === 0 && zeroLabel ? zeroLabel : arabic(value);
-  return (
-    <div className="stepper">
-      <span className="stepper-label">
-        {label}
-        {hint && <small>{hint}</small>}
-      </span>
-      <span className="stepper-controls">
-        {/* `aria-disabled`, not `disabled`: a button that disables itself the
-            moment it is pressed drops the keyboard where it stands. */}
-        <button
-          className="icon-button"
-          aria-label={`أنقص ${label}`}
-          aria-disabled={value <= min}
-          onClick={() => value > min && onChange(value - 1)}
-        >
-          <Minus size={17} />
-        </button>
-        <output aria-label={label}>{shown}</output>
-        <button
-          className="icon-button"
-          aria-label={`زد ${label}`}
-          aria-disabled={value >= max}
-          onClick={() => value < max && onChange(value + 1)}
-        >
-          <Plus size={17} />
-        </button>
-      </span>
-    </div>
   );
 }
 
@@ -348,48 +300,25 @@ export function SettingsSheet({
         </p>
       </section>
 
-      <details className="advanced">
-        <summary>عدد مرات التكرار</summary>
-        <Stepper
-          label="المقطع منفردًا"
-          hint="تلقين"
-          value={prefs.plan.singleReps}
-          min={0}
-          max={10}
-          zeroLabel="بلا"
-          onChange={(singleReps) => setPlan({ singleReps })}
-        />
-        <Stepper
-          label="الوصل بما قبله"
-          hint="ربط"
-          value={prefs.plan.linkReps}
-          min={0}
-          max={10}
-          zeroLabel="بلا"
-          onChange={(linkReps) => setPlan({ linkReps })}
-        />
+      {/* How many times each step repeats is on the start screen, next to the
+          estimate those numbers move. This one is not a length but the shape
+          of the method, and its default of two is the method as taught. */}
+      <section className="setting-section">
         <Stepper
           label="مقاطع الوصل"
           hint="كم مقطعًا سابقًا يُضَم"
+          name="عدد مقاطع الوصل"
           value={prefs.plan.linkBack}
           min={0}
           max={5}
           zeroLabel="الكل"
           onChange={(linkBack) => setPlan({ linkBack })}
         />
-        <Stepper
-          label="السرد الأخير"
-          hint="المقطع كاملًا"
-          value={prefs.plan.reciteReps}
-          min={0}
-          max={10}
-          zeroLabel="بلا"
-          onChange={(reciteReps) => setPlan({ reciteReps })}
-        />
         <p className="field-note">
           ضمّ كل المقاطع السابقة يجعل الجلسة تطول بسرعة كبيرة كلما زاد المدى.
+          ومرات التكرار في الشاشة الأولى.
         </p>
-      </details>
+      </section>
 
       <section className="setting-section">
         <div className="setting-label" id="count-label">

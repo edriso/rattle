@@ -197,7 +197,7 @@ label:has(input:focus-visible) {
   width: min(100%, 360px);
   align-self: center;
   justify-self: center;
-  padding-block: var(--gap) calc(var(--gap) + 6px);
+  padding-block: var(--gap);
 }
 .intro {
   text-align: center;
@@ -279,7 +279,7 @@ label:has(input:focus-visible) {
   filter: brightness(1.08);
 }
 .save-hint {
-  margin: var(--gap, 14px) 0 0;
+  margin: var(--gap-sm, 10px) 0 0;
   text-align: center;
   color: var(--muted-foreground);
   font-size: 12px;
@@ -821,11 +821,13 @@ progress::-moz-progress-bar {
 .chip-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   border: 0;
   margin: 0;
   padding: 0;
 }
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -851,6 +853,10 @@ progress::-moz-progress-bar {
   margin: var(--gap, 20px) 0 0;
   padding: 0;
 }
+/* A legend inside a flex fieldset is the fieldset's own legend rather than a
+   flex item, so it takes the line above the row it names, which is what both
+   of these rows want. */
+.chip-row legend,
 .grain-row legend {
   padding: 0;
   margin-bottom: 8px;
@@ -859,14 +865,58 @@ progress::-moz-progress-bar {
   padding: 8px 2px;
   font-size: 13px;
 }
+/* The cost of the drill, and the control over what it costs, on one line. */
+.estimate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: var(--gap, 20px) 0 var(--gap-sm, 14px);
+}
 .session-estimate {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 20px;
-  margin: var(--gap, 20px) 0 var(--gap-sm, 14px);
+  gap: 6px 16px;
   color: var(--muted-foreground);
   font-size: 14px;
+}
+.reps-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.reps-toggle:hover {
+  color: var(--foreground);
+  background: var(--surface-raised);
+}
+/* A chevron that turns, so the row reads as openable. The interface is
+   right-to-left throughout, so closed points along the reading direction. */
+.reps-toggle::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(135deg);
+  transition: transform 160ms;
+  opacity: 0.7;
+}
+.reps-toggle[aria-expanded='true'] {
+  color: var(--foreground);
+}
+.reps-toggle[aria-expanded='true']::after {
+  transform: rotate(45deg);
+}
+.reps .stepper:first-child {
+  padding-top: 0;
 }
 .session-estimate span {
   display: inline-flex;
@@ -1027,12 +1077,11 @@ progress::-moz-progress-bar {
 }
 
 /* ── Repetition counts ───────────────────────────────────────────────── */
-.advanced {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-  margin-bottom: 10px;
+/* The panel the estimate's row opens. It sits directly above «ابدأ», where
+   the numbers it holds are next to the estimate they move. */
+.reps {
+  margin-bottom: var(--gap-sm, 8px);
 }
-.advanced summary,
 .shortcut-help summary {
   cursor: pointer;
   min-height: 44px;
@@ -1044,13 +1093,11 @@ progress::-moz-progress-bar {
   color: var(--foreground);
   list-style: none;
 }
-.advanced summary::-webkit-details-marker,
 .shortcut-help summary::-webkit-details-marker {
   display: none;
 }
 /* A chevron that turns, so a closed section reads as openable. The interface
    is right-to-left throughout, so closed points along the reading direction. */
-.advanced summary::after,
 .shortcut-help summary::after {
   content: '';
   width: 7px;
@@ -1062,7 +1109,6 @@ progress::-moz-progress-bar {
   flex-shrink: 0;
   opacity: 0.7;
 }
-.advanced[open] summary::after,
 .shortcut-help[open] summary::after {
   transform: rotate(45deg);
 }
@@ -1153,13 +1199,12 @@ progress::-moz-progress-bar {
   }
 }
 /* 844px is the viewport of the phone most people are holding, and the form
-   fills it exactly. Below that the promise line gives way to the form it
-   introduces, and the rhythm tightens. The heading stays: it is the page's
-   only h1, and the brand in the corner is a link, not a title. */
-@media (max-height: 843px) {
-  /* Height is scarce from here down, so the rhythm gives ground faster than
-     the linear `dvh` curve would, and the surah field gives up the roomiest
-     of its padding. It stays well over the 44px a finger needs. */
+   has to fill it whole: a dozen rows, each with the minimum a finger needs.
+   So the tightening starts above that height rather than below it, and the
+   rhythm gives ground faster than the linear `dvh` curve would while the
+   surah field gives up the roomiest of its padding. Both stay well over the
+   44px a finger needs. */
+@media (max-height: 900px) {
   .start-main {
     --gap: clamp(6px, 1.1dvh, 12px);
   }
@@ -1167,12 +1212,45 @@ progress::-moz-progress-bar {
     min-height: 64px;
     padding-block: 8px;
   }
-  .intro p {
-    display: none;
-  }
   .intro h1 {
     font-size: 26px;
     margin-bottom: 0;
+  }
+}
+/* Below the phone, the promise line gives way to the form it introduces. The
+   heading stays: it is the page's only h1, and the brand in the corner is a
+   link, not a title. */
+@media (max-height: 843px) {
+  .intro p {
+    display: none;
+  }
+}
+/* Shorter still, which is most phones once the browser's own bars are on the
+   screen: `dvh` reports what is left, and what is left is this. Every row
+   keeps the 44px a finger needs; what gives way is the space around them, so
+   no row of the form is dropped and «ابدأ» stays reachable. */
+@media (max-height: 780px) {
+  .topbar {
+    min-height: 56px;
+  }
+  .intro h1 {
+    font-size: 21px;
+  }
+  .surah-field {
+    min-height: 56px;
+    /* The two lines inside are what set its height from here down, and they
+       still clear 44px on their own. */
+    padding-block: 2px;
+  }
+  .chip-row legend,
+  .grain-row legend {
+    margin-bottom: 3px;
+  }
+  .range-fields .ayah-field {
+    margin-block: var(--gap, 16px) var(--gap-sm, 7px);
+  }
+  .primary-button {
+    min-height: 48px;
   }
 }
 @media (max-height: 600px) {
@@ -1202,7 +1280,7 @@ progress::-moz-progress-bar {
 }
 .long-session {
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: var(--gap-sm, 10px);
 }
 /* Inline, so the offer reads as part of the sentence rather than as a control
    parked under it. `.text-button` is a full-width block everywhere else. */

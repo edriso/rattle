@@ -90,7 +90,7 @@ describe('choosing a passage', () => {
   it('costs the drill before anything is fetched and grows with the range', async () => {
     start({ surah: 2, ayah: 1, to: 3 });
     render(<App />);
-    const estimate = await screen.findByRole('status');
+    const estimate = await screen.findByRole('status', { name: 'تقدير الجلسة' });
     await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
     const before = estimate.textContent;
     fireEvent.change(screen.getByRole('textbox', { name: 'إلى الآية' }), {
@@ -105,18 +105,24 @@ describe('choosing a passage', () => {
     render(<App />);
     const hint = await screen.findByText(/جلسة طويلة/, {}, { timeout: 3000 });
     expect(hint).toBeTruthy();
-    // The way out of a long drill is one tap from the sentence saying so.
+    // The way out of a long drill is one tap from the sentence saying so, and
+    // it opens the counts on this screen rather than sending the reader to a
+    // panel to look for them.
     fireEvent.click(screen.getByRole('button', { name: 'خفّف التكرار' }));
-    // The settings panel is a lazy chunk, so give it room to arrive.
-    expect(
-      await screen.findByRole('dialog', {}, { timeout: 3000 }),
-    ).toBeTruthy();
+    const counts = await screen.findByRole('button', {
+      name: 'أنقص مرات التلقين',
+    });
+    fireEvent.click(counts);
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattil:v1')!).plan.singleReps)
+        .toBe(defaults.plan.singleReps - 1),
+    );
   });
 
   it('offers listening alone, and hands the gap back when repeating resumes', async () => {
     start({ surah: 112, ayah: 1, to: 4, echo: 2 });
     render(<App />);
-    const estimate = await screen.findByRole('status');
+    const estimate = await screen.findByRole('status', { name: 'تقدير الجلسة' });
     await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
     const repeating = estimate.textContent;
     fireEvent.click(screen.getByRole('radio', { name: 'أستمع فقط' }));
