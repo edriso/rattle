@@ -323,10 +323,15 @@ at run time.
     touching exactly. A pause is inside the span of a word, not between two, so
     no threshold on that data can tell you whether the reciter stopped.
   - **Every cut is stored 300 ms later than the boundary the aligner reports**
-    (`LAG`). Measured against the audio, the pause begins a median 290 ms after
-    that boundary, so a clip ending at it ended while he was still finishing
-    his word. Do not raise it much: overshooting the end of a pause clips the
-    start of the next phrase, which is worse.
+    (`LAG`), because a clip ending at the boundary ended while the reciter was
+    still finishing his word. The 290 ms that number was fitted to came from a
+    130-ayah sample of three reciters and **is superseded**: measured over
+    whole mushafs, the correction wanted is +406 ms for Husary, +347 for Abdul
+    Basit's murattal, +106 for the teaching mushaf and **−432** for Abdul
+    Basit's mujawwad. So do not tune `LAG` to any of them. It is left at 300
+    deliberately, since fitting one number to one reciter's evidence is the
+    mistake measuring exists to replace, and a recitation still resting on it
+    wants measuring rather than fitting.
   - **Timings are read by `verse_key`, never by position.** One shipped
     recitation returns its ayat out of order, and one is missing an ayah.
 

@@ -62,9 +62,12 @@ and both are easy to undo by accident:
   recording. Asked for as one slice it keeps the reciter's own pause between
   them; asked for as two it spliced them tight together and dropped it.
 - **`ClipPlayer` opens a clip that starts part-way through a recording at its
-  first sound.** A cut lands where the reciter finished a word, which is the
-  moment before he breathes, so the clip would otherwise open on about a second
-  of silence. A clip that starts at the top of a recording is left alone: that
+  first sound.** On a recitation still resting on the constant, a cut lands
+  where the reciter finished a word, the moment before he breathes, so the clip
+  would otherwise open on about a second of silence. On one measured against
+  its audio the cut sits 80 ms inside a real pause, so there is much less to
+  trim, but the trim is what makes the two behave alike from the listener's
+  side and it stays. A clip that starts at the top of a recording is left alone: that
   silence is the breath between one ayah and the next, and trimming it would
   run them together. Three consequences, all small and all deliberate, and all
   because the clock prices a clip by the content it asks for rather than by the

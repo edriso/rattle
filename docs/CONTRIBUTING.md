@@ -203,11 +203,39 @@ comes last in the file.** `.stepper-compact` was written above `.stepper` and
 lost `gap`, `padding-block` and `justify-content` silently, which made every
 count 20px taller than its own rules said. Put a variant after the base.
 
-## The one thing nobody has done yet
+## The thing half-done, if you want something substantial
 
-The phrase cuts inside a long ayah are placed from the waqf marks in the text
-plus a constant correction, because the timing data this app vendors records
-no silence at all. Verifying every cut against the audio offline would replace
-both the guess and the constant with a measurement. It is written up, with the
-numbers that say how much it is worth, at the end of AGENTS.md and in
-[data/README.md](../data/README.md). It is a good first substantial project.
+The phrase cuts inside a long ayah start out placed from the waqf marks in the
+text plus a constant correction, because the timing data this app vendors
+records no silence at all. `scripts/verify-cuts.ts` replaces that guess with a
+measurement, and it has been run on four of the twelve recitations: it fetches
+each ayah's recording, asks `ffmpeg` where the pauses are, and moves, keeps or
+drops every cut accordingly. `verified` in each file in `src/data/timings/`
+says which have been done.
+
+What is left is not just "run it on the rest", and this is the part worth
+reading before you start. **Five of the twelve cannot be measured this way at
+all.** They are modern masters with only 10 to 16 dB between the reciter's
+voice and their own noise floor, against 34 to 66 dB for the older ones, and
+four of them have a noise floor sitting *above* the detector's threshold, so
+they spend well under 1% of their length below it and most of that is the
+lead-in of the file. Run blind,
+that does not degrade their files, it empties them, because an ayah loses its
+whole set of cuts when a single one cannot be placed. The script now measures
+that before it measures anything else and refuses, printing the two numbers so
+you can check the refusal instead of believing it.
+
+So there are three real projects here, in increasing size:
+
+- **Measure Minshawi's murattal.** The last one this method reaches cleanly:
+  88% of a sample places. One command, about 350 MB of downloads, twenty
+  minutes.
+- **Recover the cuts the four measured recitations dropped** while the search
+  window was too narrow. Free on audio, because the recordings are cached, but
+  it re-derives all four from the API first.
+- **Hear the other five**, which needs a detector that follows the voice rather
+  than its level: something spectral, or a dip measured against the local
+  speech level instead of an absolute floor. That is the genuinely open one.
+
+All three are written up with the numbers that say what each is worth, at the
+end of AGENTS.md and in [data/README.md](../data/README.md).

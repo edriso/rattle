@@ -71,11 +71,15 @@ Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and D
 Run it from the repository root, reading only, and it prints what it would change:
 
 ```sh
-node scripts/verify-cuts.ts husary          # one reciter
-node scripts/verify-cuts.ts --write         # every reciter with a file
+node scripts/verify-cuts.ts husary               # one reciter, reading only
+node scripts/verify-cuts.ts minshawi --limit=60  # a sample, to see if it is worth it
+node scripts/verify-cuts.ts husary --write       # write what it measured
+node scripts/verify-cuts.ts --write              # every reciter with a file
 ```
 
-It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files per reciter, so it caches them under `work/audio/` (git-ignored) and a second run costs nothing. A file it has measured carries a `verified` date, and `prepare:timings` now **leaves such a file alone and says so**, because it cannot reproduce what is in it: those boundaries came from listening to the recordings, and all that script has is the text and a constant. So adding a reciter needs no flag and costs nothing that was measured. `--force` overwrites anyway, which is right for a change to the splitting rules or to `LAG`, and then the file needs measuring again.
+`--limit=N` measures the first N ayat and will not combine with `--write`, because writing a partial pass would throw away every ayah it did not reach. `--force` writes a run that fell below `MIN_YIELD` anyway; read the numbers first.
+
+It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files per reciter, so it caches them under `work/audio/` (git-ignored) and a second run costs nothing. A file it has measured carries a `verified` date, and `prepare:timings` now **leaves such a file alone and says so**, because it cannot reproduce what is in it: those boundaries came from listening to the recordings, and all that script has is the text and a constant. So adding a reciter needs no flag and costs nothing that was measured. `prepare:timings -- --force` overwrites anyway, which is right for a change to the splitting rules or to `LAG`, and then the file needs measuring again. (That flag is unrelated to `verify-cuts`'s own `--force`, which overrides the yield floor.)
 
 Two properties worth knowing. It is **idempotent**: a second pass over a verified file changes nothing, because every cut already sits in a measured pause, which is a useful self-check. And it is **all or nothing per ayah**, because `buildSegments` only cuts an ayah that has exactly one boundary per gap between its phrases: a partial set is not something the app can use, so an ayah that loses one cut loses them all.
 
