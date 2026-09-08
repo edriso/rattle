@@ -370,6 +370,24 @@ network comes back starts from the right place.
   text on a highlighted row takes `--accent-foreground-muted`. This is not
   hypothetical: «متأنٍّ» beside a highlighted reciter failed 8 of 8
   combinations and could not be seen at all in the light appearance.
+- The pairings, measured in Chrome as composited sRGB over all eight
+  combinations, worst case of each. Reuse these rather than re-deriving them,
+  and re-measure only what you change:
+
+  | ink on ground | worst | needs |
+  | --- | --- | --- |
+  | `--foreground` on `--background` | 14.15 | 4.5 |
+  | `--accent` on `--background` | 6.01 | 4.5 |
+  | `--accent` on `--surface` | 6.32 | 4.5 |
+  | `--muted-foreground` on `--background` | 5.98 | 4.5 |
+  | `--muted-foreground` on `--surface` | 5.56 | 4.5 |
+  | `--accent-foreground` on `--accent` | 6.20 | 4.5 |
+  | `--accent-foreground-muted` on `--accent` | 4.95 | 4.5 |
+  | `--control-border` on `--background` | 3.24 | 3.0 (1.4.11) |
+
+  Two of those have little room: `--control-border` clears 1.4.11 by 0.24,
+  and `--accent-foreground-muted` clears AA by 0.45, which is why its mix is
+  85 per cent and must not go below 80.
 - **This stylesheet is unlayered, so a plain class beats a Tailwind utility**
   however specific the utility looks. `.muted` outranked
   `**:text-accent-foreground` on the highlighted select row, which is why the
