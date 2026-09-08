@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Notes for anyone — human or AI — working on Rattil.
+Notes for anyone, human or AI, working on Rattil.
 
 ## What this app is
 
@@ -100,6 +100,25 @@ If you add a key, add it in four places: the hook, the `aria-keyshortcuts` and
 `title` of the button it belongs to, the list in the settings sheet
 (`src/components/Sheets.tsx`), and the README.
 
+## The start screen carries the session options
+
+Everything that decides what a sitting will be is on that one screen: the
+passage, how much of it a repetition covers, whether the learner repeats aloud,
+and how many times each step runs. The repetition counts used to be two taps
+away inside the settings sheet, and a reader asked for them here, because they
+are what somebody changes when a sitting feels too long. They open from the row
+that carries the estimate, which is the number they move.
+
+What stays in the sheet is `linkBack`, the number of previous segments a وصل
+step reaches back over. That shapes the method rather than the length of a
+sitting, and its default of two is the method as taught.
+
+Two labels on that screen were earned the hard way. The range presets say
+«طول المدى» **on the screen**, not only in the accessible tree: a reader took
+«٣ آيات» under the ayah fields for a repetition count, and the row below it
+says «٣ آيات» too, about something else. And the only «مرات» on the screen is
+on the counts.
+
 ## The start screen fits the screen
 
 Everything on the start screen is spaced from one rhythm, `--gap`, declared on
@@ -115,6 +134,14 @@ desktop. Two rules go with it:
   editing the base rule appeared to do nothing. There is one place now. If a
   short screen needs more, shrink `--gap` there rather than re-listing every
   margin.
+- There are three height bands, and each one gives up as little as it can:
+  under 900px the rhythm tightens and the surah field sheds its roomiest
+  padding, under 844px the promise line gives way to the form it introduces,
+  and under 780px the labels and the topbar tighten too. **No row is ever
+  dropped and every row keeps the 44px a finger needs.** Measured in Chrome at
+  390 wide, the form fits whole at 844, 812 and 740 tall; at 667 and 640 it
+  still overflows, less than it did before the counts were added. If you add a
+  row to this screen, measure those five heights again.
 
 ## The verse frame
 
@@ -152,12 +179,28 @@ except al-Fatihah and at-Tawbah. The reciter records it separately, so the
 audio does not have it. Use `openVerse()` from `src/data/verse.ts` to split it
 off before you show an ayah or line it up with audio.
 
-**Only split a verse where a reciter may stop.** Long ayat are cut at the waqf
-marks (pause marks) already inside the text: `ۖ` `ۗ` `ۘ` `ۚ`. Never cut at `ۙ`
-(stopping is forbidden there), at `ۛ` (you may stop at only one mark of a pair),
-or at `ۜ` (a short pause taken without breathing). A mark only counts when the
-whole space-separated token is made of mark characters. `src/memorize/phrases.ts`
-does this. Do not loosen it.
+**Only split a verse where the reciter actually stops.** This is stricter than
+"where stopping is allowed", and the difference was a real defect: a reader
+heard clips ending mid-breath. Long ayat are cut at `ۚ` (جائز), `ۗ` (قلى) and
+`ۘ` (لازم), and nowhere else.
+
+- Never at `ۖ` (صلى). Stopping is permitted and continuing is *preferred*, and
+  that is what reciters do: measured against the recordings this app plays,
+  they carry on through 28% of them (Husary), 33% (Minshawi) and 71% (Abdul
+  Basit). It is 29% of the marks in the mushaf, so this costs real phrases.
+- Never at a clause word in a stretch with no mark at all. That fallback used
+  to cut at ثم, قال, a prefixed و; the reciter stops at 4% of those or fewer,
+  against the 8-12% rate of any random point mid-word, so it carried no
+  information and every one of its cuts was a chop. It was a fifth of all the
+  cuts in the mushaf and it is gone.
+- Never at `ۙ` (stopping is forbidden), `ۛ` (you may stop at only one mark of a
+  pair) or `ۜ` (a pause held without breathing).
+
+A verse with none of the three marks stays whole, however long it runs. That is
+the honest answer: nothing in the text or in the vendored timings says where
+inside it he takes his breath. `src/memorize/phrases.ts` does this, and
+`data/README.md` records how it was measured. Do not loosen it, and do not
+reintroduce the clause fallback.
 
 **Do not send user data anywhere.** Recordings live in memory and are deleted
 when the ayah changes or the page closes. Settings and the review plan go in
@@ -172,8 +215,27 @@ at run time.
   `data/quran-uthmani.txt` into one JSON file per surah.
 - **Phrase timings**, from Quran.com word timings.
   `scripts/prepare-timings.ts` works out where inside each ayah's recording the
-  phrases begin, and writes one file per reciter (about 46 KB each). The app
-  loads a reciter's file only when the user drills phrase by phrase.
+  phrases begin, and writes one file per reciter (about 26 KB each). The app
+  loads a reciter's file only when the user drills phrase by phrase. Three
+  things about that script are load-bearing, and `data/README.md` has the
+  measurements behind all of them:
+  - **Its source records no silence.** 92% of consecutive words are marked as
+    touching exactly. A pause is inside the span of a word, not between two, so
+    no threshold on that data can tell you whether the reciter stopped.
+  - **Every cut is stored 300 ms later than the boundary the aligner reports**
+    (`LAG`). Measured against the audio, the pause begins a median 290 ms after
+    that boundary, so a clip ending at it ended while he was still finishing
+    his word. Do not raise it much: overshooting the end of a pause clips the
+    start of the next phrase, which is worse.
+  - **Timings are read by `verse_key`, never by position.** One shipped
+    recitation returns its ayat out of order, and one is missing an ayah.
+
+Not every mushaf has timings. `Reciter.recitation` is optional, and
+`cutsPhrases()` in `src/data/audio.ts` is what the app asks before it offers
+«جملة»; `grainFor()` in `src/data/quran.ts` keeps the pair legal wherever
+either half changes. أيمن سويد is the reciter this exists for: his mushaf is a
+مصحف معلّم with no published word timings anywhere, and his pace had to be
+measured from the recordings' own lengths.
 
 Both scripts run with plain `node` (Node 22 strips the types). Read
 `data/README.md` before you touch either. If you add a reciter, or change the
@@ -246,7 +308,7 @@ network comes back starts from the right place.
 - Every touch target is at least 44 by 44 pixels. Every control has a label.
   Text meets WCAG AA contrast (4.5:1) in both the light and the dark theme and
   in all four accent colours, and every control's edge meets the 3:1 that
-  WCAG 1.4.11 asks for — that is what `--control-border` is for, and why it is
+  WCAG 1.4.11 asks for: that is what `--control-border` is for, and why it is
   a different token from the quiet `--border` used for separators.
 - Do not fade text with `opacity` to show it is secondary. Opacity multiplies
   against the background and quietly drops the contrast below AA; use
@@ -257,7 +319,7 @@ network comes back starts from the right place.
 
 ## The panels
 
-The two sheets — the passage picker and the settings — and the grading sheet
+The two sheets, the passage picker and the settings, and the grading sheet
 share `Panel` in `src/components/Sheets.tsx`. Three things about them are
 deliberate:
 
@@ -320,10 +382,20 @@ the last two. If you change this, check the estimate the home screen shows.
 
 Good next steps, roughly in order of value:
 
-1. Highlight each word as it is recited. The committed timing data already has
+1. **Verify the phrase cuts against the audio, offline.** This is the one that
+   would finish a job the current work only got most of the way through. The
+   vendored timings come from a source that records no silence, so where the
+   reciter actually stops is inferred from the waqf marks and corrected by a
+   constant. Fetching each splitting ayah's own MP3 once, taking a 10 ms RMS
+   envelope, snapping every cut to the nearest silence of 250 ms or more and
+   dropping the boundaries that have none would replace both the inference and
+   the constant with a measurement. About 1,500 files per reciter, `ffmpeg` on
+   the machine running the script, and the output is still vendored data.
+   `data/README.md` has the numbers that say how much it is worth.
+2. Highlight each word as it is recited. The committed timing data already has
    what this needs.
-2. Give the review plan its own screen. Today the home screen shows only the
+3. Give the review plan its own screen. Today the home screen shows only the
    first two items that are due.
-3. Drill the join between one passage and the next as its own item. Research on
+4. Drill the join between one passage and the next as its own item. Research on
    hifz says that join is where memorisation usually breaks, and the app does
    not practise it yet.

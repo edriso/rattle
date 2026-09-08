@@ -73,7 +73,7 @@ const DAY = 86_400_000;
 
 /* Days are added to the calendar date, not to a count of milliseconds. Adding
    24 hours across the end of summer time lands at 23:00 the day before, which
-   would make a passage due a day early — or, at the ceiling, come back in 34
+   would make a passage due a day early, or, at the ceiling, come back in 34
    days instead of 35. */
 const addDays = (date: string, days: number) => {
   const [y, m, d] = date.split('-').map(Number);

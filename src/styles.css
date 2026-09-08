@@ -319,7 +319,7 @@ label:has(input:focus-visible) {
 /* Fade the edge rather than chop a line in half, so a frame holding more text
    than it shows says so. The padding is wider than the fade, so a passage that
    fits never touches it. `no-clip` is what keeps the focus ring, which is
-   painted outside the frame, out of the mask — without it the ring vanishes. */
+   painted outside the frame, out of the mask; without it the ring vanishes. */
 @supports (mask-clip: no-clip) {
   .verse-space {
     mask-image: linear-gradient(

@@ -22,8 +22,12 @@ export type Reciter = {
   mirror?: string;
   /** Constant bitrate of that folder, in kbps, used to size a download. */
   kbps: number;
-  /** Quran.com recitation id, the source of the vendored phrase timings. */
-  recitation: number;
+  /**
+   * Quran.com recitation id, the source of the vendored phrase timings, or
+   * absent where nobody has published word timings for this mushaf. Such a
+   * recitation is drilled by the ayah and never cut inside one.
+   */
+  recitation?: number;
   /**
    * Seconds of recitation per Arabic letter, measured over the reciter's whole
    * mushaf. Used to estimate a session before any audio has been fetched.
@@ -119,10 +123,19 @@ export const findReciter = (id: string): Reciter =>
 
 /** Pace bands, so the picker can say how deliberate a recitation is. */
 export function paceLabel(pace: number): string {
+  if (pace >= 0.6) return 'متأنٍّ جدًّا';
   if (pace >= 0.45) return 'متأنٍّ';
   if (pace >= 0.3) return 'معتدل';
   return 'سريع';
 }
+
+/**
+ * Whether an ayah of this recitation can be cut into phrases. It needs
+ * published word timings, and not every mushaf has them; without them the
+ * drill works by the ayah and the interface does not offer «جملة».
+ */
+export const cutsPhrases = (id: string) =>
+  findReciter(id).recitation !== undefined;
 
 const pad = (n: number) => String(n).padStart(3, '0');
 

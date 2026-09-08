@@ -75,6 +75,19 @@ async function fetchAudio(urls: readonly string[], signal?: AbortSignal) {
 
 /** Decoded audio is heavy, so the cache is bounded by playing time, not count. */
 const CACHE_SECONDS = 420;
+/**
+ * How far into a clip that begins part-way through a recording its first sound
+ * is looked for. A clip is cut at the moment the reciter finishes a word, so it
+ * opens inside the pause he then takes, and that pause runs about a second.
+ * Long enough to cover it; far too short to swallow a phrase.
+ */
+const TRIM_WINDOW = 2;
+/** Sound below this fraction of a clip's own loudest moment is silence. */
+const SILENT = 0.03;
+/** Kept before the first sound, so no beginning is ever clipped. */
+const ONSET = 0.04;
+/** Longest stretch of a recording ever scanned to find that loudest moment. */
+const SCAN = 8;
 /** Scheduling lead, long enough to survive a slow frame before the first clip. */
 const LEAD = 0.06;
 /** A recording that has not arrived by now is treated as a failure, so a
@@ -198,6 +211,36 @@ export class ClipPlayer implements Audio {
   }
 
   /**
+   * Where the sound actually starts in a clip that begins part-way through a
+   * recording. The clip is cut where the reciter finished a word, which is the
+   * moment before the pause he takes, so playing from there opens with about a
+   * second of silence. A clip that starts at the beginning of a recording is
+   * left alone: that silence is the breath between one ayah and the next, and
+   * dropping it would run them together.
+   */
+  private firstSound(buffer: AudioBuffer, from: number, to: number) {
+    if (from <= 0) return from;
+    const rate = buffer.sampleRate;
+    const samples = buffer.getChannelData(0);
+    const begin = Math.floor(from * rate);
+    const end = Math.min(samples.length, Math.floor(to * rate));
+    let loudest = 0;
+    for (let i = begin; i < Math.min(end, begin + SCAN * rate); i++) {
+      const level = Math.abs(samples[i]);
+      if (level > loudest) loudest = level;
+    }
+    const threshold = loudest * SILENT;
+    if (threshold <= 0) return from;
+    const window = Math.min(end, begin + TRIM_WINDOW * rate);
+    for (let i = begin; i < window; i++)
+      if (Math.abs(samples[i]) > threshold)
+        return Math.max(from, i / rate - ONSET);
+    // Nothing but silence in the whole window, which no pause is long enough
+    // to be. Whatever this recording holds, play it from where it was asked.
+    return from;
+  }
+
+  /**
    * Schedule one pass over `requests`, back to back on the audio clock, and
    * return the time that pass ends. Everything is committed to the clock up
    * front, so linked ayat splice with no event-loop gap between them.
@@ -215,11 +258,13 @@ export class ClipPlayer implements Audio {
     for (const request of requests) {
       const buffer = this.buffers.get(request.url);
       if (!buffer) continue;
-      const from = Math.max(0, Math.min(request.from, buffer.duration));
+      const asked = Math.max(0, Math.min(request.from, buffer.duration));
       const to =
         request.to === null
           ? buffer.duration
-          : Math.max(from, Math.min(request.to, buffer.duration));
+          : Math.max(asked, Math.min(request.to, buffer.duration));
+      if (to - asked <= 0) continue;
+      const from = this.firstSound(buffer, asked, to);
       if (to - from <= 0) continue;
       // Playing a recording is using it, and the cache drops what is unused.
       this.touch(request.url);

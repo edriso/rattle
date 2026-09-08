@@ -1,4 +1,4 @@
-# AGENTS.md — src/memorize
+# AGENTS.md, src/memorize
 
 This folder holds the memorisation method. Read the root
 [AGENTS.md](../../AGENTS.md) first.
@@ -9,13 +9,13 @@ is why a whole session can be driven in a test with a fake clock.
 
 ## What a session does
 
-A session takes a passage — one surah, one ayah to another — and drills it in
+A session takes a passage, one surah from one ayah to another, and drills it in
 three kinds of step, over and over:
 
-- **تلقين (single)** — play one segment on its own, a few times.
-- **وصل (link)** — play that segment together with the ones just before it, so
+- **تلقين (single)**: play one segment on its own, a few times.
+- **وصل (link)**: play that segment together with the ones just before it, so
   the join between them gets practised too.
-- **سرد (recite)** — at the end, play the whole passage.
+- **سرد (recite)**: at the end, play the whole passage.
 
 Joining is the point. A learner who drills each ayah alone ends up with a set
 of separate ayat, not a surah. This comes from Sheikh Ahmad Shams's proposal on
@@ -31,7 +31,7 @@ still choose "الكل" if they want that.
 
 | File          | What it does                                                                        |
 | ------------- | ----------------------------------------------------------------------------------- |
-| `phrases.ts`  | Splits one verse into phrases at the waqf marks.                                    |
+| `phrases.ts`  | Splits one verse into phrases at the waqf marks the reciter stops at.               |
 | `session.ts`  | Turns a passage into segments and clips. Also estimates how long a drill will take. |
 | `schedule.ts` | Builds the list of steps, and moves the cursor through them.                        |
 | `player.ts`   | Web Audio. Fetches, decodes, caches and plays slices of ayah recordings.            |
@@ -47,9 +47,26 @@ clip is a slice of a single ayah's recording: a start time, and an end time or
 `null` for "play to the end".
 
 `buildSegments()` makes them. For phrase-level drilling it needs the reciter's
-phrase boundaries. If those are missing, or if they look wrong — the wrong
-count, or not going forward — it keeps the ayah whole instead of cutting it
-blind. Never remove that check.
+phrase boundaries. If those are missing, or if they look wrong (the wrong
+count, or not going forward) it keeps the ayah whole instead of cutting it
+blind. Never remove that check. A reciter whose mushaf has no published word
+timings has no boundaries at all, and the interface does not offer «جملة» for
+him; see `cutsPhrases()` in `src/data/audio.ts`.
+
+Two things about clips exist because a cut is not a clean break in the sound,
+and both are easy to undo by accident:
+
+- **`requests()` folds together consecutive clips of the same recording that
+  meet.** Two phrases of one ayah are cut at the same moment, so a وصل step
+  playing one after the other is playing a continuous stretch of that
+  recording. Asked for as one slice it keeps the reciter's own pause between
+  them; asked for as two it spliced them tight together and dropped it.
+- **`ClipPlayer` opens a clip that starts part-way through a recording at its
+  first sound.** A cut lands where the reciter finished a word, which is the
+  moment before he breathes, so the clip would otherwise open on about a second
+  of silence. A clip that starts at the top of a recording is left alone: that
+  silence is the breath between one ayah and the next, and trimming it would
+  run them together.
 
 ## The runtime
 
@@ -77,7 +94,7 @@ A few rules the class keeps to. Break one and something will get stuck:
   numbers have not changed, or every subscriber would re-render for nothing.
 - The countdown is `cost(cursor) - spent()`. `cost` prices the repetition in
   front of the learner whole, so `spent()` has to account for every second
-  already behind them — the audio played, the echo elapsed, and what a paused
+  already behind them: the audio played, the echo elapsed, and what a paused
   run had covered. Miss one and the clock climbs back up instead of down.
 
 ## Audio
@@ -108,7 +125,7 @@ A few rules the class keeps to. Break one and something will get stuck:
   addresses exists to answer. Never pass `combine()` more than two signals.
 - `play()` silences the batch it replaces. Only the sources of the newest call
   are held, so anything left scheduled by an older one could never be stopped
-  again — two recitations at once, with no way to quiet the first.
+  again: two recitations at once, with no way to quiet the first.
 - The cache is ordered by **use**, not by arrival: playing a recording moves it
   to the young end. Otherwise the ayah being drilled ages like one nothing has
   touched since it loaded, and gets thrown out from under the drill.
@@ -117,7 +134,7 @@ A few rules the class keeps to. Break one and something will get stuck:
 
 After each pass, the app leaves silence for the learner to repeat. The silence
 is as long as the audio that just played, times a factor the user chooses, from
-half of it up to double. It is never a fixed number of seconds — a long ayah
+half of it up to double. It is never a fixed number of seconds; a long ayah
 needs a long pause and a short one does not. `manual` waits for a tap instead.
 
 The echo is **not** part of the passage. `buildPassage()` in `usePassage.ts`

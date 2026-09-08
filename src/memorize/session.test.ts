@@ -14,7 +14,7 @@ const surahs = import.meta.glob<{ verses: string[] }>('../data/surahs/*.json', {
 });
 const baqarah = surahs['../data/surahs/2.json'].verses;
 /** The committed boundaries for al-Husary, in seconds. */
-const kursi = [8.97, 15.12, 20.76, 29.9, 35.76, 44.92];
+const kursi = [9.27, 15.42, 21.06, 30.2, 45.22];
 
 describe('building the segments a session drills', () => {
   it('makes one segment per ayah, played whole', () => {
@@ -55,7 +55,6 @@ describe('building the segments a session drills', () => {
       '2:255#4',
       '2:255#5',
       '2:255#6',
-      '2:255#7',
     ]);
     // Every phrase runs from the previous cut to the next, so nothing is lost
     // between them and no word can be clipped off an end.

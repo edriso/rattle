@@ -15,11 +15,24 @@ describe('phrase splitting', () => {
     expect(phrases[0]).toMatchObject({ firstWord: 0, words: 4 });
   });
 
-  it('splits at the waqf marks a reciter may stop on', () => {
-    // آية الكرسي carries a ۚ or ۖ at every clause end.
+  it('splits at the waqf marks a reciter stops on', () => {
+    // آية الكرسي carries a ۚ at most of its clause ends.
     const phrases = splitVerse(verse(2, 255));
-    expect(phrases.length).toBeGreaterThan(5);
+    expect(phrases).toHaveLength(6);
     expect(phrases[0].text.endsWith('ۚ')).toBe(true);
+  });
+
+  /* Stopping at ۖ is allowed and continuing is preferred, and that is what a
+     reciter does: measured against the recordings this app plays, he carries
+     on through 28% of them (Husary) to 71% (Abdul Basit). A phrase ending
+     there ended in the middle of his breath. */
+  it('never ends a phrase on a صلى mark', () => {
+    for (let surah = 1; surah <= 114; surah++)
+      for (const text of surahs[`../data/surahs/${surah}.json`].verses) {
+        const parts = splitVerse(text);
+        for (const part of parts.slice(0, -1))
+          expect(part.text.trimEnd().endsWith('\u06D6')).toBe(false);
+      }
   });
 
   it('never stops on a لا mark', () => {
@@ -28,11 +41,15 @@ describe('phrase splitting', () => {
     }
   });
 
-  it('breaks a long unmarked stretch at a clause boundary', () => {
+  /* It used to be cut at a clause word: ثم, قال, a prefixed و. The reciter
+     stops at 4% of those (Husary) or none at all (Minshawi, Abdul Basit),
+     against the 8-12% rate of any random point mid-word, so every one of those
+     cuts was a guess that chopped his breath. Nothing in the text says where
+     he breathes inside such a stretch, and the honest answer is to say so by
+     leaving it whole. */
+  it('leaves a long unmarked stretch whole', () => {
     // 6:6 runs 31 words without a single waqf mark.
-    const phrases = splitVerse(verse(6, 6));
-    expect(phrases.length).toBeGreaterThan(1);
-    for (const phrase of phrases) expect(phrase.words).toBeLessThanOrEqual(18);
+    expect(splitVerse(verse(6, 6))).toHaveLength(1);
   });
 
   it('treats an embedded seen as part of its word, not a pause', () => {
@@ -69,17 +86,21 @@ describe('phrase splitting', () => {
       }
     }
     // A stable figure guards against a rule change that quietly re-cuts the text.
-    expect(phrases).toBe(10256);
+    expect(phrases).toBe(8380);
   });
 
-  it('keeps phrases within a length a learner can hold', () => {
+  /* Half of all phrases are eight words, which is the length this is for. The
+     long tail is the price of only cutting where the reciter stops: a stretch
+     with no waqf mark inside it stays whole, however long it runs, because
+     nothing says where inside it he takes his breath. Both figures are pinned
+     so a change to the rules has to be a deliberate one. */
+  it('keeps most phrases to a length a learner can hold', () => {
     const sizes: number[] = [];
     for (let surah = 1; surah <= 114; surah++)
       for (const text of surahs[`../data/surahs/${surah}.json`].verses)
         for (const part of splitVerse(text)) sizes.push(part.words);
     sizes.sort((a, b) => a - b);
-    expect(sizes[sizes.length >> 1]).toBe(7);
-    expect(sizes.at(-1)).toBeLessThanOrEqual(22);
-    expect(sizes.filter((n) => n > 18)).toHaveLength(10);
+    expect(sizes[sizes.length >> 1]).toBe(8);
+    expect(sizes.filter((n) => n > 18)).toHaveLength(594);
   });
 });

@@ -60,6 +60,37 @@ type MutableOptions = SessionOptions & { echo: EchoMode };
 
 const clamp = (n: number) => (Number.isFinite(n) && n > 0 ? n : 0);
 
+/** Slack allowed between two slices of one recording before they count as
+    meeting rather than as two separate places in it. */
+const TOUCHING = 0.05;
+
+/**
+ * Fold consecutive slices of the same recording that meet into one slice.
+ * Two phrases of one ayah are cut at the same moment, so a step that plays
+ * them one after the other is playing a continuous stretch of the recording:
+ * asking for it as one keeps the reciter's own pause between them, where two
+ * requests would have dropped it and spliced the phrases tight together.
+ */
+function joined(clips: readonly PlayRequest[]): PlayRequest[] {
+  const out: PlayRequest[] = [];
+  for (const clip of clips) {
+    const last = out.at(-1);
+    if (
+      last &&
+      last.url === clip.url &&
+      last.to !== null &&
+      clip.from <= last.to + TOUCHING
+    )
+      out[out.length - 1] = {
+        url: last.url,
+        from: last.from,
+        to: clip.to === null ? null : Math.max(last.to, clip.to),
+      };
+    else out.push(clip);
+  }
+  return out;
+}
+
 export class Session {
   private readonly listeners = new Set<() => void>();
   private readonly durations = new Map<string, number>();
@@ -182,22 +213,24 @@ export class Session {
 
   /** Everything the audio layer must play for one pass over a step. */
   private requests(step: Step, skip = 0): PlayRequest[] {
-    const out: PlayRequest[] = [];
-    let dropped = 0;
-    for (let i = step.from; i <= step.to; i++) {
+    const clips: PlayRequest[] = [];
+    for (let i = step.from; i <= step.to; i++)
       for (const clip of this.options.segments[i]?.clips ?? []) {
         const url = ayahAudioUrl(clip.surah, clip.ayah, this.options.reciter);
         const known = this.durations.get(url);
-        const to = clip.to ?? known ?? null;
-        const length = to === null ? 0 : Math.max(0, to - clip.from);
-        if (dropped + length <= skip && length > 0) {
-          dropped += length;
-          continue;
-        }
-        const into = Math.max(0, skip - dropped);
-        dropped += length;
-        out.push({ url, from: clip.from + into, to });
+        clips.push({ url, from: clip.from, to: clip.to ?? known ?? null });
       }
+    const out: PlayRequest[] = [];
+    let dropped = 0;
+    for (const clip of joined(clips)) {
+      const length = clip.to === null ? 0 : Math.max(0, clip.to - clip.from);
+      if (dropped + length <= skip && length > 0) {
+        dropped += length;
+        continue;
+      }
+      const into = Math.max(0, skip - dropped);
+      dropped += length;
+      out.push({ ...clip, from: clip.from + into });
     }
     return out;
   }

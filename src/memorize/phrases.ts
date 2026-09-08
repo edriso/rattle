@@ -1,58 +1,57 @@
 /* Splitting a verse into memorisable phrases, using only the vendored Uthmani
    text. Verse text is never altered: a phrase is always an exact substring of
-   the verse, and concatenating every phrase with single spaces rebuilds it. */
+   the verse, and concatenating every phrase with single spaces rebuilds it.
 
-/* Waqf marks that a reciter may stop on, so a phrase may end there:
-   ۖ صلى, ۗ قلى, ۘ لازم, ۚ جائز. Deliberately excluded are ۙ (لا, stopping
-   forbidden), ۛ (معانقة, stop at exactly one of a pair, never both) and
-   ۜ (سكتة, a held pause taken without breathing, so never a phrase end). */
-const STOP_MARKS = 'ۖۗۘۚ';
-/** ARABIC SMALL HIGH LAM ALEF (لا): stopping here is forbidden. */
-const NO_STOP = 'ۙ';
-/* Every mark that stands alone between two words rather than belonging to one,
-   including ۞ (بداية الربع) and ۩ (موضع سجدة), which are read by nobody. */
-const MARK_CHARS = `${STOP_MARKS}${NO_STOP}ۛۜ۞۩`;
+   A phrase exists to be played on its own, so it may only end where the
+   reciter's own breath ends. That is the whole rule, and it is stricter than
+   "where stopping is allowed":
 
-const DIACRITICS = /[ً-ٰٕۖ-ۭـ]/g;
+   - ۚ جائز and ۗ قلى and ۘ لازم end a phrase. Measured against the recordings
+     the app plays, the reciter does stop at these: 98% and 100% of the time
+     for Husary, 93% and 96% for Abdul Basit, 84% and 68% for Minshawi.
+   - ۖ صلى does not, and that is the correction. Stopping is permitted there
+     but continuing is preferred, which is exactly what a reciter does: he
+     carries on through 28% of them (Husary), 33% (Minshawi) and 71% (Abdul
+     Basit). Cutting there chopped a phrase mid-breath, which is what a reader
+     reported hearing. It is 29% of the marks in the mushaf, so this costs real
+     phrases, and it is worth it: a phrase that ends mid-word teaches a wrong
+     ending.
+   - A long stretch with no mark at all stays whole. It used to be cut at a
+     clause word (ثم, قال, a prefixed و) and the reciter stops at 4% of those
+     (Husary) or 0% (Minshawi, Abdul Basit), against the 8-12% rate of any
+     random point in the middle of a word. That is not a signal, it was 20% of
+     all the cuts in the mushaf, and every one of them was a guaranteed chop.
 
+   Excluded for the same reason as always: ۙ (لا, stopping forbidden), ۛ
+   (معانقة, stop at exactly one of a pair, never both) and ۜ (سكتة, a held
+   pause taken without breathing).
+
+   The numbers above come from measuring `silencedetect` against the reciters'
+   own recordings; see docs in data/README.md. */
+
+/** Marks that end a phrase. U+06DA جائز, U+06D7 قلى, U+06D8 لازم. */
+const STOP_MARKS = 'ۚۗۘ';
+/**
+ * Every mark that stands alone between two words rather than belonging to one:
+ * the three above plus U+06D6 صلى, U+06D9 لا, U+06DB معانقة, U+06DC سكتة,
+ * U+06DE بداية الربع and U+06E9 موضع سجدة, the last two read by nobody.
+ */
+const MARK_CHARS = `${STOP_MARKS}ۖۙۛۜ۞۩`;
+
+/* Numeric escapes on purpose: a bidirectional editor reorders a character
+   range on screen, so a class typed as Arabic marks can be saved differently
+   from how it reads, and a broken class makes every check here pass
+   vacuously. `phrases.test.ts` walks all 6,236 verses for that reason. */
 const MARK_ONLY = new RegExp(`^[${MARK_CHARS}]+$`, 'u');
 const STOPPABLE = new RegExp(`[${STOP_MARKS}]`, 'u');
 
 /** True when the token is a standalone annotation rather than a Quranic word. */
 const isMark = (token: string) => MARK_ONLY.test(token);
 
-const bare = (word: string) => word.replace(DIACRITICS, '').replace(/ٱ/g, 'ا');
-
-/** Words that open a new clause, used only when a long stretch has no waqf. */
-const CLAUSE_WORDS = new Set([
-  'ثم',
-  'أو',
-  'او',
-  'إن',
-  'ان',
-  'إذا',
-  'اذا',
-  'إذ',
-  'اذ',
-  'بل',
-  'لكن',
-  'أم',
-  'ام',
-  'حتى',
-  'لما',
-  'قل',
-  'قال',
-  'يأيها',
-  'يايها',
-]);
-
-const opensClause = (word: string) => {
-  const w = bare(word);
-  if (!w) return false;
-  // A prefixed و or ف joins clauses; two letters alone is a word, not a prefix.
-  if ((w[0] === 'و' || w[0] === 'ف') && w.length > 2) return true;
-  return CLAUSE_WORDS.has(w);
-};
+/** Shortest phrase worth practising on its own. */
+const MIN_WORDS = 4;
+/** Longest phrase a stub is folded into, rather than left on its own. */
+const MAX_MERGED = 18;
 
 export type Phrase = {
   /** Verbatim slice of the verse, marks included. */
@@ -63,16 +62,9 @@ export type Phrase = {
   words: number;
 };
 
-export type SplitOptions = {
-  /** Longest phrase tolerated before a clause boundary is looked for. */
-  maxWords?: number;
-  /** Shortest phrase worth practising on its own. */
-  minWords?: number;
-};
-
 type Token = { text: string; mark: boolean };
 
-/** Group tokens into runs that end on a waqf mark a reciter may stop at. */
+/** Group tokens into runs that end on a waqf mark the reciter stops at. */
 function splitAtWaqf(tokens: readonly Token[]): Token[][] {
   const runs: Token[][] = [];
   let current: Token[] = [];
@@ -87,94 +79,32 @@ function splitAtWaqf(tokens: readonly Token[]): Token[][] {
   return runs;
 }
 
-/** Word positions inside a run where a clause starts and a stop is allowed. */
-function clauseBreaks(run: readonly Token[]): number[] {
-  const breaks: number[] = [];
-  let words = 0;
-  let forbidden = false;
-  for (const token of run) {
-    if (token.mark) {
-      if (token.text.includes(NO_STOP)) forbidden = true;
-      continue;
-    }
-    if (words > 0 && !forbidden && opensClause(token.text)) breaks.push(words);
-    forbidden = false;
-    words++;
-  }
-  return breaks;
-}
-
-/** Cut a run that has no usable waqf mark into pieces at clause boundaries. */
-function splitLongRun(
-  run: readonly Token[],
-  maxWords: number,
-  minWords: number,
-): Token[][] {
-  const wordIndex: number[] = [];
-  run.forEach((token, i) => {
-    if (!token.mark) wordIndex.push(i);
-  });
-  const total = wordIndex.length;
-  if (total <= maxWords) return [[...run]];
-  const breaks = clauseBreaks(run);
-  const pieces: Token[][] = [];
-  let start = 0;
-  let cut = 0;
-  while (total - start > maxWords) {
-    const ideal = start + Math.round(maxWords * 0.8);
-    const inRange = breaks.filter(
-      (b) => b >= start + minWords && b <= start + maxWords,
-    );
-    // Overshoot the limit rather than leave one unmanageable block behind.
-    const options = inRange.length
-      ? inRange
-      : breaks.filter((b) => b >= start + minWords && b <= total - minWords);
-    if (!options.length) break;
-    const next = options.reduce((best, b) =>
-      Math.abs(b - ideal) < Math.abs(best - ideal) ? b : best,
-    );
-    pieces.push(run.slice(cut, wordIndex[next]));
-    cut = wordIndex[next];
-    start = next;
-  }
-  pieces.push(run.slice(cut));
-  return pieces;
-}
-
 const countWords = (piece: readonly Token[]) =>
   piece.reduce((n, token) => n + (token.mark ? 0 : 1), 0);
 
 /**
- * Split one verse into phrases at the pause marks the reciter observes,
- * falling back to clause boundaries only where a stretch has no mark at all.
+ * Split one verse into the phrases the reciter himself pauses between. A verse
+ * with no such mark comes back whole, which is the honest answer: nothing in
+ * the text or in the timings says where he takes his breath inside it.
  */
-export function splitVerse(
-  verse: string,
-  options: SplitOptions = {},
-): Phrase[] {
-  const maxWords = options.maxWords ?? 14;
-  const minWords = options.minWords ?? 4;
+export function splitVerse(verse: string): Phrase[] {
   const tokens: Token[] = verse
     .split(' ')
     .filter(Boolean)
     .map((text) => ({ text, mark: isMark(text) }));
   if (!tokens.length) return [];
 
-  const pieces = splitAtWaqf(tokens).flatMap((run) =>
-    splitLongRun(run, maxWords, minWords),
-  );
-
   // Fold a stub into its neighbour: a two-word phrase is not worth a cycle.
   const merged: Token[][] = [];
-  for (const piece of pieces) {
+  for (const piece of splitAtWaqf(tokens)) {
     const previous = merged.at(-1);
     const tooShort =
-      countWords(piece) < minWords ||
-      (previous ? countWords(previous) < minWords : false);
+      countWords(piece) < MIN_WORDS ||
+      (previous ? countWords(previous) < MIN_WORDS : false);
     if (
       previous &&
       tooShort &&
-      countWords(previous) + countWords(piece) <= maxWords + minWords
+      countWords(previous) + countWords(piece) <= MAX_MERGED
     )
       merged[merged.length - 1] = [...previous, ...piece];
     else merged.push(piece);

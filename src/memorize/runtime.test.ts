@@ -433,6 +433,39 @@ describe('session runtime', () => {
     expect(seen.mock.calls.length).toBeLessThan(settled + 8);
   });
 
+  /* Two phrases of one ayah are cut at the same moment, so a step that plays
+     one after the other is playing a continuous stretch of the recording. Two
+     requests would splice them and drop the reciter's pause between them. */
+  it('asks for two phrases of one ayah as one continuous stretch', async () => {
+    const timings = () => [4];
+    const segments = buildSegments(
+      { surah: 100, from: 1, to: 1 },
+      // Four words either side of the mark: fewer and the two would be folded
+      // into one phrase, which is a stub not worth a cycle of its own.
+      ['ALIF BAA TAA THAA ۚ JIIM HAA KHAA DAAL'],
+      'phrase',
+      timings,
+    );
+    expect(segments).toHaveLength(2);
+    const audio = new FakeAudio();
+    const session = new Session({
+      segments,
+      // One step, holding both phrases, which is what a وصل step looks like.
+      steps: [{ kind: 'link', from: 0, to: 1, reps: 1 }],
+      reciter: 'husary',
+      pace: 0.4,
+      echo: 'off',
+      audio,
+    });
+    await session.start();
+    await settle();
+    // One request, from the top of the recording to the end the layer has
+    // measured, rather than two meeting at the cut.
+    expect(audio.runs.at(-1)).toEqual([
+      { url: audio.runs[0][0].url, from: 0, to: audio.seconds },
+    ]);
+  });
+
   it('stops the clock and the audio when disposed', async () => {
     const { session, audio } = build();
     await session.start();
