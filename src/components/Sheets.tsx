@@ -427,6 +427,36 @@ export function SettingsSheet({
         </Select>
       </section>
 
+      {/* Not autoplay: nothing here starts a recitation. It keeps one that is
+          already sounding from stopping at every move, which is what a reader
+          listening through a passage expects. */}
+      <fieldset className="setting-section">
+        <legend>عند الانتقال إلى الآية التالية</legend>
+        <div className="segmented">
+          {(
+            [
+              [true, 'تتابع التلاوة'],
+              [false, 'تتوقف'],
+            ] as const
+          ).map(([keepPlaying, label]) => (
+            <label key={label} data-active={prefs.keepPlaying === keepPlaying}>
+              <input
+                className="sr-only"
+                type="radio"
+                name="keep-playing"
+                checked={prefs.keepPlaying === keepPlaying}
+                onChange={() => update({ keepPlaying })}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <p className="field-note">
+          في المراجعة الحرة، تنتقل التلاوة مع الآية بلا حاجة إلى زر التشغيل في
+          كل مرة.
+        </p>
+      </fieldset>
+
       <fieldset className="setting-section">
         <legend>المظهر</legend>
         <div className="segmented">

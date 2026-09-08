@@ -47,7 +47,11 @@ export function AyahView({
       ),
     [prefs.surah, prefs.ayah, last, prefs.reciter],
   );
-  const { playing, notice, toggle, pause } = useRangeAudio(sources, repeat);
+  const { playing, notice, toggle, pause } = useRangeAudio(
+    sources,
+    repeat,
+    prefs.keepPlaying,
+  );
   const move = (direction: number) => {
     if (
       (direction > 0 && last === surah.count) ||

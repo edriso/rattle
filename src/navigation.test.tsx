@@ -284,7 +284,7 @@ it('cancels pending playback when Space is pressed a second time', async () => {
   expect(result.current.playing).toBe(false);
 });
 
-it('connects Space and the play button to the same audio and stops it on navigation', async () => {
+const fakeAudio = () => {
   const player = new FakeAudio();
   vi.stubGlobal(
     'Audio',
@@ -294,6 +294,13 @@ it('connects Space and the play button to the same audio and stops it on navigat
       }
     },
   );
+  return player;
+};
+
+/* Moving on used to silence the recitation, so a reader listening straight
+   through a passage had to press play again at every ayah. */
+it('connects Space and the play button to the same audio and carries it across a move', async () => {
+  fakeAudio();
   render(<App />);
   await act(async () => {
     fireEvent.keyDown(document.body, { key: ' ' });
@@ -305,12 +312,42 @@ it('connects Space and the play button to the same audio and stops it on navigat
     fireEvent.click(screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }));
   });
   expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
+  // A move while it is paused leaves it paused: nothing starts on its own.
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+  });
+  expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
   await act(async () => {
     fireEvent.keyDown(document.body, { key: ' ' });
   });
-  fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+  });
+  expect(position()).toBe(4);
+  expect(
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+  ).toBeTruthy();
+});
+
+it('stops the recitation on a move for a reader who has asked it to', async () => {
+  localStorage.setItem(
+    'rattil:v1',
+    JSON.stringify({
+      ...defaults,
+      screen: 'practice',
+      ayah: 2,
+      keepPlaying: false,
+    }),
+  );
+  fakeAudio();
+  render(<App />);
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key: ' ' });
+  });
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+  });
   expect(position()).toBe(3);
-  expect(player.pause).toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
 });
 

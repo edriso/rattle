@@ -7,12 +7,23 @@ import { audioMirrors } from './data/audio';
 /** Every address a recording can be reached at, its own first. */
 const addresses = (url: string) => [url, ...audioMirrors(url)];
 
+const FAILED = 'تعذّر تشغيل التلاوة. أعد المحاولة.';
+
 /**
  * Plays a run of ayah recordings one after another through a single media
  * element, looping the whole run when `repeat` is set. One element rather than
  * one per ayah keeps a mobile browser's single-stream autoplay grant intact.
+ *
+ * With `keepPlaying`, a run that is sounding when the range changes carries on
+ * into the new one. That is not autoplay: it only ever continues sound the
+ * learner already asked for, so moving through a passage does not mean
+ * pressing play at every ayah.
  */
-export function useRangeAudio(urls: readonly string[], repeat: boolean) {
+export function useRangeAudio(
+  urls: readonly string[],
+  repeat: boolean,
+  keepPlaying = false,
+) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const list = useRef<readonly string[]>(urls);
   const at = useRef(0);
@@ -27,21 +38,49 @@ export function useRangeAudio(urls: readonly string[], repeat: boolean) {
   const request = useRef(0);
   const pending = useRef(false);
   const looping = useRef(repeat);
+  const carries = useRef(keepPlaying);
   const [playing, setPlaying] = useState(false);
   const [notice, setNotice] = useState('');
   const key = urls.join('|');
 
   looping.current = repeat;
+  carries.current = keepPlaying;
+
+  /** Start the element sounding, and own the outcome: only the latest attempt
+      is allowed to publish it, so a range change mid-attempt stays quiet. */
+  const begin = useCallback(async (player: HTMLAudioElement) => {
+    const id = ++request.current;
+    pending.current = true;
+    wanted.current = true;
+    setNotice('');
+    try {
+      await player.play();
+      if (id === request.current) setPlaying(!player.paused);
+    } catch {
+      if (id === request.current) {
+        wanted.current = false;
+        setPlaying(false);
+        setNotice(FAILED);
+      }
+    } finally {
+      if (id === request.current) pending.current = false;
+    }
+  }, []);
 
   useEffect(() => {
+    /* Whether the recitation the learner asked for is to carry into this
+       range. The address that was answering carries with it: a run that is
+       still sounding has no reason to go back to a host it already found
+       unreachable, while a run that is starting fresh does. */
+    const carry = wanted.current && carries.current;
     setPlaying(false);
     setNotice('');
     list.current = urls;
     at.current = 0;
-    host.current = 0;
-    wanted.current = false;
+    if (!carry) host.current = 0;
+    wanted.current = carry;
     if (!urls.length) return;
-    const player = new Audio(urls[0]);
+    const player = new Audio();
     player.preload = 'none';
     audio.current = player;
     player.onplaying = () => setPlaying(true);
@@ -53,6 +92,7 @@ export function useRangeAudio(urls: readonly string[], repeat: boolean) {
       const chain = addresses(list.current[index] ?? '');
       player.src = chain[host.current] ?? chain[0];
     };
+    goTo(0);
     player.onended = () => {
       const next = at.current + 1;
       if (next < list.current.length) {
@@ -95,6 +135,7 @@ export function useRangeAudio(urls: readonly string[], repeat: boolean) {
       wanted.current = false;
       setPlaying(false);
     };
+    if (carry) void begin(player);
     return () => {
       request.current++;
       pending.current = false;
@@ -128,23 +169,8 @@ export function useRangeAudio(urls: readonly string[], repeat: boolean) {
       pause();
       return;
     }
-    const id = ++request.current;
-    pending.current = true;
-    wanted.current = true;
-    setNotice('');
-    try {
-      await player.play();
-      if (id === request.current) setPlaying(!player.paused);
-    } catch {
-      if (id === request.current) {
-        wanted.current = false;
-        setPlaying(false);
-        setNotice('تعذّر تشغيل التلاوة. أعد المحاولة.');
-      }
-    } finally {
-      if (id === request.current) pending.current = false;
-    }
-  }, [pause]);
+    await begin(player);
+  }, [pause, begin]);
 
   return { playing, notice, toggle, pause };
 }

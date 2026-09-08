@@ -53,6 +53,13 @@ export type Preferences = {
   appearance: 'dark' | 'light' | 'system';
   /** Ayat shown at once in free practice. */
   perView: number;
+  /**
+   * Whether recitation carries on into the next ayat in free review. It is
+   * not autoplay: nothing starts without the learner pressing play, and a run
+   * they paused stays paused. It only keeps a run that is already sounding
+   * from stopping every time they move.
+   */
+  keepPlaying: boolean;
   grain: Grain;
   echo: EchoMode;
   plan: SchedulePlan;
@@ -70,6 +77,7 @@ export const defaults: Preferences = {
   theme: 'gold',
   appearance: 'dark',
   perView: 1,
+  keepPlaying: true,
   grain: 1,
   echo: 1,
   plan: defaultPlan,
@@ -110,6 +118,8 @@ export function restore(value: unknown): Preferences {
       ? p.appearance!
       : defaults.appearance,
     perView: clamped(p.perView, 1, 5, 1),
+    keepPlaying:
+      typeof p.keepPlaying === 'boolean' ? p.keepPlaying : defaults.keepPlaying,
     grain: isGrain(p.grain) ? p.grain : defaults.grain,
     echo: isEcho(p.echo) ? p.echo : defaults.echo,
     plan: restorePlan(p.plan),
