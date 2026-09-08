@@ -23,6 +23,7 @@
    fix.  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { reciters } from '../src/data/audio.ts';
 import { openVerse } from '../src/data/verse.ts';
 import { splitVerse, verseWords } from '../src/memorize/phrases.ts';
@@ -38,7 +39,8 @@ const OUT = new URL('../src/data/timings/', import.meta.url);
  * would clip the beginning of the next phrase, which is the worse failure.
  */
 const LAG = 300;
-/** A phrase shorter than this is not worth cutting for, so the ayah stays whole. */
+/** Recording that must be left after a cut, or the ayah stays whole: a final
+    phrase with less than this in it is not worth cutting for. */
 const MIN_CLIP = 400;
 /**
  * How much of a word may still be sounding at a cut before the boundary is
@@ -91,12 +93,58 @@ function wordSpans(timing: VerseTiming) {
     const index = Number(segment[0]);
     const from = Number(segment[1]) - timing.timestamp_from;
     const to = Number(segment[2]) - timing.timestamp_from;
-    if (!Number.isFinite(index) || !Number.isFinite(from)) continue;
+    // `to` is checked as well as `from`: one NaN end would carry through the
+    // running maximum below and make the repetition check pass vacuously for
+    // every word after it, which is the check's whole job.
+    if (
+      !Number.isFinite(index) ||
+      !Number.isFinite(from) ||
+      !Number.isFinite(to)
+    )
+      continue;
     // A reciter who repeats a word gets several entries for the same index.
     starts.set(index, Math.min(starts.get(index) ?? from, from));
     ends.set(index, Math.max(ends.get(index) ?? to, to));
   }
   return { starts, ends, count: starts.size ? Math.max(...starts.keys()) : 0 };
+}
+
+/**
+ * The cuts inside one ayah, or the reason it has none and plays whole. Every
+ * check here is what keeps a cut the app cannot trust out of the file, so this
+ * is the part with a test of its own.
+ */
+export function ayahCuts(
+  timing: VerseTiming,
+  phrases: readonly { firstWord: number }[],
+  words: number,
+): { cuts: number[] } | { dropped: 'mismatch' | 'repeated' | 'partial' } {
+  const duration = timing.timestamp_to - timing.timestamp_from;
+  const { starts, ends, count } = wordSpans(timing);
+  // Quran.com joins a handful of words the source text keeps apart; where the
+  // two disagree the ayah keeps its timings out of the file entirely.
+  if (count !== words) return { dropped: 'mismatch' };
+  /* The last moment anything up to each word is still sounding. A teaching
+     mushaf recites a stretch and then says it again, so a word before the cut
+     can be voiced after it; a clip opening there would begin on words that
+     belong to the phrase before it. */
+  const voicedUpTo: number[] = [];
+  let latest = 0;
+  for (let word = 1; word <= count; word++) {
+    voicedUpTo[word] = latest;
+    latest = Math.max(latest, ends.get(word) ?? latest);
+  }
+  const cuts: number[] = [];
+  for (const phrase of phrases.slice(1)) {
+    const word = phrase.firstWord + 1;
+    const start = starts.get(word);
+    if (start === undefined) break;
+    if (voicedUpTo[word] > start + OVERLAP) return { dropped: 'repeated' };
+    const cut = Math.round(Math.min(Math.max(start, 0), duration) + LAG);
+    if (cut <= (cuts.at(-1) ?? 0) || cut > duration - MIN_CLIP) break;
+    cuts.push(cut);
+  }
+  return cuts.length === phrases.length - 1 ? { cuts } : { dropped: 'partial' };
 }
 
 type Report = {
@@ -133,99 +181,81 @@ async function build(reciter: (typeof reciters)[number]) {
       const ayah = index + 1;
       const timing = timings.get(`${surah}:${ayah}`);
       const { text } = openVerse(surah, ayah, raw);
-      report.letters += text.replace(/[ً-ٰٕۖ-ۭـ\s]/g, '').length;
       if (!timing) {
         report.absent.push(`${surah}:${ayah}`);
         return;
       }
-      const duration = timing.timestamp_to - timing.timestamp_from;
-      report.seconds += duration / 1000;
+      // Counted here rather than above, so an ayah the source has no timing
+      // for contributes neither letters nor seconds to the measured pace.
+      report.letters += text.replace(/[ً-ٰٕۖ-ۭـ\s]/g, '').length;
+      report.seconds += (timing.timestamp_to - timing.timestamp_from) / 1000;
       const phrases = splitVerse(text);
       if (phrases.length < 2) return;
-      const { starts, ends, count } = wordSpans(timing);
-      // Quran.com joins a handful of words the source text keeps apart; where
-      // the two disagree the ayah keeps its timings out of the file entirely.
-      if (count !== verseWords(text).length) {
-        report.skipped.push(`${surah}:${ayah}`);
+      const result = ayahCuts(timing, phrases, verseWords(text).length);
+      if ('dropped' in result) {
+        (result.dropped === 'repeated' ? report.repeated : report.skipped).push(
+          `${surah}:${ayah}`,
+        );
         return;
       }
-      /* The last moment anything up to each word is still sounding. A teaching
-         mushaf recites a stretch and then says it again, so a word before the
-         cut can be voiced after it; a clip opening there would begin on words
-         that belong to the phrase before it. */
-      const voicedUpTo: number[] = [];
-      let latest = 0;
-      for (let word = 1; word <= count; word++) {
-        voicedUpTo[word] = latest;
-        latest = Math.max(latest, ends.get(word) ?? latest);
-      }
-      const cuts: number[] = [];
-      let repeated = false;
-      for (const phrase of phrases.slice(1)) {
-        const word = phrase.firstWord + 1;
-        const start = starts.get(word);
-        if (start === undefined) break;
-        if (voicedUpTo[word] > start + OVERLAP) {
-          repeated = true;
-          break;
-        }
-        const cut = Math.round(Math.min(Math.max(start, 0), duration) + LAG);
-        if (cut <= (cuts.at(-1) ?? 0) || cut > duration - MIN_CLIP) break;
-        cuts.push(cut);
-      }
-      if (repeated) {
-        report.repeated.push(`${surah}:${ayah}`);
-        return;
-      }
-      if (cuts.length !== phrases.length - 1) {
-        report.skipped.push(`${surah}:${ayah}`);
-        return;
-      }
-      bounds[`${surah}:${ayah}`] = cuts;
+      bounds[`${surah}:${ayah}`] = result.cuts;
       report.split++;
     });
   }
   return { bounds, report };
 }
 
-mkdirSync(OUT, { recursive: true });
-const generated = new Date().toISOString().slice(0, 10);
-const paces: string[] = [];
-for (const reciter of reciters) {
-  /* A recitation nobody has published word timings for. Its audio is played
-     whole, and the app never offers to cut inside an ayah for it. */
-  if (reciter.recitation === undefined) {
-    console.log(`${reciter.id.padEnd(20)} no word timings published, skipped`);
-    continue;
+/* Everything above is a pure function of what the API returned, so a test can
+   import this module and reach it. Only being run as a command generates
+   anything. */
+if (
+  process.argv[1] !== undefined &&
+  pathToFileURL(process.argv[1]).href === import.meta.url
+)
+  await generate();
+
+async function generate() {
+  mkdirSync(OUT, { recursive: true });
+  const generated = new Date().toISOString().slice(0, 10);
+  const paces: string[] = [];
+  for (const reciter of reciters) {
+    /* A recitation nobody has published word timings for. Its audio is played
+       whole, and the app never offers to cut inside an ayah for it. */
+    if (reciter.recitation === undefined) {
+      console.log(
+        `${reciter.id.padEnd(20)} no word timings published, skipped`,
+      );
+      continue;
+    }
+    const { bounds, report } = await build(reciter);
+    writeFileSync(
+      new URL(`${reciter.id}.json`, OUT),
+      /* Indented, because a diff of this file should say which ayat changed.
+         `npm run prepare:timings` runs the formatter over the output afterwards,
+         which is what collapses the short arrays to a line an ayah. */
+      JSON.stringify(
+        {
+          reciter: reciter.id,
+          recitation: reciter.recitation,
+          source: `${API}/${reciter.recitation}/audio_files?chapter=<1..114>&segments=true`,
+          generated,
+          bounds,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+    const pace = report.seconds / report.letters;
+    paces.push(`${reciter.id}: ${pace.toFixed(3)}`);
+    console.log(
+      `${reciter.id.padEnd(20)} split ${String(report.split).padStart(4)} ayat, ` +
+        `skipped ${String(report.skipped.length).padStart(3)}, ` +
+        `repeated ${String(report.repeated.length).padStart(3)}, ` +
+        `absent ${String(report.absent.length).padStart(3)}, ` +
+        `pace ${pace.toFixed(3)} s/letter`,
+    );
   }
-  const { bounds, report } = await build(reciter);
-  writeFileSync(
-    new URL(`${reciter.id}.json`, OUT),
-    /* Indented, because a diff of this file should say which ayat changed.
-       `npm run prepare:timings` runs the formatter over the output afterwards,
-       which is what collapses the short arrays to a line an ayah. */
-    JSON.stringify(
-      {
-        reciter: reciter.id,
-        recitation: reciter.recitation,
-        source: `${API}/${reciter.recitation}/audio_files?chapter=<1..114>&segments=true`,
-        generated,
-        bounds,
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-  const pace = report.seconds / report.letters;
-  paces.push(`${reciter.id}: ${pace.toFixed(3)}`);
   console.log(
-    `${reciter.id.padEnd(20)} split ${String(report.split).padStart(4)} ayat, ` +
-      `skipped ${String(report.skipped.length).padStart(3)}, ` +
-      `repeated ${String(report.repeated.length).padStart(3)}, ` +
-      `absent ${String(report.absent.length).padStart(3)}, ` +
-      `pace ${pace.toFixed(3)} s/letter`,
+    '\nMeasured pace values for src/data/audio.ts:\n  ' + paces.join('\n  '),
   );
 }
-console.log(
-  '\nMeasured pace values for src/data/audio.ts:\n  ' + paces.join('\n  '),
-);

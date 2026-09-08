@@ -253,6 +253,8 @@ label:has(input:focus-visible) {
 .ayah-field input {
   width: 76px;
   min-height: 44px;
+  /* Under 16px, iOS Safari zooms the page when the field takes focus. */
+  font-size: 16px;
   border: 1px solid var(--control-border);
   background: var(--surface);
   border-radius: 8px;
@@ -681,6 +683,7 @@ progress::-moz-progress-bar {
    line has to leave room for the tashkeel the reader came for. */
 .ayah-option-head {
   font-family: Amiri, serif;
+  min-width: 0;
   line-height: 1.9;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -934,6 +937,8 @@ progress::-moz-progress-bar {
   color: var(--muted-foreground);
   font-size: 14px;
 }
+/* Its chevron is the shared rule at the end of this file, with the one the
+   shortcut list uses. */
 .reps-toggle {
   display: inline-flex;
   align-items: center;
@@ -951,23 +956,8 @@ progress::-moz-progress-bar {
   color: var(--foreground);
   background: var(--surface-raised);
 }
-/* A chevron that turns, so the row reads as openable. The interface is
-   right-to-left throughout, so closed points along the reading direction. */
-.reps-toggle::after {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(135deg);
-  transition: transform 160ms;
-  opacity: 0.7;
-}
 .reps-toggle[aria-expanded='true'] {
   color: var(--foreground);
-}
-.reps-toggle[aria-expanded='true']::after {
-  transform: rotate(45deg);
 }
 .reps .stepper:first-child {
   padding-top: 0;
@@ -1151,8 +1141,11 @@ progress::-moz-progress-bar {
   display: none;
 }
 /* A chevron that turns, so a closed section reads as openable. The interface
-   is right-to-left throughout, so closed points along the reading direction. */
-.shortcut-help summary::after {
+   is right-to-left throughout, so closed points along the reading direction.
+   No opacity on it: it is what says whether the section is open, and 1.4.11
+   wants 3:1 for that, which multiplying against the background gives up. */
+.shortcut-help summary::after,
+.reps-toggle::after {
   content: '';
   width: 7px;
   height: 7px;
@@ -1161,9 +1154,9 @@ progress::-moz-progress-bar {
   transform: rotate(135deg);
   transition: transform 160ms;
   flex-shrink: 0;
-  opacity: 0.7;
 }
-.shortcut-help[open] summary::after {
+.shortcut-help[open] summary::after,
+.reps-toggle[aria-expanded='true']::after {
   transform: rotate(45deg);
 }
 .stepper {

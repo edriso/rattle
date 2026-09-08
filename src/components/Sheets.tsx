@@ -204,11 +204,14 @@ function AyahList({
       >
         {/* No trigger button: the generated one is a tab stop with no
             accessible name, and typing or arrowing opens the list anyway. */}
+        {/* No `inputMode="numeric"`: this field takes the words of a verse as
+            well as its number, and a numeric keypad on a phone has no way to
+            reach letters. `digits()` reads the numerals either keyboard
+            produces. */}
         <ComboboxInput
           id={id}
           className="ayah-search"
           placeholder="الرقم أو أول الآية…"
-          inputMode="numeric"
           autoComplete="off"
           aria-invalid={invalid}
           aria-describedby={describedBy}

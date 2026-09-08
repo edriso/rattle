@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { App } from './App';
 import { SessionView } from './components/SessionView';
 import { defaults, type Preferences } from './data/quran';
@@ -100,6 +101,28 @@ describe('choosing a passage', () => {
     });
     await waitFor(() => expect(estimate.textContent).not.toBe(before));
     expect(estimate.textContent).toMatch(/مرة|مرات|مرتان/);
+  });
+
+  /* The passage clamps every keystroke, so a field showing the clamped value
+     fought the typing: over ٩, a typed ١ read as an inverted range, snapped to
+     ٥, and the next digit landed on that. */
+  it('takes a retyped number a digit at a time', async () => {
+    start({ surah: 2, ayah: 5, to: 9 });
+    render(<App />);
+    const to = (await screen.findByRole('textbox', {
+      name: 'إلى الآية',
+    })) as HTMLInputElement;
+    const user = userEvent.setup();
+    await user.clear(to);
+    expect(to.value).toBe('');
+    await user.type(to, '١٢');
+    expect(to.value).toBe('١٢');
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattil:v1')!).to).toBe(12),
+    );
+    // Leaving the field shows the number the passage actually holds.
+    fireEvent.blur(to);
+    expect(to.value).toBe('١٢');
   });
 
   it('says what to do about a drill that would run long', async () => {

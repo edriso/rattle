@@ -43,14 +43,19 @@ const REPS = 'repetition-counts';
 const ayahGrains = grains.filter((grain) => grain !== 'phrase');
 
 /**
- * One end of the passage. The number it shows is the passage's own, so typing
- * past the end of the surah snaps back to it; but an empty field is a moment
- * in the middle of retyping rather than a value, so it is allowed to stay
- * empty while it is being typed in and gets its number back on the way out.
- * That is the whole reason this holds any state: the field used to refuse to
- * go blank, and a reader who wanted ٦ had to select the ١ before typing over
- * it. Text rather than a number field, because a number field silently throws
- * away ٢٥٥, which is what an Arabic keyboard types.
+ * One end of the passage.
+ *
+ * While it is being typed into, the field shows what was typed; the moment it
+ * is left, it shows the number the passage actually holds. It has to hold that
+ * draft, for two reasons that are really one. The field used to refuse to go
+ * blank, so a reader who wanted ٦ had to select the ١ and type over it. And
+ * the passage clamps every keystroke, so a field showing the clamped value
+ * fought the typing: clearing «إلى الآية» over ٩ and typing ١ then ٢ read the
+ * ١ as an inverted range, snapped it to ٥, and appended the ٢ to *that*,
+ * leaving the reader on ayah ٥٢ having asked for ١٢.
+ *
+ * Text rather than a number field, because a number field silently throws away
+ * ٢٥٥, which is what an Arabic keyboard types.
  */
 function AyahField({
   id,
@@ -63,7 +68,7 @@ function AyahField({
   value: number;
   onChange: (value: number) => void;
 }) {
-  const [blank, setBlank] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <div className="ayah-field">
       <label htmlFor={id}>{label}</label>
@@ -72,13 +77,13 @@ function AyahField({
         type="text"
         inputMode="numeric"
         autoComplete="off"
-        value={blank ? '' : arabic(value)}
+        value={draft ?? arabic(value)}
         onChange={(event) => {
+          setDraft(event.target.value);
           const typed = digits(event.target.value);
-          setBlank(event.target.value.trim() === '');
           if (typed) onChange(Number(typed));
         }}
-        onBlur={() => setBlank(false)}
+        onBlur={() => setDraft(null)}
       />
     </div>
   );
@@ -141,6 +146,10 @@ export function HomeView({
   const setPlan = (patch: Partial<SchedulePlan>) =>
     update({ plan: { ...prefs.plan, ...patch } });
 
+  /* Both ends are clamped to the surah, and the far one gives way rather than
+     leaving a range that ends before it starts. The fields hold their own
+     draft while they are being typed into, so the clamp is never what the
+     next keystroke lands on. */
   const setRange = (from: number, to: number) => {
     const start = Math.max(1, Math.min(surah.count, from));
     update({ ayah: start, to: Math.max(start, Math.min(surah.count, to)) });
@@ -346,13 +355,16 @@ export function HomeView({
               <span>جارٍ الحساب…</span>
             )}
           </output>
+          {/* Not «مرات التكرار»: the estimate beside it counts the plays in
+              «مرة» and «مرات», and the same counted noun on two things one
+              row apart is the confusion «طول المدى» was written to end. */}
           <button
             className="reps-toggle"
             aria-expanded={counts}
             aria-controls={REPS}
             onClick={() => setCounts(!counts)}
           >
-            مرات التكرار
+            ضبط التكرار
           </button>
         </div>
         <Repetitions

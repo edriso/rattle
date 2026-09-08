@@ -35,6 +35,12 @@ export function useRangeAudio(
   /** Whether the run is meant to be sounding. A rewind between runs is not,
       and neither is a run the learner has just paused. */
   const wanted = useRef(false);
+  /** Whether the element was actually sounding when the range last changed.
+      Read from the element rather than from `wanted`, because a pause from
+      the lock screen or a headset button never passes through this hook: it
+      leaves `wanted` set, and a move would then start sound the learner had
+      just stopped. */
+  const sounding = useRef(false);
   const request = useRef(0);
   const pending = useRef(false);
   const looping = useRef(repeat);
@@ -72,13 +78,13 @@ export function useRangeAudio(
        range. The address that was answering carries with it: a run that is
        still sounding has no reason to go back to a host it already found
        unreachable, while a run that is starting fresh does. */
-    const carry = wanted.current && carries.current;
+    const carry = sounding.current && carries.current;
     setPlaying(false);
     setNotice('');
     list.current = urls;
     at.current = 0;
     if (!carry) host.current = 0;
-    wanted.current = carry;
+    wanted.current = false;
     if (!urls.length) return;
     const player = new Audio();
     player.preload = 'none';
@@ -139,6 +145,9 @@ export function useRangeAudio(
     return () => {
       request.current++;
       pending.current = false;
+      // Read before the pause below, which is this hook's own and says
+      // nothing about whether the learner was listening.
+      sounding.current = !player.paused;
       player.onplaying =
         player.onpause =
         player.onended =

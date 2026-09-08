@@ -329,6 +329,30 @@ it('connects Space and the play button to the same audio and carries it across a
   ).toBeTruthy();
 });
 
+/* A pause from the lock screen, a headset button or the OS media controls
+   never passes through this app, so what carries a run across a move has to be
+   whether the element was sounding, not whether the app last asked it to. */
+it('does not restart a recitation the phone itself paused', async () => {
+  const player = fakeAudio();
+  render(<App />);
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key: ' ' });
+  });
+  expect(
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+  ).toBeTruthy();
+  // Not through `pause()`: the element is stopped from outside the page.
+  await act(async () => {
+    player.pause();
+  });
+  expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+  });
+  expect(position()).toBe(3);
+  expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
+});
+
 it('stops the recitation on a move for a reader who has asked it to', async () => {
   localStorage.setItem(
     'rattil:v1',

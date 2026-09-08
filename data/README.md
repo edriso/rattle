@@ -64,7 +64,7 @@ Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and D
 
 ### What this still does not fix
 
-Between 27% and 45% of the boundaries this app used to cut at were places the reciter never stopped, and dropping ۖ and the clause fallback removes most but not all of that: at the marks that remain he still runs on 0-2% of the time (Husary, Abdul Basit) and up to 32% (Minshawi at ۗ). The 300 ms lag is a constant standing in for a per-boundary measurement, and it lands inside real silence about half the time.
+Between 27% and 45% of the boundaries this app used to cut at were places the reciter never stopped, and dropping ۖ and the clause fallback removes most but not all of that: at the marks that remain he still runs on 0-2% of the time (Husary), 4-7% (Abdul Basit) and up to 32% (Minshawi at ۗ). The 300 ms lag is a constant standing in for a per-boundary measurement, and it lands inside real silence about half the time.
 
 The fix for both is the same and it is a known next step: **verify the cuts against the audio offline**. For each ayah that splits, fetch the reciter's own per-ayah MP3 once, take a 10 ms RMS envelope, snap each cut to the nearest silence of 250 ms or more within about 1.5 s, and drop any boundary that has none. That is roughly 1,500 files per reciter, it needs `ffmpeg` on the machine running the script, and the output stays vendored data, so nothing changes at run time. It would replace both the constant and the static rule above with the thing they approximate.
 

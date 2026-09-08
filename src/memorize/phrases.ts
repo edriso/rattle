@@ -13,7 +13,7 @@
      but continuing is preferred, which is exactly what a reciter does: he
      carries on through 28% of them (Husary), 33% (Minshawi) and 71% (Abdul
      Basit). Cutting there chopped a phrase mid-breath, which is what a reader
-     reported hearing. It is 29% of the marks in the mushaf, so this costs real
+     reported hearing. It was 29% of the cuts in the mushaf, so this costs real
      phrases, and it is worth it: a phrase that ends mid-word teaches a wrong
      ending.
    - A long stretch with no mark at all stays whole. It used to be cut at a
@@ -29,19 +29,21 @@
    The numbers above come from measuring `silencedetect` against the reciters'
    own recordings; see docs in data/README.md. */
 
-/** Marks that end a phrase. U+06DA جائز, U+06D7 قلى, U+06D8 لازم. */
-const STOP_MARKS = 'ۚۗۘ';
+/* Escapes rather than the marks themselves, because both of these strings are
+   read as regular-expression character classes below. A bidirectional editor
+   reorders such a class on screen, so one typed as Arabic marks can be saved
+   differently from how it reads, and a class that lost a member makes every
+   check here pass vacuously. `phrases.test.ts` walks all 6,236 verses for that
+   reason. */
+
+/** Marks that end a phrase: ۚ جائز, ۗ قلى, ۘ لازم. */
+const STOP_MARKS = '\u06DA\u06D7\u06D8';
 /**
  * Every mark that stands alone between two words rather than belonging to one:
- * the three above plus U+06D6 صلى, U+06D9 لا, U+06DB معانقة, U+06DC سكتة,
- * U+06DE بداية الربع and U+06E9 موضع سجدة, the last two read by nobody.
+ * the three above plus ۖ صلى, ۙ لا, ۛ معانقة, ۜ سكتة, ۞ بداية الربع and
+ * ۩ موضع سجدة, the last two read by nobody.
  */
-const MARK_CHARS = `${STOP_MARKS}ۖۙۛۜ۞۩`;
-
-/* Numeric escapes on purpose: a bidirectional editor reorders a character
-   range on screen, so a class typed as Arabic marks can be saved differently
-   from how it reads, and a broken class makes every check here pass
-   vacuously. `phrases.test.ts` walks all 6,236 verses for that reason. */
+const MARK_CHARS = `${STOP_MARKS}\u06D6\u06D9\u06DB\u06DC\u06DE\u06E9`;
 const MARK_ONLY = new RegExp(`^[${MARK_CHARS}]+$`, 'u');
 const STOPPABLE = new RegExp(`[${STOP_MARKS}]`, 'u');
 

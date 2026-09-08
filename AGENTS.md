@@ -113,11 +113,14 @@ What stays in the sheet is `linkBack`, the number of previous segments a وصل
 step reaches back over. That shapes the method rather than the length of a
 sitting, and its default of two is the method as taught.
 
-Two labels on that screen were earned the hard way. The range presets say
-«طول المدى» **on the screen**, not only in the accessible tree: a reader took
-«٣ آيات» under the ayah fields for a repetition count, and the row below it
-says «٣ آيات» too, about something else. And the only «مرات» on the screen is
-on the counts.
+Two labels on that screen were earned the hard way, and both are the same
+mistake: the same counted noun on two things that are not the same. The range
+presets say «طول المدى» **on the screen**, not only in the accessible tree,
+because a reader took «٣ آيات» under the ayah fields for a repetition count
+and the row below it says «٣ آيات» too, about something else. And the control
+that opens the counts says «ضبط التكرار» rather than «مرات التكرار», because
+the estimate on its own row counts the plays in «مرة» and «مرات». Check a new
+label against the whole screen, not against its own row.
 
 ## The start screen fits the screen
 
@@ -187,7 +190,7 @@ heard clips ending mid-breath. Long ayat are cut at `ۚ` (جائز), `ۗ` (قل�
 - Never at `ۖ` (صلى). Stopping is permitted and continuing is *preferred*, and
   that is what reciters do: measured against the recordings this app plays,
   they carry on through 28% of them (Husary), 33% (Minshawi) and 71% (Abdul
-  Basit). It is 29% of the marks in the mushaf, so this costs real phrases.
+  Basit). It was 29% of the cuts in the mushaf, so this costs real phrases.
 - Never at a clause word in a stretch with no mark at all. That fallback used
   to cut at ثم, قال, a prefixed و; the reciter stops at 4% of those or fewer,
   against the 8-12% rate of any random point mid-word, so it carried no
@@ -252,15 +255,17 @@ audio from, and a fetch that fails falls through to it. `ayahAudioUrl()` mints
 the first address, which stays the one a recording is cached and keyed under;
 `audioMirrors()` returns the rest. Two things to know before you touch either:
 
-- The mirror does not carry `Abdurrahmaan_As-Sudais_64kbps` or
-  `Saood_ash-Shuraym_64kbps`. Those two fall through to the 192 and 128 kbps
-  cuts of the same reading. Measured over eleven ayat from 2 to 43 seconds
-  long, the higher cut runs a **constant** 78.7 ms (Sudais) and 34.1 ms
-  (Shuraym) longer, whatever the ayah: encoder padding, not drift that piles
-  up. So a phrase cut lands within a tenth of a second of where the vendored
-  timings put it, and no correction is worth carrying. That is what a
-  reciter's `mirror` field is for. If you add a reciter, check its folder on
-  the mirror and set the field when the name differs.
+- The mirror does not carry `Abdurrahmaan_As-Sudais_64kbps`,
+  `Saood_ash-Shuraym_64kbps` or `Minshawy_Mujawwad_64kbps`. Those three fall
+  through to a higher-bitrate cut of the same reading. Measured over eleven
+  ayat from 2 to 43 seconds long, the higher cut runs a **constant** 78.7 ms
+  (Sudais) and 34.1 ms (Shuraym) longer, whatever the ayah, and over twelve
+  ayat from 2 to 391 seconds a bounded 26 to 52 ms longer (Minshawi, which is
+  one MP3 frame): encoder padding, not drift that piles up. So a phrase cut
+  lands within a tenth of a second of where the vendored timings put it, and
+  no correction is worth carrying. That is what a reciter's `mirror` field is
+  for. If you add a reciter, check its folder on the mirror and set the field
+  when the name differs.
 - Both hosts sit behind the same CDN. This carries a session through an origin
   or a folder going missing, not through that CDN going down. A genuinely
   independent third address would have to be storage someone owns and pays
@@ -277,9 +282,9 @@ the first address, which stays the one a recording is cached and keyed under;
   done
   ```
 
-  Expect 206 for every `mirror:` folder and for the seven `folder:` values the
-  mirror shares. The two 64 kbps folders it does not carry return 404, which
-  is why they have a `mirror:` of their own.
+  Expect 206 for every `mirror:` folder and for the nine `folder:` values the
+  mirror shares. The three folders it does not carry return 404, which is why
+  they have a `mirror:` of their own.
 
 **The address that answers belongs to the run.** In `useRangeAudio` the media
 element remembers which address worked and keeps it for the rest of the range,
