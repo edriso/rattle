@@ -125,6 +125,66 @@ describe('choosing a passage', () => {
     expect(to.value).toBe('١٢');
   });
 
+  /* The counts go down to nothing and up to ten, and both ends have to read
+     as something rather than as a number that will not move. */
+  it('holds the counts between nothing and ten, and says which', async () => {
+    start({
+      surah: 112,
+      ayah: 1,
+      to: 2,
+      plan: { ...defaults.plan, singleReps: 1 },
+    });
+    render(<App />);
+    const single = await screen.findByRole('status', { name: 'مرات التلقين' });
+    const less = screen.getByRole('button', { name: 'أنقِص مرات التلقين' });
+    const more = screen.getByRole('button', { name: 'زِد مرات التلقين' });
+    expect(single.textContent).toBe('١');
+    fireEvent.click(less);
+    // Zero is «بلا», not «٠»: the step is dropped, it is not run no times.
+    await waitFor(() => expect(single.textContent).toBe('بلا'));
+    /* And it stops there. `aria-disabled` rather than `disabled`, so pressing
+       it again does not drop the keyboard where it stands. */
+    expect(less.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(less);
+    expect(single.textContent).toBe('بلا');
+    for (let i = 0; i < 12; i++) fireEvent.click(more);
+    await waitFor(() => expect(single.textContent).toBe('١٠'));
+    expect(more.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  /* Now that all three counts can be turned down from the start screen, all
+     three can be turned down to nothing at once. The schedule keeps one
+     closing recital rather than presenting a drill with no steps in it, so
+     the start button never sits there refusing to be pressed with nothing on
+     the screen to explain why. */
+  it('keeps one closing recital when every count is turned off', async () => {
+    start({
+      surah: 112,
+      ayah: 1,
+      to: 3,
+      plan: { linkBack: 2, singleReps: 0, linkReps: 0, reciteReps: 0 },
+    });
+    render(<App />);
+    const estimate = await screen.findByRole(
+      'status',
+      { name: 'تقدير الجلسة' },
+      { timeout: 3000 },
+    );
+    await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
+    // Something to play, and counted the way Arabic counts it.
+    expect(estimate.textContent).toMatch(/مرة|مرات|مرتان/);
+    expect(estimate.textContent).not.toMatch(/٠ مرة/);
+    const begin = screen.getByRole('button', {
+      name: /ابدأ جلسة التلقين/,
+    }) as HTMLButtonElement;
+    expect(begin.disabled).toBe(false);
+    fireEvent.click(begin);
+    expect(
+      await screen.findByText(/الخطوة ١ من ١/, {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    expect(screen.getByText('سرد')).toBeTruthy();
+  });
+
   it('says what to do about a drill that would run long', async () => {
     start({ surah: 2, ayah: 255, to: 257 });
     render(<App />);
