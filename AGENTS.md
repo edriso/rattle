@@ -56,7 +56,14 @@ components/ui/   the eight shadcn parts the app actually uses, generated.
                  back in: `npx shadcn add <part>` fetches only what you need.
 scripts/         offline tools that build the committed data
 data/            the original Quran text file, its checksum, and its provenance
+docs/            CONTRIBUTING.md, the walk-through for a first change
+LICENSE          0BSD: everything written here, with no conditions at all
+NOTICE           what this repository only redistributes, and on whose terms
 ```
+
+New to the repository? Read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+first. It walks through one change end to end and says which of these files
+to open for which kind of task. This file is the reference behind it.
 
 There is no router. The app shows one screen at a time, chosen from the saved
 preferences, and the title and social tags are static in `index.html` where a
@@ -75,7 +82,7 @@ use it.
 | --------------- | ------------------------------------------------ |
 | `←` or `Enter`  | next step, or next ayat                          |
 | `→`             | previous                                         |
-| `Space` or `↑`  | play and pause, and end the echo gap early       |
+| `Space` or `↑`  | play and pause, and continue in «أنا أتحكّم»      |
 | `↓`             | play this step again, or turn looping on and off |
 | `Shift + Enter` | start or stop recording (free review)            |
 | `Shift + Space` | play your own recording                          |
@@ -102,25 +109,39 @@ If you add a key, add it in four places: the hook, the `aria-keyshortcuts` and
 
 ## The start screen carries the session options
 
-Everything that decides what a sitting will be is on that one screen: the
-passage, how much of it a repetition covers, whether the learner repeats aloud,
-and how many times each step runs. The repetition counts used to be two taps
-away inside the settings sheet, and a reader asked for them here, because they
-are what somebody changes when a sitting feels too long. They open from the row
-that carries the estimate, which is the number they move.
+Everything that decides what a sitting will be is on that one screen and
+**drawn on it**: the passage, how much of it a repetition covers, whether the
+learner repeats aloud, how many times each step runs, and who recites. A
+reader asked for the repetition counts here, in these words, «وأرى أن وجوده
+في الشاشة الرئيسية بجانب بقية خيارات الجلسة سيكون أسهل»: beside the other
+options, which means visible, not one tap behind a disclosure. They were put
+behind a disclosure once. That was half an answer, and it is not what was
+asked for.
+
+The counts are three columns rather than three rows, which is what makes them
+affordable: 109px against 150. Each is bordered as one control, because three
+bare triples of «− ٣ +» leave less space between one count's minus and the
+next count's plus than between either and its own number, and the eye groups
+by proximity. Their buttons narrow with the viewport (`clamp`) so a 320px
+screen does not overflow sideways.
+
+The reciter shares the estimate's row, because his pace is what the estimate
+is mostly saying: the slowest mushaf here takes three times as long over a
+passage as the quickest, and whether «جملة» can be offered at all depends on
+him. He shows a `short` name, which every reciter must carry, and the whole
+name as the button's accessible name. It opens the settings sheet with the
+cursor on him, through `landOn`.
 
 What stays in the sheet is `linkBack`, the number of previous segments a وصل
 step reaches back over. That shapes the method rather than the length of a
 sitting, and its default of two is the method as taught.
 
-Two labels on that screen were earned the hard way, and both are the same
-mistake: the same counted noun on two things that are not the same. The range
-presets say «طول المدى» **on the screen**, not only in the accessible tree,
-because a reader took «٣ آيات» under the ayah fields for a repetition count
-and the row below it says «٣ آيات» too, about something else. And the control
-that opens the counts says «ضبط التكرار» rather than «مرات التكرار», because
-the estimate on its own row counts the plays in «مرة» and «مرات». Check a new
-label against the whole screen, not against its own row.
+One label on that screen was earned the hard way: the same counted noun on two
+things that are not the same. The range presets say «طول المدى» **on the
+screen**, not only in the accessible tree, because a reader took «٣ آيات»
+under the ayah fields for a repetition count while the row below said
+«٣ آيات» too, about something else. Check a new label against the whole
+screen, not against its own row.
 
 ## The start screen fits the screen
 
@@ -137,14 +158,22 @@ desktop. Two rules go with it:
   editing the base rule appeared to do nothing. There is one place now. If a
   short screen needs more, shrink `--gap` there rather than re-listing every
   margin.
-- There are three height bands, and each one gives up as little as it can:
-  under 900px the rhythm tightens and the surah field sheds its roomiest
-  padding, under 844px the promise line gives way to the form it introduces,
-  and under 780px the labels and the topbar tighten too. **No row is ever
-  dropped and every row keeps the 44px a finger needs.** Measured in Chrome at
-  390 wide, the form fits whole at 844, 812 and 740 tall; at 667 and 640 it
-  still overflows, less than it did before the counts were added. If you add a
-  row to this screen, measure those five heights again.
+- There are four height bands, and each one gives up as little as it can.
+  Under 900px the rhythm tightens, the surah field sheds its roomiest padding,
+  and **the heading goes out of the flow**, to the accessible tree rather than
+  off the page: it is still the page's only h1 and still the first thing a
+  screen reader reaches, but the brand in the corner already says which app
+  this is and the form is self-evidently a form for choosing a passage, so its
+  70px buys a row of controls. Under 843px the promise line goes. Under 780px
+  the labels and the topbar tighten and the line about the position being
+  saved gives way, since «عن التطبيق» says it too. Under 700px the blocks
+  close up on each other, and nothing inside them moves.
+- **No row is ever dropped and every row keeps the 44px a finger needs.**
+  Measured in Chrome against the built app at 390 wide, the form fits whole at
+  844, 812, 780, 740 and 700 tall, and nothing overflows sideways down to
+  320px. At 667 and 640 it still scrolls, by about as much as it did before
+  the counts arrived. **If you add a row to this screen, measure those
+  heights again**, and measure the built app rather than the dev server.
 
 ## The verse frame
 
@@ -297,9 +326,26 @@ network comes back starts from the right place.
 - Copy shown to the user is Arabic. Names in code are English.
 - Comments say **why**, not what. If a line looks odd, explain the reason. Do
   not narrate what the code already says.
-- Numbers shown to the user use Arabic-Indic digits and correct Arabic grammar.
-  Use the helpers in `src/data/arabic.ts` (`arabic`, `ayatCount`, `timesCount`,
-  `minutesCount`, `daysCount`) rather than writing `${n} آيات` by hand.
+- Numbers shown to the user use Arabic-Indic digits and correct Arabic
+  grammar. Use the helpers in `src/data/arabic.ts` (`arabic`, `ayatCount`,
+  `timesCount`, `minutesCount`, `daysCount`) rather than writing `${n} آيات`
+  by hand. Three places had written it by hand anyway, and the surah list said
+  «٧ آية» for al-Fatiha for months. `arabic.test.ts` now checks every surah in
+  the mushaf, so that particular bug cannot come back, but nothing stops a new
+  hand-written one: reach for the counter.
+- **The counted noun follows the number beside it, not the whole figure.**
+  `counted()` bands on `n % 100`, so al-A'raf's ٢٠٦ takes the plural of its
+  six and al-Baqarah's ٢٨٦ the singular of its eighty-six.
+- **The dual's case comes from what governs it**, which the counter cannot
+  see. «آيتان» standing alone as a label, but «نحو دقيقتين», because «نحو» is
+  a مضاف, and «متأخرة يومين», because a duration is a ظرف زمان منصوب. Each
+  counter carries the dual its own call sites need. A call site in a different
+  grammatical position needs a **new counter**, not a change to an existing
+  one. «نحو دقيقتان» is what getting this wrong looks like.
+- Tanwin stays off interface text, as the Arabic style guides have it, with
+  one exception that is not a diacritic at all: the alef an accusative fatha
+  is written on. «٢٠ يومًا», never «٢٠ يوم». On a noun ending in ة there is no
+  alef, which is why `hundred` is optional on `CountedForms`.
 - **A field that takes a number is never `type="number"`.** That field silently
   throws away ٢٥٥, which is what an Arabic keyboard types, and it can only show
   Latin digits. Use `type="text"` with `inputMode="numeric"`, show the value
@@ -318,9 +364,64 @@ network comes back starts from the right place.
 - Do not fade text with `opacity` to show it is secondary. Opacity multiplies
   against the background and quietly drops the contrast below AA; use
   `--muted-foreground`, which is chosen to pass.
+- **`--muted-foreground` is chosen against `--surface`, so it is wrong on a
+  row the accent has painted.** On `--accent` it collapses to between 1.0 and
+  1.5 to one, measured across all four colours in both appearances. Secondary
+  text on a highlighted row takes `--accent-foreground-muted`. This is not
+  hypothetical: «متأنٍّ» beside a highlighted reciter failed 8 of 8
+  combinations and could not be seen at all in the light appearance.
+- **This stylesheet is unlayered, so a plain class beats a Tailwind utility**
+  however specific the utility looks. `.muted` outranked
+  `**:text-accent-foreground` on the highlighted select row, which is why the
+  name flipped colour and the pace beside it did not. If a `components/ui`
+  part's own utility is not winning, that is why; add the rule here rather
+  than fighting it there.
 - A control that becomes unavailable while it holds focus uses `aria-disabled`,
   not `disabled`. A `disabled` button drops the keyboard on the floor the
   moment it is pressed.
+- Anything third-party that this repository **redistributes** gets an entry in
+  [NOTICE](NOTICE) in the same pass. Everything written here is
+  [0BSD](LICENSE): no attribution, no conditions, deliberately, so do not add
+  a licence header to a file and do not add a credit-us line anywhere. The
+  Quran text is the opposite case, because its terms are not ours to give
+  away.
+
+## The transport, and the learner's own turn
+
+One button means one thing: it stops what is running and starts what is not.
+The learner's turn counts as running, because the silence is timed and the
+clock moves through it, and the turn used to be the one stretch of a session
+that could not be stopped. Ending the turn early is a **separate** control,
+in the slot that otherwise only balances the row, so the transport does not
+shift when it appears.
+
+`echo: 'manual'` («أنا أتحكّم») is the exception: there the drill really is
+halted until the learner says otherwise, so «تابِع» goes on the main button
+and there is nothing to stop. Phase `waiting` is that state; phase `echoing`
+is a timed silence, which is not the same thing.
+
+## Changing a setting while a drill is running
+
+The settings sheet is reachable mid-session, so nothing in it may cost the
+learner their place, and only one thing in it can even try.
+
+- **The silence** is handed to the running session by `setEcho`. The session
+  is built with `echo: 'off'` and given the real one straight away for exactly
+  this reason.
+- **The reciter** rebuilds the drill, and `useSession` carries the cursor
+  across when it is the same drill: the same steps and the same segments in a
+  different voice. Comparing step boundaries is not enough, because two
+  reciters can split different ayat of one passage into the same number of
+  phrases; `sameDrill` compares segment ids too.
+- **`linkBack`** genuinely makes a different drill, since it decides what
+  every step after the first one is, so there is no step to carry a cursor to.
+  It starts over, and while a session is running the sheet says so. A
+  progress bar that jumps back with no explanation is the thing to avoid.
+- Everything else belongs to free review or to the appearance.
+
+Anything that shapes a sitting belongs on the start screen, where changing it
+before you begin is the natural thing. If you add a setting, work out which of
+those four it is before you decide where it goes.
 
 ## The panels
 

@@ -2,6 +2,8 @@
 
 Two sets of data are committed to this repository rather than fetched at run time: the Quran text, and the phrase-boundary timings the session uses to cut an ayah's recording. Both are generated offline by a script, and neither is re-fetched during a build or an install.
 
+Neither is ours to license. [NOTICE](../NOTICE) says whose they are and on what terms; everything written for this repository is [0BSD](../LICENSE) with no conditions at all. If you add a source, add it to both this file and NOTICE in the same pass.
+
 ## Quran text
 
 - Source: Tanzil Project, **Uthmani, version 1.1**.
@@ -19,8 +21,8 @@ The source prefixes the basmala to ayah 1 of every surah except al-Fatihah and a
 
 - Source: Quran.com word-by-word segments, `https://api.qurancdn.com/api/qdc/audio/reciters/<id>/audio_files?chapter=<1..114>&segments=true`.
 - Generated: 2026-09-08, by `npm run prepare:timings`, into `src/data/timings/<reciter>.json`.
-- About 37 KB per reciter as stored, 28 KB as built and 10 KB over the wire, down from 63, 47 and 17; loaded only when the learner drills at phrase level.
-- One reciter has no file: no source publishes word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks.
+- Eleven files for twelve reciters. 33 to 38 KB each as stored, 27 to 28 KB as built and 10 KB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Measure the built chunk rather than the stored JSON if you quote a number: Vite inlines the JSON into a chunk, so the two differ.
+- The twelfth reciter has no file: no source publishes word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks, and the start screen stops offering «جملة» when the answer is no.
 
 The API reports each word as a millisecond span into the **full-chapter** recording. The app plays the **per-ayah** files EveryAyah serves, so the script subtracts the ayah's own `timestamp_from`. The two are the same recording: across every reciter shipped here, `timestamp_to − timestamp_from` matched the length of the corresponding EveryAyah file to within about 0.3 s, and most to within 0.05 s.
 

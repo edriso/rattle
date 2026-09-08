@@ -232,7 +232,7 @@ label:has(input:focus-visible) {
   display: flex;
   align-items: center;
   gap: 14px;
-  text-align: right;
+  text-align: start;
   background: var(--surface);
   border: 1px solid var(--control-border);
   border-radius: 10px;
@@ -455,6 +455,9 @@ label:has(input:focus-visible) {
   display: grid;
   place-items: center;
 }
+/* Physical, not logical, and the one place in this file that is. A play
+   triangle is not mirrored by writing direction the way a chevron is, so the
+   nudge that optically centres it belongs on the same side in both. */
 .play-main svg {
   margin-left: 3px;
 }
@@ -572,7 +575,7 @@ progress::-moz-progress-bar {
 .skip-link {
   position: fixed;
   top: 12px;
-  left: 12px;
+  inset-inline-start: 12px;
   z-index: 100;
   background: var(--accent);
   color: var(--accent-foreground);
@@ -760,7 +763,7 @@ progress::-moz-progress-bar {
   font-size: 14px;
 }
 .setting-select [data-slot='select-value'] {
-  text-align: right;
+  text-align: start;
 }
 .field-note {
   display: block;
