@@ -27,6 +27,7 @@ import { cachedSurah, loadSurah, openVerse } from '../data/text';
 import {
   surahs,
   arabic,
+  ayatCount,
   digits,
   normalize,
   type Preferences,
@@ -325,14 +326,14 @@ export function Picker({
             {(s) => (
               <ComboboxItem key={s.id} value={s}>
                 <span>سورة {s.name}</span>
-                <small>{arabic(s.count)} آية</small>
+                <small>{ayatCount(s.count)}</small>
               </ComboboxItem>
             )}
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
       <div className="picker-meta">
-        السورة {arabic(id)} من ١١٤ <span>{arabic(selected.count)} آية</span>
+        السورة {arabic(id)} من ١١٤ <span>{ayatCount(selected.count)}</span>
       </div>
       <div className="range-fields">
         <AyahList
@@ -498,22 +499,12 @@ export function SettingsSheet({
             className="setting-select"
             aria-labelledby="count-label"
           >
-            <SelectValue>
-              {prefs.perView === 1
-                ? 'آية واحدة'
-                : prefs.perView === 2
-                  ? 'آيتان'
-                  : `${arabic(prefs.perView)} آيات`}
-            </SelectValue>
+            <SelectValue>{ayatCount(prefs.perView)}</SelectValue>
           </SelectTrigger>
           <SelectContent dir="rtl">
             {[1, 2, 3, 4, 5].map((n) => (
               <SelectItem key={n} value={String(n)}>
-                {n === 1
-                  ? 'آية واحدة'
-                  : n === 2
-                    ? 'آيتان'
-                    : `${arabic(n)} آيات`}
+                {ayatCount(n)}
               </SelectItem>
             ))}
           </SelectContent>

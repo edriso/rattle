@@ -13,21 +13,55 @@ export const digits = (value: string) =>
     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/[^0-9]/g, '');
+/** The forms a counted noun takes. One and two carry their own word instead
+    of a numeral, so those two hold a whole phrase rather than a bare noun. */
+export type CountedForms = {
+  /** «آية واحدة»: the noun first, واحدة after it as a صفة. */
+  one: string;
+  /** The dual, «آيتان»: the form itself carries the two, with no numeral. */
+  two: string;
+  /** Three to ten, جمع مجرور: «٣ آيات». */
+  few: string;
+  /** Eleven to ninety-nine, مفرد منصوب. A noun ending in a consonant needs
+      the alef its tanwin is written on here: «٢٠ يومًا», never «٢٠ يوم». */
+  many: string;
+  /** Exact hundreds and thousands, مفرد مجرور, where that alef goes again:
+      «١٠٠ يوم». A noun ending in ة reads the same either way, which is why
+      this may be left out. */
+  hundred?: string;
+  /** Nothing to count. Arabic does not say «٠ مرة»; it says there are none. */
+  none?: string;
+};
+
 /**
- * A number with its counted noun, following Arabic agreement: one and two
- * take their own words, three to ten take the plural, and above that the
- * singular returns in the accusative.
+ * A number with its counted noun.
+ *
+ * The band is read off `n % 100` rather than off `n`, because the تمييز
+ * follows the number **beside** it and not the whole figure: ٢٠٦ آيات takes
+ * the plural of the six, and ٢٨٦ آية the singular of the eighty-six. That is
+ * مجمع اللغة العربية's «ويحكم التمييز نصبًا أو جرًا مميزُهُ».
+ *
+ * The dual is stored per counter instead of derived, because its case depends
+ * on what governs it where it lands: «آيتان» standing alone as a label, but
+ * «نحو دقيقتين», where «نحو» is a مضاف. This function cannot see that
+ * context, so each counter below carries the form its own call sites need,
+ * and a call site in a different position needs its own counter rather than
+ * this one. Getting that wrong is what «نحو دقيقتان» was.
+ *
+ * Numerals stay as digits and are never spelt out, so the gender reversal of
+ * three to ten, سبع آيات against سبعة أيام, never arises.
  */
-export function counted(
-  n: number,
-  forms: { one: string; two: string; few: string; many: string },
-) {
+export function counted(n: number, forms: CountedForms) {
+  if (n === 0 && forms.none) return forms.none;
   if (n === 1) return forms.one;
   if (n === 2) return forms.two;
   const unit = n % 100;
-  return `${arabic(n)} ${unit >= 3 && unit <= 10 ? forms.few : forms.many}`;
+  if (unit >= 3 && unit <= 10) return `${arabic(n)} ${forms.few}`;
+  if (unit === 0 && forms.hundred) return `${arabic(n)} ${forms.hundred}`;
+  return `${arabic(n)} ${forms.many}`;
 }
 
+/** Ayat, as a label with nothing governing it, so the dual is مرفوع. */
 export const ayatCount = (n: number) =>
   counted(n, {
     one: 'آية واحدة',
@@ -36,24 +70,34 @@ export const ayatCount = (n: number) =>
     many: 'آية',
   });
 
+/** Plays of a run, as a label. */
 export const timesCount = (n: number) =>
   counted(n, {
     one: 'مرة واحدة',
     two: 'مرتان',
     few: 'مرات',
     many: 'مرة',
+    none: 'بلا تكرار',
   });
 
+/** Minutes after «نحو», which is a مضاف, so its dual is مجرور. */
 export const minutesCount = (n: number) =>
   counted(n, {
     one: 'دقيقة',
-    two: 'دقيقتان',
+    two: 'دقيقتين',
     few: 'دقائق',
     many: 'دقيقة',
   });
 
+/** Days as a ظرف زمان منصوب, «متأخرة يومين», so the dual is منصوب too. */
 export const daysCount = (n: number) =>
-  counted(n, { one: 'يوم', two: 'يومان', few: 'أيام', many: 'يومًا' });
+  counted(n, {
+    one: 'يومًا واحدًا',
+    two: 'يومين',
+    few: 'أيام',
+    many: 'يومًا',
+    hundred: 'يوم',
+  });
 
 /**
  * The form of Arabic text this app searches by. Everything a plain keyboard
@@ -74,4 +118,3 @@ export const normalize = (s: string) =>
     .replace(/\u0649/g, '\u064A')
     .replace(/\s+/g, ' ')
     .trim();
-/** Which of the two ways of working the app is showing. */
