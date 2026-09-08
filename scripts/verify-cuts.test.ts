@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { judge, MARGIN, MIN_SILENCE, WINDOW } from './verify-cuts.ts';
+import {
+  hearing,
+  judge,
+  MARGIN,
+  MIN_RANGE,
+  MIN_SILENCE,
+  MIN_YIELD,
+  NOISE,
+  WINDOW,
+} from './verify-cuts.ts';
 
 /* `judge` decides what a recording says about one cut: that it already falls
    in a pause, that it belongs in one nearby, or that there is no pause there
@@ -117,5 +126,88 @@ describe('judging a cut against the silences in a recording', () => {
       silence(9000, 9800),
     ]);
     expect(verdict).toMatchObject({ kind: 'moved', at: 5300 + MARGIN });
+  });
+});
+
+/* Whether a recitation can be measured at all, which is decided before any of
+   it is. The figures below are what the script itself reports over 24 ayat
+   spread across each mushaf, and the outcome beside each is what a full or
+   sampled run actually produced. Held here because `MIN_RANGE` and `NOISE`
+   are tuning knobs, and a test that only checked invented numbers would let
+   somebody move one and find out from a user which recitations went quiet. */
+const MASTERING = [
+  // Classic murattal and mujawwad: room to spare, and the gate works.
+  { id: 'husary', floor: -58.2, speech: -24.4, measurable: true },
+  { id: 'husary-muallim', floor: -64.0, speech: -28.3, measurable: true },
+  { id: 'abdulbasit', floor: -68.2, speech: -24.4, measurable: true },
+  { id: 'abdulbasit-mujawwad', floor: -73.9, speech: -22.2, measurable: true },
+  { id: 'minshawi', floor: -64.9, speech: -21.2, measurable: true },
+  { id: 'minshawi-mujawwad', floor: -83.8, speech: -18.3, measurable: true },
+  // Modern masters. Every one of these returned no pauses whatever, and
+  // shatri two out of ninety-four, which read in the report as reciters who
+  // never stop rather than as recordings with no quiet in them.
+  { id: 'alafasy', floor: -32.9, speech: -20.6, measurable: false },
+  { id: 'shatri', floor: -40.2, speech: -24.6, measurable: false },
+  { id: 'shuraim', floor: -30.5, speech: -20.1, measurable: false },
+  { id: 'sudais', floor: -31.7, speech: -21.5, measurable: false },
+  { id: 'dussary', floor: -28.6, speech: -17.0, measurable: false },
+];
+
+/** A level array whose fifth percentile is `floor` and whose median is
+    `speech`, which is all `hearing` reads out of one. */
+const like = (floor: number, speech: number) =>
+  Array.from({ length: 100 }, (_, i) =>
+    i < 5 ? -120 : i < 50 ? floor : speech,
+  );
+
+describe('whether a level gate can hear a recitation at all', () => {
+  it('reads the floor and the speech level out of an envelope', () => {
+    const ear = hearing(like(-60, -20));
+    expect(ear.floor).toBe(-60);
+    expect(ear.speech).toBe(-20);
+    expect(ear.range).toBe(40);
+  });
+
+  it('takes a frame of digital silence as -120 and not as the floor', () => {
+    // -inf would sort nowhere; the fifth percentile is what keeps one frame
+    // of it at a file boundary from being mistaken for the room.
+    expect(hearing(like(-60, -20)).floor).toBe(-60);
+  });
+
+  it.each(MASTERING)(
+    'agrees with what $id actually did',
+    ({ floor, speech, measurable }) => {
+      expect(hearing(like(floor, speech)).measurable).toBe(measurable);
+    },
+  );
+
+  it('leaves room on both sides of the gap it is drawn across', () => {
+    // Nothing measured falls between these two, and `MIN_RANGE` sits in the
+    // middle rather than up against either. If a recitation ever lands in
+    // between, this is the test that says the constant now needs an argument.
+    const works = MASTERING.filter((m) => m.measurable);
+    const fails = MASTERING.filter((m) => !m.measurable);
+    const worst = Math.min(...works.map((m) => m.speech - m.floor));
+    const best = Math.max(...fails.map((m) => m.speech - m.floor));
+    expect(best).toBeLessThan(MIN_RANGE);
+    expect(worst).toBeGreaterThan(MIN_RANGE);
+    expect(MIN_RANGE - best).toBeGreaterThan(5);
+    expect(worst - MIN_RANGE).toBeGreaterThan(5);
+  });
+
+  it('refuses a recording whose quiet never reaches the gate', () => {
+    // The other way it fails, and a different fault: plenty of range, but the
+    // floor sits above -40dBFS, so the gate is never crossed.
+    const gate = Number.parseFloat(NOISE);
+    const ear = hearing(like(gate + 2, gate + 2 + MIN_RANGE * 2));
+    expect(ear.range).toBeGreaterThan(MIN_RANGE);
+    expect(ear.measurable).toBe(false);
+  });
+
+  it('keeps the write floor under every yield a real run has managed', () => {
+    // Measured: abdulbasit 59/60, minshawi 49/60, abdulbasit-mujawwad
+    // 1284/1489. The collapses it has to catch were 0/60 and 2/60.
+    expect(MIN_YIELD).toBeLessThan(49 / 60);
+    expect(MIN_YIELD).toBeGreaterThan(2 / 60);
   });
 });

@@ -52,6 +52,44 @@ const WINDOW = 1500;
  */
 const MARGIN = 80;
 
+/** Frames the envelope is measured in, in milliseconds: 882 samples at the
+    44.1kHz the resample pins, so the figure does not depend on how a
+    recitation happens to have been encoded. */
+const FRAME = 20;
+
+/**
+ * How much room a recitation has to have between its speech and its own
+ * quietest stretches, in dB, before `NOISE` can find anything in it.
+ *
+ * `NOISE` is a fixed gate, and a fixed gate only means something if there is
+ * somewhere for it to sit. Measured over 24 ayat of each of the twelve: the
+ * six classic murattal and mujawwad recitations have 34 to 63dB of room and
+ * spend 16 to 36% of their length under -40dBFS. The five modern masters have
+ * 10 to 16dB, and four of them have a noise floor *above* -40dBFS, so they
+ * spend 0.2 to 6% of their length under the gate and it finds no pauses at
+ * all. That is not a reciter running his boundaries together, it is limiting,
+ * and in the output the two are indistinguishable unless something separates
+ * them first. 24 is the middle of a gap with nothing in it: the lowest range
+ * that works is 33.8dB and the highest that fails is 16.1.
+ */
+const MIN_RANGE = 24;
+
+/** Ayat sampled to characterise the mastering, which belongs to the recording
+    session rather than to the ayah, so two dozen settle it. */
+const SOUNDINGS = 24;
+
+/**
+ * How much of a recitation a `--write` has to leave standing, as a fraction of
+ * the ayat that had cuts.
+ *
+ * An ayah loses its whole set when a single cut cannot be placed, so a
+ * measurement that mishears a recording does not degrade that file, it empties
+ * it, and «جملة» quietly stops being offered for that reciter. Every
+ * recitation measured so far keeps 82% or more, so a run under this is
+ * reporting a fault in the method and not a finding about the reciter.
+ */
+const MIN_YIELD = 0.7;
+
 type Bounds = Record<string, number[]>;
 type TimingFile = {
   reciter: string;
@@ -144,6 +182,52 @@ async function recording(surah: number, ayah: number, reciter: string) {
   throw new Error(`${surah}:${ayah}: ${String(lastError)}`);
 }
 
+/** The recording's loudness over time, one RMS reading per `FRAME`. */
+async function envelope(path: string) {
+  const { stdout } = await run('ffmpeg', [
+    '-hide_banner',
+    '-nostats',
+    '-i',
+    path,
+    '-af',
+    `aresample=44100,asetnsamples=${(44100 * FRAME) / 1000},astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level:file=-`,
+    '-f',
+    'null',
+    '-',
+  ]);
+  const levels: number[] = [];
+  for (const m of stdout.matchAll(/RMS_level=(-?[\d.]+|-inf)/g))
+    // A frame of true digital silence reads -inf, which no percentile can
+    // sort. -120dBFS is below anything a microphone in a room ever heard.
+    levels.push(m[1] === '-inf' ? -120 : Number(m[1]));
+  return levels;
+}
+
+/**
+ * Whether a level gate can find this recitation's pauses at all, and the two
+ * numbers that decide it: where its quiet sits and where its speech sits.
+ */
+function hearing(levels: readonly number[]) {
+  const sorted = [...levels].sort((a, b) => a - b);
+  const at = (p: number) =>
+    sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+  // The fifth percentile rather than the minimum: one frame of digital
+  // silence at a file boundary is not the noise floor of the room.
+  const floor = at(0.05);
+  const speech = at(0.5);
+  const gate = Number.parseFloat(NOISE);
+  return {
+    floor,
+    speech,
+    range: speech - floor,
+    under: levels.filter((v) => v < gate).length / (levels.length || 1),
+    // Both, because they fail differently: too little room means the gate
+    // cannot separate speech from pause, and a floor above the gate means it
+    // never crosses at all.
+    measurable: speech - floor >= MIN_RANGE && floor < gate,
+  };
+}
+
 type Verdict =
   | { kind: 'kept'; at: number }
   | { kind: 'moved'; at: number; by: number }
@@ -217,7 +301,12 @@ const median = (xs: readonly number[]) => {
   return sorted[Math.floor(sorted.length / 2)];
 };
 
-async function verify(id: string, write: boolean, limit: number) {
+async function verify(
+  id: string,
+  write: boolean,
+  limit: number,
+  force: boolean,
+) {
   const path = new URL(`${id}.json`, TIMINGS);
   const file = JSON.parse(readFileSync(path, 'utf8')) as TimingFile;
   const all = Object.keys(file.bounds);
@@ -226,6 +315,38 @@ async function verify(id: string, write: boolean, limit: number) {
   const keys = limit ? all.slice(0, limit) : all;
   if (limit && write)
     throw new Error('--limit cannot be combined with --write');
+
+  console.log(`\n${id}`);
+  /* What the recording can be asked, before it is asked fifteen hundred
+     times. Spread across the run rather than taken off the front, so a sura
+     recorded on its own day does not stand for the whole mushaf. */
+  const step = Math.max(1, Math.floor(keys.length / SOUNDINGS));
+  const soundings: number[] = [];
+  for (const key of keys.filter((_, i) => i % step === 0).slice(0, SOUNDINGS)) {
+    const [surah, ayah] = key.split(':').map(Number);
+    try {
+      soundings.push(
+        ...(await envelope(new URL(await recording(surah, ayah, id)).pathname)),
+      );
+    } catch {
+      // A file that will not read says nothing about the mastering either way.
+    }
+  }
+  const ear = soundings.length ? hearing(soundings) : null;
+  if (ear)
+    console.log(
+      `  mastering        floor ${ear.floor.toFixed(1)}dBFS, speech ${ear.speech.toFixed(1)}dBFS, ` +
+        `${ear.range.toFixed(1)}dB apart, ${(ear.under * 100).toFixed(1)}% of it under ${NOISE}`,
+    );
+  if (ear && !ear.measurable) {
+    console.log(
+      `  a gate at ${NOISE} cannot hear this recitation: it needs ${MIN_RANGE}dB of room and has ${ear.range.toFixed(1)}.\n` +
+        `  Nothing measured, nothing written. These cuts stay on the constant, which at least does not\n` +
+        `  pretend to have listened. Hearing them would take a detector that follows the voice rather\n` +
+        `  than the level; see data/README.md.`,
+    );
+    return;
+  }
   const kept: number[] = [];
   const moved: number[] = [];
   const unfounded: number[] = [];
@@ -277,7 +398,6 @@ async function verify(id: string, write: boolean, limit: number) {
 
   const total = kept.length + moved.length + unfounded.length;
   const away = moved.map(Math.abs);
-  console.log(`\n${id}`);
   console.log(
     `  ayat with cuts   ${keys.length} -> ${Object.keys(next).length}`,
   );
@@ -315,6 +435,26 @@ async function verify(id: string, write: boolean, limit: number) {
   );
   if (failed)
     console.log(`  recordings unread  ${failed} (cuts left as they were)`);
+  /* A distribution whose largest move is exactly the window is not being
+     described by the measurement, it is being clipped by it: the real offset
+     of this recitation is somewhere past the edge, and so is an unknown share
+     of the cuts counted "no silence within the window" above. */
+  if (away.length && Math.max(...away) >= WINDOW)
+    console.log(
+      `  note: the largest move reaches ${WINDOW}ms, the window itself, so this recitation's offset is\n` +
+        `  truncated by the window rather than measured by it.`,
+    );
+
+  const intact = Object.keys(next).length / (keys.length || 1);
+  if (write && intact < MIN_YIELD && !force) {
+    console.log(
+      `  Nothing written: ${(intact * 100).toFixed(1)}% of ayat kept a usable set and the floor is ${(MIN_YIELD * 100).toFixed(0)}%.\n` +
+        `  A collapse this size is a fault in the measurement, not a finding about the reciter, and\n` +
+        `  writing it would take «جملة» away from this recitation without saying so. Pass --force if\n` +
+        `  you have read the numbers above and mean it.`,
+    );
+    return;
+  }
 
   if (write) {
     file.bounds = Object.fromEntries(
@@ -335,6 +475,7 @@ async function verify(id: string, write: boolean, limit: number) {
 async function main() {
   const args = process.argv.slice(2);
   const write = args.includes('--write');
+  const force = args.includes('--force');
   const wanted = args.filter((a) => !a.startsWith('--'));
   const limit = Number(/--limit=(\d+)/.exec(args.join(' '))?.[1] ?? 0);
   const ids = (
@@ -344,7 +485,7 @@ async function main() {
   ).filter((id) => existsSync(new URL(`${id}.json`, TIMINGS)));
   if (!ids.length) throw new Error('no timing files for the reciters given');
   mkdirSync(CACHE, { recursive: true });
-  for (const id of ids) await verify(id, write, limit);
+  for (const id of ids) await verify(id, write, limit, force);
 }
 
 if (pathToFileURL(process.argv[1]).href === import.meta.url)
@@ -353,4 +494,14 @@ if (pathToFileURL(process.argv[1]).href === import.meta.url)
     process.exit(1);
   });
 
-export { judge, silences, MIN_SILENCE, WINDOW, MARGIN };
+export {
+  judge,
+  silences,
+  hearing,
+  MIN_SILENCE,
+  WINDOW,
+  MARGIN,
+  MIN_RANGE,
+  MIN_YIELD,
+  NOISE,
+};

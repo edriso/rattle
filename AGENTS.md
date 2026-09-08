@@ -601,17 +601,30 @@ the last two. If you change this, check the estimate the home screen shows.
 
 Good next steps, roughly in order of value:
 
-1. **Measure the remaining reciters' cuts against their audio.**
-   `scripts/verify-cuts.ts` does this and has been run on the recitations
-   marked `verified` in `src/data/timings/`; the rest still rest on a
-   constant. Each is one command, `node scripts/verify-cuts.ts <id> --write`,
-   about 350 MB of downloads and twenty minutes. `data/README.md` has the
-   method and what it found, which is stronger than a wrong constant: the
-   correct **sign** differs by recitation. Husary's cuts are a median 406 ms
-   early and Abdul Basit's mujawwad a median 432 ms late, so the one lag is
-   helping the first and hurting the second by about the same amount. And the
-   teaching mushaf needed almost nothing: 96.4% of its cuts were already
-   inside a real pause.
+1. **Measure Minshawi's two recitations against their audio**, which are the
+   only ones left that this method can reach. `scripts/verify-cuts.ts` has
+   been run on the four marked `verified` in `src/data/timings/`; what it
+   found is stronger than a wrong constant, because the correct **sign**
+   differs by recitation. Husary's cuts are a median 406 ms early and Abdul
+   Basit's mujawwad a median 432 ms late, so the one lag helps the first and
+   hurts the second by about the same amount. The teaching mushaf needed
+   almost nothing: 96.4% of its cuts were already inside a real pause.
+
+   **Read `data/README.md` before running it, and do not assume the rest are
+   one command each.** Five of the twelve recitations cannot be measured by
+   level at all: they are modern masters with 10 to 16 dB between speech and
+   their own noise floor, against 34 to 66 dB for the six classic ones, and
+   four of them have a floor *above* the -40 dBFS gate, so it is never
+   crossed. Run blind, that emptied the phrase cuts of five recitations and
+   read in the report as five reciters who never stop for breath. The script
+   now measures the mastering first and refuses, and prints the two numbers so
+   the refusal can be checked. Both guards are pinned by a table in
+   `scripts/verify-cuts.test.ts` holding what each recitation actually
+   measured, so moving `MIN_RANGE` or `NOISE` tells you by name which
+   recitations you just broke. And before spending Minshawi's 350 MB, widen
+   `WINDOW`: both of his press their largest move against it, which means
+   their real offset is past it, near a second rather than the 300 ms the
+   window was sized for.
 2. Highlight each word as it is recited. The committed timing data already has
    what this needs.
 3. Give the review plan its own screen. Today the home screen shows only the

@@ -79,21 +79,21 @@ It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files
 
 Two properties worth knowing. It is **idempotent**: a second pass over a verified file changes nothing, because every cut already sits in a measured pause, which is a useful self-check. And it is **all or nothing per ayah**, because `buildSegments` only cuts an ayah that has exactly one boundary per gap between its phrases: a partial set is not something the app can use, so an ayah that loses one cut loses them all.
 
-Measured over the whole mushaf, three recitations so far:
+Measured over the whole mushaf, four recitations so far:
 
-| | Husary (murattal) | Husary (المعلّم) | Abdul Basit (المجوّد) |
-| --- | --- | --- | --- |
-| cuts before | 2,124 | 2,105 | 1,969 |
-| already inside a pause | 371 (17.5%) | **2,030 (96.4%)** | 5 (0.3%) |
-| moved into one | 1,688 (79.5%) | 68 (3.2%) | 1,751 (88.9%) |
-| median move | **+406 ms** | +106 ms | **−432 ms** |
-| which way | 1,686 later | 64 later | 1,674 **earlier** |
-| no pause within 1.5 s | 65 (3.1%) | 7 (0.3%) | 213 (10.8%) |
-| ayat that split | 1,552 → 1,489 | 1,546 → 1,539 | 1,489 → 1,284 |
+| | Husary (murattal) | Husary (المعلّم) | Abdul Basit (murattal) | Abdul Basit (المجوّد) |
+| --- | --- | --- | --- | --- |
+| cuts before | 2,124 | 2,105 | 1,967 | 1,969 |
+| already inside a pause | 371 (17.5%) | **2,030 (96.4%)** | 341 (17.3%) | 5 (0.3%) |
+| moved into one | 1,688 (79.5%) | 68 (3.2%) | 1,419 (72.1%) | 1,751 (88.9%) |
+| median move | **+406 ms** | +106 ms | +347 ms | **−432 ms** |
+| which way | 1,686 later | 64 later | 1,399 later | 1,674 **earlier** |
+| no pause within 1.5 s | 65 (3.1%) | 7 (0.3%) | 207 (10.5%) | 213 (10.8%) |
+| ayat that split | 1,552 → 1,489 | 1,546 → 1,539 | 1,458 → 1,270 | 1,489 → 1,284 |
 
 Three findings, and the first is the one that matters.
 
-**A constant cannot do this job, because its correct sign is not the same for every recitation.** Husary's cuts arrive a median 406 ms *early* and Abdul Basit's mujawwad a median 432 ms *late*, over roughly two thousand cuts each, and almost none of either goes the other way. So the 300 ms lag is not merely imprecise for one reciter and fine for another: it is helping the first and actively hurting the second by about the same amount. No single number could have been right, which is the whole argument for measuring. That also supersedes, for these recitations, the 290 ms figure recorded above from a 130-ayah sample.
+**A constant cannot do this job, because its correct sign is not the same for every recitation.** Husary's cuts arrive a median 406 ms *early* and Abdul Basit's mujawwad a median 432 ms *late*, over roughly two thousand cuts each, and almost none of either goes the other way. So the 300 ms lag is not merely imprecise for one reciter and fine for another: it is helping the first and actively hurting the second by about the same amount. No single number could have been right, which is the whole argument for measuring. That also supersedes, for these recitations, the 290 ms figure recorded above from a 130-ayah sample. Abdul Basit's *murattal*, at +347 ms, is the one the constant nearly fits, which is the coincidence that made it look serviceable.
 
 **The teaching mushaf was already nearly right.** 96.4% of الحصري المعلّم's cuts fell inside a real pause before anything was measured, against 17.5% for the same reciter's murattal, and what did move moved a quarter as far. That is what a teaching mushaf is: recited slowly with a deliberate stop at every stopping place, so the pauses are long enough that even an aligner recording no silence puts its boundary inside one. It is also, empirically, the case for what was asked for in the reading group, that this kind of repetition belongs on a teacher's mushaf rather than on any recording that happens to have timings.
 
@@ -105,7 +105,46 @@ The constant is left where it is rather than tuned, because tuning one number to
 
 Between 27% and 45% of the boundaries this app used to cut at were places the reciter never stopped, and dropping ۖ and the clause fallback removed most but not all of that: at the marks that remain he still runs on 0-2% of the time (Husary), 4-7% (Abdul Basit) and up to 32% (Minshawi at ۗ). For a verified reciter that residue is now gone, since a boundary with no pause is dropped outright.
 
-What is left is the reciters that have not been measured yet. Each is a single command and about 350 MB of downloads, and until then their cuts rest on the constant. `verified` in each timing file says which is which.
+What is left is the recitations that have not been measured, and they are not all waiting on the same thing.
+
+### Five recitations cannot be measured this way at all
+
+A gate at -40 dBFS only means something if a recording has somewhere for it to sit. Sampling 24 ayat spread across each of the twelve mushafs and reading the RMS envelope in 20 ms frames splits them in two, with nothing in between:
+
+The six a gate can hear:
+
+| recitation | noise floor | speech | apart | under -40 dBFS |
+| --- | --- | --- | --- | --- |
+| Minshawi (المجوّد) | −83.8 dBFS | −18.3 | 65.5 dB | 24.0% |
+| Abdul Basit (المجوّد) | −73.9 | −22.2 | 51.7 | 19.6% |
+| Abdul Basit (murattal) | −68.2 | −24.4 | 43.8 | 17.3% |
+| Minshawi (murattal) | −64.9 | −21.2 | 43.6 | 15.1% |
+| Husary (المعلّم) | −64.0 | −28.3 | 35.7 | 36.8% |
+| Husary (murattal) | −58.2 | −24.4 | 33.7 | 15.7% |
+
+And the five it cannot:
+
+| recitation | noise floor | speech | apart | under -40 dBFS |
+| --- | --- | --- | --- | --- |
+| Ash-Shaatree | −40.2 | −24.6 | **15.6 dB** | 5.1% |
+| Al-Afasy | −32.9 | −20.6 | **12.3** | 1.1% |
+| Ad-Dussary | −28.6 | −17.0 | **11.6** | 0.2% |
+| Ash-Shuraym | −30.5 | −20.1 | **10.4** | 0.3% |
+| As-Sudais | −31.7 | −21.5 | **10.1** | 0.2% |
+
+The first six have 34 to 66 dB between their speech and their own quietest stretches, and spend 15 to 37% of their length under the gate. The other five have 10 to 16 dB, and four of them have a **noise floor above the gate**, so they never cross it: they spend 0.2 to 5% of their length under -40 dBFS, most of that the lead-in of the file. These are modern masters, limited and reverberant, and there is no level a fixed gate could take that separates a pause from a held note in them.
+
+Run blind, that failure is silent and looks like a finding. Sampling 60 ayat of each: Al-Afasy 0 of 95 cuts placed, Ad-Dussary 0 of 95, Ash-Shuraym 0 of 95, As-Sudais 0 of 91, Ash-Shaatree 2 of 94. Written, that would have emptied the phrase cuts of five of the twelve recitations and quietly withdrawn «جملة» from each, and the report would have read as five reciters who never stop for breath.
+
+So `verify-cuts.ts` measures the mastering **before** it measures anything else, refuses to go on when a recitation has less than `MIN_RANGE` (24 dB, the middle of that gap) or a floor above the gate, and prints the two numbers so the refusal can be checked rather than believed. It also refuses to write a run that lost more than 30% of its ayat (`MIN_YIELD`), which is the same fault caught from the other end. `--force` overrides that second guard for somebody who has read the numbers; nothing overrides the first, because there is nothing to override it with.
+
+Hearing these five would take a detector that follows the voice rather than the level: a spectral or onset measure, or a relative dip against the local speech level instead of an absolute floor. That is a project, not a flag.
+
+### Two are measurable and only need running
+
+Minshawi's murattal and mujawwad both pass the mastering check comfortably, and a 60-ayah sample places 88% and 53% of their cuts. Both need roughly 350 MB of downloads and twenty minutes, `node scripts/verify-cuts.ts minshawi --write`. Read the sample first: both press their largest move against the 1.5 s window, which means their true offset is *past* it and `WINDOW` needs widening before the full run is worth the bandwidth. Minshawi's murattal wants a median +971 ms and the mujawwad +861 ms, three times the constant, so a window sized for a 300 ms error is the wrong instrument for them.
+
+Ayman Sowaid has no published word timings, so there is nothing to measure. `verified` in each timing file says which recitations have been measured.
 
 Re-run `prepare:timings` only when a reciter is added, or the splitting rules in `src/memorize/phrases.ts` change, or `LAG` changes; then re-run the verification. The committed output is what the app ships.
 
