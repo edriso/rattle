@@ -642,8 +642,15 @@ progress::-moz-progress-bar {
   border: 1px solid var(--control-border);
   border-radius: 8px;
 }
+/* As tall as the box drawn around it. The generated input carries its own
+   32px height inside a 50px group, which left 9px of the box above and below
+   it that looked like part of the field and answered no tap; `align-self`
+   alone cannot stretch a box that has been given a height, so the height goes
+   back to `auto` first. */
 .surah-search input {
   font-size: 16px;
+  height: auto;
+  align-self: stretch;
   padding-block: 0;
   padding-inline: 12px;
 }
@@ -691,6 +698,8 @@ progress::-moz-progress-bar {
    sides, which is what the addon above was breaking. */
 .ayah-search input {
   width: 100%;
+  height: auto;
+  align-self: stretch;
   min-height: 44px;
   border: 0;
   background: transparent;
