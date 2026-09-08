@@ -57,7 +57,7 @@ export function Repetitions({
       />
       <Stepper
         label="سرد"
-        hint="المقطع كاملًا في آخر الجلسة"
+        hint="المدى كاملًا في آخر الجلسة"
         name="مرات السرد"
         value={plan.reciteReps}
         min={0}

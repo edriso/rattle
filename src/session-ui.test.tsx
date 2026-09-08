@@ -112,7 +112,7 @@ describe('choosing a passage', () => {
     // panel to look for them.
     fireEvent.click(screen.getByRole('button', { name: 'خفّف التكرار' }));
     const counts = await screen.findByRole('button', {
-      name: 'أنقص مرات التلقين',
+      name: 'أنقِص مرات التلقين',
     });
     fireEvent.click(counts);
     await waitFor(() =>

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { arabic } from '../data/quran';
 
@@ -28,27 +29,35 @@ export function Stepper({
   onChange: (value: number) => void;
 }) {
   const shown = value === 0 && zeroLabel ? zeroLabel : arabic(value);
+  /* The hint carries what the label means, so it is spoken with the value
+     rather than left on the screen for whoever can see it. */
+  const described = useId();
   return (
     <div className="stepper">
       <span className="stepper-label">
         {label}
-        {hint && <small>{hint}</small>}
+        {hint && <small id={described}>{hint}</small>}
       </span>
       <span className="stepper-controls">
         {/* `aria-disabled`, not `disabled`: a button that disables itself the
             moment it is pressed drops the keyboard where it stands. */}
         <button
           className="icon-button"
-          aria-label={`أنقص ${name}`}
+          aria-label={`أنقِص ${name}`}
           aria-disabled={value <= min}
           onClick={() => value > min && onChange(value - 1)}
         >
           <Minus size={17} />
         </button>
-        <output aria-label={name}>{shown}</output>
+        <output
+          aria-label={name}
+          aria-describedby={hint ? described : undefined}
+        >
+          {shown}
+        </output>
         <button
           className="icon-button"
-          aria-label={`زد ${name}`}
+          aria-label={`زِد ${name}`}
           aria-disabled={value >= max}
           onClick={() => value < max && onChange(value + 1)}
         >

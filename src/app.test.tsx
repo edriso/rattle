@@ -57,10 +57,12 @@ describe('catalogue and persisted state', () => {
      mushaf has them. A pair the app cannot drill used to fail the whole
      session with «تعذّر تحميل النص». */
   it('never pairs phrase drilling with a reciter who has no word timings', async () => {
-    expect(restore({ reciter: 'ayman-sowaid', grain: 'phrase' })).toMatchObject({
-      reciter: 'ayman-sowaid',
-      grain: 1,
-    });
+    expect(restore({ reciter: 'ayman-sowaid', grain: 'phrase' })).toMatchObject(
+      {
+        reciter: 'ayman-sowaid',
+        grain: 1,
+      },
+    );
     expect(restore({ reciter: 'husary', grain: 'phrase' })).toMatchObject({
       grain: 'phrase',
     });

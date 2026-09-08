@@ -280,8 +280,7 @@ export function HomeView({
         )}
         {!phrases && (
           <p className="field-note grain-note">
-            لم تُنشَر مواضع الكلمات لمصحف {reciter.name}، فالتكرار من الآية وما
-            فوقها.
+            لم يُنشَر تزمين الكلمات لتلاوة {reciter.name}، فأقلّ ما يُكرَّر آية كاملة.
           </p>
         )}
 

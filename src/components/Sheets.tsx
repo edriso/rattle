@@ -207,6 +207,7 @@ function AyahList({
         <ComboboxInput
           id={id}
           className="ayah-search"
+          placeholder="الرقم أو أول الآية…"
           inputMode="numeric"
           autoComplete="off"
           aria-invalid={invalid}
@@ -466,7 +467,7 @@ export function SettingsSheet({
       <section className="setting-section">
         <Stepper
           label="مقاطع الوصل"
-          hint="كم مقطعًا سابقًا يُضَم"
+          hint="كم مقطعًا سابقًا يُضَمّ"
           name="عدد مقاطع الوصل"
           value={prefs.plan.linkBack}
           min={0}
@@ -476,7 +477,7 @@ export function SettingsSheet({
         />
         <p className="field-note">
           ضمّ كل المقاطع السابقة يجعل الجلسة تطول بسرعة كبيرة كلما زاد المدى.
-          ومرات التكرار في الشاشة الأولى.
+          وأمّا مرات التكرار ففي الصفحة الأولى.
         </p>
       </section>
 
@@ -520,12 +521,12 @@ export function SettingsSheet({
           already sounding from stopping at every move, which is what a reader
           listening through a passage expects. */}
       <fieldset className="setting-section">
-        <legend>عند الانتقال إلى الآية التالية</legend>
+        <legend>عند تغيير الآية</legend>
         <div className="segmented">
           {(
             [
-              [true, 'تتابع التلاوة'],
-              [false, 'تتوقف'],
+              [true, 'تستمرّ التلاوة'],
+              [false, 'تتوقّف'],
             ] as const
           ).map(([keepPlaying, label]) => (
             <label key={label} data-active={prefs.keepPlaying === keepPlaying}>
