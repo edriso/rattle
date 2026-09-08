@@ -29,12 +29,6 @@ export type Reciter = {
    */
   recitation?: number;
   /**
-   * A مصحف معلّم: recorded to be repeated after, ayah by ayah, rather than
-   * performed. Worth saying beside the name, because it is what somebody
-   * taking on new material is looking for.
-   */
-  teaching?: boolean;
-  /**
    * Seconds of recitation per Arabic letter, measured over the reciter's whole
    * mushaf. Used to estimate a session before any audio has been fetched.
    */
@@ -83,7 +77,6 @@ export const reciters: readonly Reciter[] = [
     folder: 'Husary_Muallim_128kbps',
     kbps: 128,
     recitation: 12,
-    teaching: true,
     pace: 0.526,
   },
   {
@@ -99,11 +92,10 @@ export const reciters: readonly Reciter[] = [
     name: 'أيمن سويد',
     folder: 'Ayman_Sowaid_64kbps',
     kbps: 64,
-    teaching: true,
     /* No `recitation`: Quran.com publishes no word timings for this mushaf,
        and no other host publishes any either. Every id from 1 to 400 was
        probed; 174 is the highest that exists and none of them is his. So this
-       one is drilled by the ayah, which is how a مصحف معلّم is used anyway.
+       one is drilled by the ayah and never cut inside one.
        Its pace is measured from the recordings' own lengths rather than from
        timings: 421 ayat spread over all 114 surahs, sized from their
        content-length at the folder's constant bitrate, then calibrated by

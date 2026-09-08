@@ -20,7 +20,7 @@ The source prefixes the basmala to ayah 1 of every surah except al-Fatihah and a
 - Source: Quran.com word-by-word segments, `https://api.qurancdn.com/api/qdc/audio/reciters/<id>/audio_files?chapter=<1..114>&segments=true`.
 - Generated: 2026-09-08, by `npm run prepare:timings`, into `src/data/timings/<reciter>.json`.
 - About 26 KB per reciter, some 9 KB over the wire; loaded only when the learner drills at phrase level.
-- One reciter has no file: nobody has published word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks.
+- One reciter has no file: no source publishes word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks.
 
 The API reports each word as a millisecond span into the **full-chapter** recording. The app plays the **per-ayah** files EveryAyah serves, so the script subtracts the ayah's own `timestamp_from`. The two are the same recording: across every reciter shipped here, `timestamp_to − timestamp_from` matched the length of the corresponding EveryAyah file to within about 0.3 s, and most to within 0.05 s.
 

@@ -233,9 +233,9 @@ at run time.
 Not every mushaf has timings. `Reciter.recitation` is optional, and
 `cutsPhrases()` in `src/data/audio.ts` is what the app asks before it offers
 «جملة»; `grainFor()` in `src/data/quran.ts` keeps the pair legal wherever
-either half changes. أيمن سويد is the reciter this exists for: his mushaf is a
-مصحف معلّم with no published word timings anywhere, and his pace had to be
-measured from the recordings' own lengths.
+either half changes. أيمن سويد is the reciter this exists for: no source
+publishes word timings for his mushaf, and his pace had to be measured from
+the recordings' own lengths instead.
 
 Both scripts run with plain `node` (Node 22 strips the types). Read
 `data/README.md` before you touch either. If you add a reciter, or change the
