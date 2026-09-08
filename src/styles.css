@@ -21,6 +21,19 @@
   --control-border: oklch(0.52 0.011 100);
   --accent: var(--gold);
   --accent-foreground: var(--button-ink);
+  /* Secondary text on a row the accent has painted. `--muted-foreground` is
+     chosen against `--surface`; on `--accent` it collapses to between 1.0 and
+     1.5 to one, measured across all four colours in both appearances, which
+     is why «متأنٍّ» beside a highlighted reciter could not be read at all.
+     Both inputs are appearance-aware, so this one declaration covers both,
+     and 85 per cent is the mix that keeps the worst case over 4.5 while
+     staying visibly quieter than the name beside it. Opacity is not an
+     option: it would multiply against the accent. */
+  --accent-foreground-muted: color-mix(
+    in oklab,
+    var(--accent-foreground) 85%,
+    var(--accent)
+  );
   --button-ink: oklch(0.23 0.025 83);
   --gold: oklch(0.78 0.105 83);
   --sage: oklch(0.78 0.085 150);
@@ -618,6 +631,16 @@ progress::-moz-progress-bar {
 }
 .surah-search input {
   font-size: 16px;
+  padding-block: 0;
+  padding-inline: 12px;
+}
+/* Neither combobox has a trigger button, because the generated one is a tab
+   stop with no accessible name. The addon that would have held it is rendered
+   all the same, empty, and its own inline-end padding takes 8px off a field
+   that holds three digits. */
+.surah-search [data-slot='input-group-addon']:empty,
+.ayah-search [data-slot='input-group-addon']:empty {
+  display: none;
 }
 .surah-options {
   background: var(--surface);
@@ -633,10 +656,11 @@ progress::-moz-progress-bar {
   color: var(--muted-foreground);
 }
 /* The highlight paints the row in the accent, and a muted count on top of it
-   cannot be read, so the count takes the row's own colour. */
-.surah-options [data-highlighted] small,
-.surah-options [data-selected] small {
-  color: inherit;
+   cannot be read. Only the highlighted row: a selected row that is not
+   highlighted is still transparent, and `inherit` there was brightening the
+   count to the foreground for nothing. */
+.surah-options [data-highlighted] small {
+  color: var(--accent-foreground-muted);
 }
 /* The ayah fields in the picker are comboboxes: either end of the passage can
    be typed as a number or found by the words of the verse itself, for whoever
@@ -649,13 +673,17 @@ progress::-moz-progress-bar {
   border: 1px solid var(--control-border);
   border-radius: 8px;
 }
+/* The field's own inset, since clearing the generated padding cleared the
+   inline one too and left the digits against the border stroke. Equal on both
+   sides, which is what the addon above was breaking. */
 .ayah-search input {
   width: 100%;
   min-height: 44px;
   border: 0;
   background: transparent;
   text-align: start;
-  padding: 0;
+  padding-block: 0;
+  padding-inline: 12px;
   font-size: 16px;
 }
 /* Wider than the field it hangs from: the field holds three digits and the
@@ -689,9 +717,8 @@ progress::-moz-progress-bar {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ayah-options [data-highlighted] .ayah-option-number,
-.ayah-options [data-selected] .ayah-option-number {
-  color: inherit;
+.ayah-options [data-highlighted] .ayah-option-number {
+  color: var(--accent-foreground-muted);
 }
 .picker-meta {
   display: flex;
@@ -792,6 +819,22 @@ progress::-moz-progress-bar {
 [data-slot='select-item'] {
   min-height: 44px;
   font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+/* `<small>` inherits the UA's `smaller`, which lands on 11px inside a 14px
+   row: under the 14px that would let it claim 1.4.3's 3:1 allowance, and
+   smaller than the same role gets in the surah list. */
+[data-slot='select-item'] .muted {
+  font-size: 12px;
+}
+/* The highlight paints the row in the accent, and this file is unlayered, so
+   `.muted` outranks the utility that is supposed to recolour the row's
+   descendants: the reciter's name flipped and the pace beside it did not.
+   Keyed on `:focus` because `:focus` is what paints the background, so the
+   ink and the ground it sits on cannot come apart. Not on `[data-selected]`:
+   a selected row that is not highlighted stays transparent, and accent ink
+   on the popover would be the same bug moved. */
+[data-slot='select-item']:focus .muted {
+  color: var(--accent-foreground-muted);
 }
 [data-slot='sheet-overlay'] {
   background: var(--shadow);
