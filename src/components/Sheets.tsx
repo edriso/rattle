@@ -28,6 +28,7 @@ import {
   surahs,
   arabic,
   ayatCount,
+  daysCount,
   digits,
   normalize,
   type Preferences,
@@ -439,6 +440,14 @@ export function SettingsSheet({
         </Select>
         <p className="field-note">
           الأداء {paceLabel(reciter.pace)}. التلاوات من everyayah.com.
+          {/* The only case where changing the reciter costs the learner their
+              place: at «جملة» a reciter with no timing for an ayah leaves it
+              whole, which is a different set of segments and so a different
+              drill. At «آية» and above it never happens, so it is not said
+              there. */}
+          {inSession &&
+            prefs.grain === 'phrase' &&
+            ' وفي التقسيم بالجملة قد يختلف تقسيم قارئٍ عن قارئ، فتبدأ الجلسة حينها من أوّلها.'}
         </p>
       </section>
 
@@ -498,7 +507,7 @@ export function SettingsSheet({
               learner's place with him. This one decides what every step after
               the first one is, so there is no place to carry, and saying so
               is better than a progress bar that jumps back unexplained. */}
-          {inSession && ' وتغييرها الآن تبدأ الجلسة من أوّلها.'}
+          {inSession && ' وإن غيّرت عدد مقاطع الوصل الآن بدأت الجلسة من أوّلها.'}
         </p>
       </section>
 
@@ -618,8 +627,9 @@ export function SettingsSheet({
       <section className="sheet-about" aria-label="عن التطبيق">
         <p>
           تُجدوَل المراجعة على هذا الجهاز، ولا يمرّ على أي مقطع أكثر من{' '}
-          {arabic(MAX_INTERVAL)} يومًا دون أن يعود.
+          {daysCount(MAX_INTERVAL)} دون أن يعود.
         </p>
+        <p>يُحفَظ موضعك وإعداداتك على هذا الجهاز وحده، ولا يُرسَل منها شيء.</p>
         <p>لا تُحفَظ التسجيلات ولا تُرسَل. تُحذَف عند تغيير الآية.</p>
         <p>
           النص القرآني من{' '}

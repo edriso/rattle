@@ -176,7 +176,7 @@ export function App() {
 
         {(storageError || review.failed) && (
           <output className="storage-notice">
-            تعذّر حفظ التقدّم على هذا المتصفح.
+            تعذّر حفظ التقدّم في هذا المتصفح.
           </output>
         )}
 

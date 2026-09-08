@@ -21,7 +21,7 @@ The source prefixes the basmala to ayah 1 of every surah except al-Fatihah and a
 
 - Source: Quran.com word-by-word segments, `https://api.qurancdn.com/api/qdc/audio/reciters/<id>/audio_files?chapter=<1..114>&segments=true`.
 - Generated: 2026-09-08, by `npm run prepare:timings`, into `src/data/timings/<reciter>.json`.
-- Eleven files for twelve reciters. 33 to 38 KB each as stored, 27 to 28 KB as built and 10 KB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Measure the built chunk rather than the stored JSON if you quote a number: Vite inlines the JSON into a chunk, so the two differ.
+- Eleven files for twelve reciters. Measured: 33 to 38 kB each as stored, 25 to 28 kB as built and 9 to 10 kB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Quote the built chunk rather than the stored JSON: Vite inlines the JSON into a chunk of its own, and the two differ by about a quarter.
 - The twelfth reciter has no file: no source publishes word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks, and the start screen stops offering «جملة» when the answer is no.
 
 The API reports each word as a millisecond span into the **full-chapter** recording. The app plays the **per-ayah** files EveryAyah serves, so the script subtracts the ayah's own `timestamp_from`. The two are the same recording: across every reciter shipped here, `timestamp_to − timestamp_from` matched the length of the corresponding EveryAyah file to within about 0.3 s, and most to within 0.05 s.

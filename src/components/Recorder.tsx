@@ -162,7 +162,7 @@ export function Recorder({
           const next = URL.createObjectURL(blob);
           activeUrl.current = next;
           setUrl(next);
-        } else setError('لم يُلتقط صوت. أعد التسجيل.');
+        } else setError('لم يُلتقط صوت. أعِد التسجيل.');
         transition('idle');
       };
       recorder.onerror = () => {
@@ -171,7 +171,7 @@ export function Recorder({
         detachRecorder();
         releaseMicrophone();
         transition('idle');
-        setError('تعذّر إكمال التسجيل. أعد المحاولة.');
+        setError('تعذّر إكمال التسجيل. أعِد المحاولة.');
       };
       recorder.start();
       transition('recording');
@@ -217,7 +217,7 @@ export function Recorder({
       setError(
         cause instanceof DOMException && cause.name === 'NotAllowedError'
           ? 'اسمح باستخدام الميكروفون من إعدادات المتصفح.'
-          : 'تعذّر الوصول إلى الميكروفون. أعد المحاولة.',
+          : 'تعذّر الوصول إلى الميكروفون. أعِد المحاولة.',
       );
     }
   }
@@ -248,7 +248,7 @@ export function Recorder({
       if (id === playbackRequest.current) setPlaying(!player.paused);
     } catch {
       if (id === playbackRequest.current)
-        setError('تعذّر تشغيل التسجيل. أعد المحاولة.');
+        setError('تعذّر تشغيل التسجيل. أعِد المحاولة.');
     } finally {
       if (id === playbackRequest.current) playbackPending.current = false;
     }
@@ -327,8 +327,8 @@ export function Recorder({
                 void playback();
               }}
               aria-keyshortcuts="Shift+Space"
-              aria-label={playing ? 'إيقاف مؤقت' : 'تشغيل التسجيل'}
-              title={playing ? 'إيقاف مؤقت' : 'تشغيل التسجيل'}
+              aria-label={playing ? 'إيقاف مؤقّت' : 'تشغيل التسجيل'}
+              title={playing ? 'إيقاف مؤقّت' : 'تشغيل التسجيل'}
             >
               {playing ? <Pause size={19} /> : <Play size={19} />}
             </button>

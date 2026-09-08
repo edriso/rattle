@@ -173,7 +173,7 @@ export const echoModes: readonly EchoMode[] = ['off', 0.5, 1, 1.5, 2, 'manual'];
 
 export const echoLabel = (echo: EchoMode) =>
   echo === 'off'
-    ? 'استماع فقط'
+    ? 'أستمع فقط'
     : echo === 'manual'
       ? 'أنا أتحكّم'
       : echo === 0.5

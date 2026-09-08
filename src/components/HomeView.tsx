@@ -189,7 +189,7 @@ export function HomeView({
                       </small>
                     </span>
                     <small className={late > 0 ? 'late' : undefined}>
-                      {late > 0 ? `متأخرة ${daysCount(late)}` : 'اليوم'}
+                      {late > 0 ? `متأخّرة ${daysCount(late)}` : 'اليوم'}
                     </small>
                   </button>
                 </li>
@@ -258,7 +258,7 @@ export function HomeView({
         </fieldset>
 
         <fieldset className="grain-row">
-          <legend className="setting-label">يُكرّر كل</legend>
+          <legend className="setting-label">مقدار المقطع</legend>
           <div className="segmented grain-choice">
             {/* «جملة» is offered only for a mushaf whose word timings have
                 been published, because cutting inside an ayah is what needs
@@ -283,7 +283,7 @@ export function HomeView({
             is not on its face: the others say their own size. */}
         {prefs.grain === 'phrase' && (
           <p className="field-note grain-note">
-            تُقسَّم الآية الطويلة عند مواضع وقف القارئ، وتبقى القصيرة آيةً واحدة.
+            تُقسَّم الآية الطويلة عند مواضع وقف القارئ، وتبقى القصيرة آيةً واحدةً.
           </p>
         )}
         {!phrases && (
@@ -386,9 +386,9 @@ export function HomeView({
           <ChevronLeft size={20} />
         </button>
         <button className="text-button" onClick={() => onStart('practice')}>
-          أو راجِع بنفسك، آيةً آية
+          أو راجِع بنفسك، آيةً آيةً
         </button>
-        <p className="save-hint">يُحفظ موضعك تلقائيًا على هذا الجهاز</p>
+        <p className="save-hint">يُحفَظ موضعك تلقائيًا على هذا الجهاز</p>
       </section>
     </>
   );

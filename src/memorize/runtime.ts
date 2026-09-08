@@ -296,7 +296,7 @@ export class Session {
         if (generation === this.generation)
           this.set({
             phase: 'error',
-            error: 'تعذّر تحميل التلاوة. تحقّق من الاتصال ثم أعد المحاولة.',
+            error: 'تعذّر تحميل التلاوة. تحقّق من الاتصال ثم أعِد المحاولة.',
           });
         return;
       }

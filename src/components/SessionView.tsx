@@ -90,7 +90,14 @@ export function SessionView({
 
   const gestures = usePracticeNavigation({
     enabled: navigationEnabled && !grading && !!session,
-    next: () => session?.next(),
+    /* Forward during a timed silence means «I have finished repeating, go
+       on», not «skip the rest of this step»: the silence is the learner's
+       turn and ending it early is the only forward move that phase has. It
+       is also what the button carrying this shortcut does. «أنا أتحكّم»
+       keeps forward as the next step, because there continuing is already on
+       the main button under Space. */
+    next: () =>
+      state?.phase === 'echoing' ? session?.continue() : session?.next(),
     previous: () => session?.previous(),
     toggleAudio: () => toggle(),
     repeat: () => {
@@ -103,7 +110,7 @@ export function SessionView({
       <div className="placeholder" role="alert">
         <p>{failed ? 'تعذّر تحميل النص.' : 'لا يوجد ما يُكرَّر في هذا المدى.'}</p>
         <button className="reveal-button" onClick={failed ? retry : onExit}>
-          {failed ? 'إعادة المحاولة' : 'عُد لاختيار المقطع'}
+          {failed ? 'إعادة المحاولة' : 'عُد إلى اختيار المقطع'}
         </button>
       </div>
     );
@@ -127,6 +134,9 @@ export function SessionView({
     state.phase === 'preparing' ||
     state.phase === 'echoing';
   const holding = state.phase === 'waiting';
+  /* The learner's turn, timed: the one phase with a forward move of its own
+     that is not the next step. */
+  const inGap = state.phase === 'echoing';
   const total = passage.steps.length;
 
   function toggle() {
@@ -260,7 +270,7 @@ export function SessionView({
           </button>
           <button
             className="play-main"
-            aria-label={holding ? 'تابِع الآن' : running ? 'إيقاف مؤقت' : 'تشغيل'}
+            aria-label={holding ? 'تابِع الآن' : running ? 'إيقاف مؤقّت' : 'تشغيل'}
             aria-keyshortcuts="Space ArrowUp"
             title="تشغيل أو إيقاف (مسافة أو ↑)"
             onClick={toggle}
@@ -271,28 +281,37 @@ export function SessionView({
               <Play size={24} fill="currentColor" />
             )}
           </button>
-          {/* Ending the turn early, in the slot that was holding the row's
-              balance. It appears only while a timed silence is running,
-              because that is the one phase where the main button is doing
-              something else: «أنا أتحكّم» puts «تابِع» on the main button,
-              and every other phase has nothing to continue past. */}
-          {state.phase === 'echoing' ? (
+          {/* Ending the turn early, in the slot that used to hold nothing
+              but the row's balance. It stays drawn once the turn is over, and
+              goes `aria-disabled` rather than away, for the reason the whole
+              app uses `aria-disabled`: a control that vanishes the moment it
+              is pressed drops the keyboard on the floor, and pressing this
+              one is exactly what makes it unavailable. Keeping it also stops
+              the transport shifting under a thumb.
+
+              «أنا أتحكّم» is the exception, and it has to be: there the main
+              button is «تابِع الآن» itself, and two buttons a finger apart
+              with one name is worse for a screen reader than a slot that
+              goes back to being empty. */}
+          {holding ? (
+            <span className="play-balance" aria-hidden="true" />
+          ) : (
             <button
               className="icon-button skip-echo"
               aria-label="تابِع الآن"
-              title="تابِع الآن"
-              onClick={() => session.continue()}
+              aria-keyshortcuts={inGap ? 'ArrowLeft Enter' : undefined}
+              title="تابِع الآن (← أو إدخال)"
+              aria-disabled={!inGap}
+              onClick={() => inGap && session.continue()}
             >
               <ChevronsLeft size={22} />
             </button>
-          ) : (
-            <span className="play-balance" aria-hidden="true" />
           )}
           <button
             className="icon-button"
             aria-label="الخطوة التالية"
-            aria-keyshortcuts="ArrowLeft Enter"
-            title="التالي (← أو إدخال)"
+            aria-keyshortcuts={inGap ? undefined : 'ArrowLeft Enter'}
+            title={inGap ? 'الخطوة التالية' : 'التالي (← أو إدخال)'}
             onClick={() => session.next()}
           >
             <ChevronLeft />

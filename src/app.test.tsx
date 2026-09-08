@@ -184,7 +184,7 @@ describe('catalogue and persisted state', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked);
     render(<App />);
     expect(
-      await screen.findByText('تعذّر حفظ التقدّم على هذا المتصفح.'),
+      await screen.findByText('تعذّر حفظ التقدّم في هذا المتصفح.'),
     ).toBeTruthy();
     expect(
       screen.getByRole('button', { name: 'ابدأ جلسة التلقين' }),

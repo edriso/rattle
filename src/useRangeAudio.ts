@@ -7,7 +7,7 @@ import { audioMirrors } from './data/audio';
 /** Every address a recording can be reached at, its own first. */
 const addresses = (url: string) => [url, ...audioMirrors(url)];
 
-const FAILED = 'تعذّر تشغيل التلاوة. أعد المحاولة.';
+const FAILED = 'تعذّر تشغيل التلاوة. أعِد المحاولة.';
 
 /**
  * Plays a run of ayah recordings one after another through a single media
@@ -137,7 +137,7 @@ export function useRangeAudio(
       // And it is only worth saying if the learner is still waiting to hear
       // something. An error can land after they have pressed pause.
       if (wanted.current)
-        setNotice('تعذّر تشغيل التلاوة. تحقّق من الاتصال ثم أعد المحاولة.');
+        setNotice('تعذّر تشغيل التلاوة. تحقّق من الاتصال ثم أعِد المحاولة.');
       wanted.current = false;
       setPlaying(false);
     };

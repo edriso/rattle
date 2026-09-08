@@ -116,14 +116,22 @@ with `inputMode="numeric"`, render through `arabic()`, read back through
 **5. Prefer logical CSS properties.** The whole interface is right to left, so
 write `padding-inline-start`, not `padding-left`; `margin-inline`, not
 `margin-left`. `text-align: start`, not `right`. Anything that hardcodes a
-side is a bug waiting on the other one. There is exactly one physical
-property left in `styles.css` and it carries a comment saying why.
+side is a bug waiting on the other one. Two physical properties are left in
+`styles.css` and each carries a comment saying why: the nudge that optically
+centres the play triangle, which is not mirrored by writing direction the way
+a chevron is, and the borders that draw the disclosure chevron itself, which
+is geometry rather than text.
 
 ## The accessibility floor, which is not optional
 
 Every one of these is checkable, and some are covered by tests:
 
-- Every touch target at least 44 by 44 pixels.
+- Every touch target at least 44 by 44 pixels. There is one deliberate
+  exception, and it carries a comment: the compact `+`/`−` buttons on the
+  start screen are 30 to 38 wide by 44 tall, because three of them share one
+  phone's width. WCAG 2.5.8 asks for 24, so that clears the standard; the
+  repository aims higher, and if you need a second exception, measure and say
+  why beside it.
 - Every control has a label. Icon-only buttons carry `aria-label`.
 - Text meets 4.5:1 contrast **in both appearances and all four accent
   colours**, which is eight combinations. A fix that only works in dark mode
@@ -176,15 +184,24 @@ on your machine and fails in CI is usually this.
 ## Measuring the layout, when you touch the start screen
 
 That screen has to fit a phone whole, and "it looks fine on my laptop" is not
-a measurement. It is spaced from one variable, `--gap`, and it has four height
-bands. **If you add or remove a row, measure again**, against the built app
-(`npm run build && npx vite preview`) and not the dev server.
+a measurement. It is spaced from one variable, `--gap`, and it has three
+height bands (900, 780 and 700 pixels tall). **If you add or remove a row,
+measure again**, against the built app (`npm run build && npx vite preview`)
+and not the dev server. And build without `VITE_BASE_PATH`, or every asset
+404s at the preview root and you will spend twenty minutes debugging an app
+that is fine.
 
 Any way of measuring is fine; headless Chrome over the DevTools Protocol is
 what was used, setting the viewport to 390×844, 812, 780, 740, 700, 667 and
 360×640 and reading `document.documentElement.scrollHeight` against
 `innerHeight`. Write down what you got, the way AGENTS.md does. A number in a
 comment saves the next person the afternoon.
+
+One trap worth knowing when you write CSS for that screen: **this stylesheet
+has no cascade layers, so two single-class selectors are decided by which
+comes last in the file.** `.stepper-compact` was written above `.stepper` and
+lost `gap`, `padding-block` and `justify-content` silently, which made every
+count 20px taller than its own rules said. Put a variant after the base.
 
 ## The one thing nobody has done yet
 

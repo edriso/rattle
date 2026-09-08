@@ -294,7 +294,7 @@ describe('choosing a passage', () => {
       ]),
     );
     render(<App />);
-    const due = await screen.findAllByRole('button', { name: /متأخرة/ });
+    const due = await screen.findAllByRole('button', { name: /متأخّرة/ });
     expect(due).toHaveLength(2);
     expect(due[0].textContent).toContain('البقرة');
     fireEvent.click(due[1]);
@@ -384,7 +384,7 @@ describe('a talqeen session', () => {
     );
     fireEvent.click(play);
     expect(
-      await screen.findByRole('button', { name: 'إيقاف مؤقت' }),
+      await screen.findByRole('button', { name: 'إيقاف مؤقّت' }),
     ).toBeTruthy();
   });
 
@@ -399,7 +399,7 @@ describe('a talqeen session', () => {
     // The basmala is recorded apart from ayah one, so it is not in the drill.
     expect(screen.queryByText(new RegExp(first.basmala!))).toBeNull();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'إيقاف مؤقت' })).toBeTruthy(),
+      expect(screen.getByRole('button', { name: 'إيقاف مؤقّت' })).toBeTruthy(),
     );
   });
 
@@ -438,12 +438,20 @@ describe('a talqeen session', () => {
     // it rather than the thing the main button has been turned into.
     const skip = screen.getByRole('button', { name: 'تابِع الآن' });
     expect(skip.className).toContain('skip-echo');
-    const pause = screen.getByRole('button', { name: 'إيقاف مؤقت' });
+    expect(skip.getAttribute('aria-disabled')).toBe('false');
+    expect(skip.getAttribute('aria-keyshortcuts')).toBe('ArrowLeft Enter');
+    const pause = screen.getByRole('button', { name: 'إيقاف مؤقّت' });
     expect(pause.className).toContain('play-main');
     fireEvent.click(pause);
     expect(await screen.findByText('متوقّفة')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'تشغيل' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'تابِع الآن' })).toBeNull();
+    /* «تابِع» stays where it was and goes inert, rather than being taken off
+       the screen: pressing it is what ends the turn, so removing it on press
+       would drop the keyboard off the control that had just been used. */
+    const after = screen.getByRole('button', { name: 'تابِع الآن' });
+    expect(after).toBe(skip);
+    expect(after.getAttribute('aria-disabled')).toBe('true');
+    expect(after.getAttribute('aria-keyshortcuts')).toBeNull();
   });
 
   it('ends the turn early from the button beside the main one', async () => {
@@ -453,9 +461,30 @@ describe('a talqeen session', () => {
     await screen.findByText('ردّد الآن', {}, { timeout: 3000 });
     const first = screen.getByText(/التكرار ١ من/);
     expect(first).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'تابِع الآن' }));
+    /* The button beside the main one, not the main one: on the old screen
+       these were the same control, so naming it is what makes this a test. */
+    const skip = screen.getByRole('button', { name: 'تابِع الآن' });
+    expect(skip.className).toContain('skip-echo');
+    expect(skip.className).not.toContain('play-main');
+    fireEvent.click(skip);
     // Which moves the drill on rather than skipping the whole step.
     expect(await screen.findByText(/التكرار ٢ من/)).toBeTruthy();
+  });
+
+  /* Forward during the turn means «I have finished repeating», which is what
+     the button carrying that shortcut does. Without this the only way to end
+     a turn early was to reach the button with Tab. */
+  it('ends the turn early from the arrow that button carries', async () => {
+    vi.stubGlobal('AudioContext', EndingAudioContext);
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3, echo: 2 });
+    render(<App />);
+    await screen.findByText('ردّد الآن', {}, { timeout: 3000 });
+    expect(screen.getByText(/التكرار ١ من/)).toBeTruthy();
+    const frame = screen.getByRole('region', { name: 'نص المقطع' });
+    fireEvent.keyDown(frame, { key: 'ArrowLeft' });
+    expect(await screen.findByText(/التكرار ٢ من/)).toBeTruthy();
+    // And it is still on the first step, not skipped past it.
+    expect(screen.getByText(/الخطوة ١ من/)).toBeTruthy();
   });
 
   /* «أنا أتحكّم» is the one phase where nothing is running, so there the main
@@ -467,9 +496,12 @@ describe('a talqeen session', () => {
     expect(
       await screen.findByText('ردّد، ثم تابِع', {}, { timeout: 3000 }),
     ).toBeTruthy();
+    /* And it is the only «تابِع» on the screen: the button beside it gives
+       its slot back rather than sitting there inert under the same name. */
     const main = screen.getByRole('button', { name: 'تابِع الآن' });
     expect(main.className).toContain('play-main');
-    expect(screen.queryByRole('button', { name: 'إيقاف مؤقت' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'إيقاف مؤقّت' })).toBeNull();
+    expect(document.querySelector('.skip-echo')).toBeNull();
   });
 
   it('names the clock and shows it as minutes and padded seconds', async () => {
@@ -491,7 +523,7 @@ describe('a talqeen session', () => {
     render(<App />);
     const pause = await screen.findByRole(
       'button',
-      { name: 'إيقاف مؤقت' },
+      { name: 'إيقاف مؤقّت' },
       { timeout: 3000 },
     );
     // Space would belong to this button once it has focus, so the arrow has to
@@ -568,10 +600,50 @@ describe('a talqeen session', () => {
     expect(screen.getByText('سعود الشريم')).toBeTruthy();
   });
 
+  /* The one setting in the sheet that cannot keep the learner's place says so
+     while a drill is running, and says nothing on the start screen, where
+     there is no drill to lose. */
+  it('warns about the joins only while a drill is running', async () => {
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'الإعدادات' },
+        { timeout: 3000 },
+      ),
+    );
+    expect(
+      await screen.findByText(/بدأت الجلسة من أوّلها/, {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    /* It names the count it is about. The sentence before it in the same
+       paragraph is about «مرات التكرار», which is on the start screen and
+       cannot be changed mid-drill at all, so «هذا العدد» would have pointed
+       at the wrong one. */
+    expect(screen.getByText(/بدأت الجلسة من أوّلها/).textContent).toContain(
+      'عدد مقاطع الوصل',
+    );
+    await user.click(screen.getByRole('button', { name: 'إغلاق' }));
+    cleanup();
+    // On the start screen there is nothing running, so nothing to warn about.
+    start({ screen: 'home', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    await user.click(
+      await screen.findByRole(
+        'button',
+        { name: 'الإعدادات' },
+        { timeout: 3000 },
+      ),
+    );
+    await screen.findByRole('combobox', { name: 'القارئ' }, { timeout: 3000 });
+    expect(screen.queryByText(/بدأت الجلسة من أوّلها/)).toBeNull();
+  });
+
   /* But a change that makes a different drill has no step to carry a cursor
      to, and says so rather than pretending: the joins decide what every step
      after the first one even is. */
-  it('starts over when the joins change, and says it will', async () => {
+  it('starts over when the joins change', async () => {
     const prefs = {
       ...defaults,
       screen: 'session',
@@ -653,7 +725,7 @@ describe('a talqeen session', () => {
     expect(
       await screen.findByRole(
         'button',
-        { name: 'إيقاف مؤقت' },
+        { name: 'إيقاف مؤقّت' },
         { timeout: 4000 },
       ),
     ).toBeTruthy();

@@ -66,8 +66,8 @@ describe('counted nouns', () => {
     expect(`نحو ${minutesCount(3)}`).toBe('نحو ٣ دقائق');
     expect(`نحو ${minutesCount(12)}`).toBe('نحو ١٢ دقيقة');
     // Duration is a ظرف زمان منصوب.
-    expect(`متأخرة ${daysCount(2)}`).toBe('متأخرة يومين');
-    expect(`متأخرة ${daysCount(5)}`).toBe('متأخرة ٥ أيام');
+    expect(`متأخّرة ${daysCount(2)}`).toBe('متأخّرة يومين');
+    expect(`متأخّرة ${daysCount(5)}`).toBe('متأخّرة ٥ أيام');
   });
 
   /* Tanwin is left off UI text, but the alef a fatha is written on is a
@@ -75,7 +75,7 @@ describe('counted nouns', () => {
   it('keeps the alef the accusative singular is written on', () => {
     expect(daysCount(20)).toBe('٢٠ يومًا');
     expect(daysCount(35)).toBe('٣٥ يومًا');
-    // An exact hundred is مجرور, where that alef goes again.
+    // An exact hundred is مجرور, where the alef is not written at all.
     expect(daysCount(100)).toBe('١٠٠ يوم');
   });
 

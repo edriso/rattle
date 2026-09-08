@@ -466,14 +466,20 @@ label:has(input:focus-visible) {
   flex-shrink: 0;
 }
 /* Ending the learner's own turn early. It takes the accent that «ردّد الآن»
-   above it takes, so the one control that belongs to that turn looks like it,
-   and it stands in the slot that otherwise only balances the row, so the
-   transport does not move when it appears. */
+   above it takes, so the one control belonging to that turn looks like it,
+   and it stands in the slot that used to hold only the row's balance, so the
+   transport keeps its geometry whether the turn is running or not. */
 .skip-echo {
   color: var(--accent);
 }
-.skip-echo:hover:not(:disabled) {
+.skip-echo:hover:not([aria-disabled='true']) {
   color: var(--accent);
+}
+/* Outside the turn it is inert, and reads as the muted colour rather than as
+   a live accent control the global `aria-disabled` opacity has faded. */
+.skip-echo[aria-disabled='true'] {
+  color: var(--muted-foreground);
+  opacity: 1;
 }
 .active {
   color: var(--accent);
@@ -1197,7 +1203,7 @@ progress::-moz-progress-bar {
 /* ── Repetition counts ───────────────────────────────────────────────── */
 /* Three counts side by side, directly above the estimate they move. Three
    columns and not three rows because this form has to fit a phone whole: the
-   rows cost 150px and the columns cost 85. */
+   rows cost 150px and the columns cost 87, measured. */
 .reps {
   border: 0;
   padding: 0;
@@ -1217,41 +1223,6 @@ progress::-moz-progress-bar {
 .reps-row .stepper {
   flex: 1 1 0;
   min-width: 0;
-}
-.stepper-compact {
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0;
-  padding-block: 0;
-}
-.stepper-compact .stepper-label {
-  font-size: 13px;
-  color: var(--muted-foreground);
-  line-height: 1.5;
-}
-/* Each count is drawn as one control, because three bare triples of «− ٣ +»
-   in a row leave less space between one count's minus and the next count's
-   plus than between either and its own number, and the eye groups by
-   proximity. The border is the same one every other box on this form uses,
-   so it clears 1.4.11's 3:1 without anything new. */
-.stepper-compact .stepper-controls {
-  gap: 0;
-  border: 1px solid var(--control-border);
-  border-radius: 9px;
-}
-/* Narrower than the 44px a row-shaped stepper gives them, because three of
-   these have to share the width of a phone: 40 wide by 44 tall is still a
-   target well over the 24px WCAG 2.5.8 asks for, and the height a finger
-   reaches for has not moved. The floor is what a 320px screen leaves, so the
-   row shrinks with the viewport rather than overflowing it. */
-.stepper-compact .stepper-controls .icon-button {
-  width: clamp(30px, 9.5vw, 38px);
-  border-radius: 8px;
-}
-.stepper-compact .stepper-controls output {
-  min-width: 24px;
-  font-size: 16px;
 }
 .shortcut-help summary {
   cursor: pointer;
@@ -1311,6 +1282,46 @@ progress::-moz-progress-bar {
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-size: 15px;
+}
+
+/* The compact form comes after the base one on purpose: both selectors are a
+   single class, so the later declaration wins every property they share, and
+   written above it these three lost the tie silently. `gap`, `padding-block`
+   and `justify-content` all belong to `.stepper` too. */
+.stepper-compact {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  padding-block: 0;
+}
+.stepper-compact .stepper-label {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+/* Each count is drawn as one control, because three bare triples of «− ٣ +»
+   in a row leave less space between one count's minus and the next count's
+   plus than between either and its own number, and the eye groups by
+   proximity. The border is the same one every other box on this form uses,
+   so it clears 1.4.11's 3:1 without anything new. */
+.stepper-compact .stepper-controls {
+  gap: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 9px;
+}
+/* Narrower than the 44px a row-shaped stepper gives them, because three of
+   these have to share the width of a phone: 30 to 38 wide by 44 tall is
+   still a target well over the 24px WCAG 2.5.8 asks for, and the height a
+   finger reaches down has not moved. The floor is what a 320px screen
+   leaves, so the row shrinks with the viewport rather than overflowing it. */
+.stepper-compact .stepper-controls .icon-button {
+  width: clamp(30px, 9.5vw, 38px);
+  border-radius: 8px;
+}
+.stepper-compact .stepper-controls output {
+  min-width: 24px;
+  font-size: 16px;
 }
 
 @media (max-width: 640px) {
@@ -1419,8 +1430,9 @@ progress::-moz-progress-bar {
   .stepper-compact .stepper-label {
     line-height: 1.35;
   }
-  /* The line that says the position is kept, in the sheet's «عن التطبيق»
-     where it is a fact about the app rather than a caption on a form. */
+  /* The caption saying the position is kept. «عن التطبيق» in the settings
+     sheet says it too, in a sentence added for this: it is a fact about the
+     app rather than a note on a form, and it must be somewhere. */
   .save-hint {
     display: none;
   }

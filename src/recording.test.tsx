@@ -151,6 +151,6 @@ it('cancels pending private playback before recording again', async () => {
   await act(async () => resolve());
   expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled();
   await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'إيقاف مؤقت' })).toBeNull(),
+    expect(screen.queryByRole('button', { name: 'إيقاف مؤقّت' })).toBeNull(),
   );
 });

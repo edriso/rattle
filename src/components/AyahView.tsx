@@ -141,7 +141,7 @@ export function AyahView({
           <button
             className="play-main"
             id="reciter-play"
-            aria-label={playing ? 'إيقاف التلاوة مؤقتًا' : 'تشغيل التلاوة'}
+            aria-label={playing ? 'إيقاف التلاوة مؤقّتًا' : 'تشغيل التلاوة'}
             aria-keyshortcuts="Space ArrowUp"
             title="تشغيل أو إيقاف (مسافة أو ↑)"
             disabled={capturing}

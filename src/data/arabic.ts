@@ -25,9 +25,9 @@ export type CountedForms = {
   /** Eleven to ninety-nine, مفرد منصوب. A noun ending in a consonant needs
       the alef its tanwin is written on here: «٢٠ يومًا», never «٢٠ يوم». */
   many: string;
-  /** Exact hundreds and thousands, مفرد مجرور, where that alef goes again:
-      «١٠٠ يوم». A noun ending in ة reads the same either way, which is why
-      this may be left out. */
+  /** Exact hundreds and thousands, مفرد مجرور, where that alef is not
+      written at all: «١٠٠ يوم», against «٢٠ يومًا» above. A noun ending in ة
+      reads the same in both, which is why this may be left out. */
   hundred?: string;
   /** Nothing to count. Arabic does not say «٠ مرة»; it says there are none. */
   none?: string;

@@ -80,7 +80,7 @@ use it.
 
 | Key             | What it does                                     |
 | --------------- | ------------------------------------------------ |
-| `←` or `Enter`  | next step, or next ayat                          |
+| `←` or `Enter`  | forward: next step, next ayat, or end a timed turn |
 | `→`             | previous                                         |
 | `Space` or `↑`  | play and pause, and continue in «أنا أتحكّم»      |
 | `↓`             | play this step again, or turn looping on and off |
@@ -119,11 +119,15 @@ behind a disclosure once. That was half an answer, and it is not what was
 asked for.
 
 The counts are three columns rather than three rows, which is what makes them
-affordable: 109px against 150. Each is bordered as one control, because three
-bare triples of «− ٣ +» leave less space between one count's minus and the
-next count's plus than between either and its own number, and the eye groups
-by proximity. Their buttons narrow with the viewport (`clamp`) so a 320px
-screen does not overflow sideways.
+affordable: **87px against 150**. Each is bordered as one control, because
+three bare triples of «− ٣ +» leave less space between one count's minus and
+the next count's plus than between either and its own number, and the eye
+groups by proximity. Their buttons narrow with the viewport (`clamp`), 30 to
+38 wide by 44 tall, so a 320px screen does not overflow sideways: three of
+them share one phone's width, and that is the one place in the app where a
+target is under 44 in its narrow dimension. It is still well over the 24px
+WCAG 2.5.8 asks for, and the dimension a finger actually aims down has not
+moved.
 
 The reciter shares the estimate's row, because his pace is what the estimate
 is mostly saying: the slowest mushaf here takes three times as long over a
@@ -136,12 +140,21 @@ What stays in the sheet is `linkBack`, the number of previous segments a وصل
 step reaches back over. That shapes the method rather than the length of a
 sitting, and its default of two is the method as taught.
 
-One label on that screen was earned the hard way: the same counted noun on two
-things that are not the same. The range presets say «طول المدى» **on the
-screen**, not only in the accessible tree, because a reader took «٣ آيات»
-under the ayah fields for a repetition count while the row below said
-«٣ آيات» too, about something else. Check a new label against the whole
-screen, not against its own row.
+Two labels on that screen were earned the hard way, and both are about the
+words around a counted noun rather than the noun itself.
+
+The range presets say «طول المدى» **on the screen**, not only in the
+accessible tree, because a reader took «٣ آيات» under the ayah fields for a
+repetition count while the row below said «٣ آيات» too, about something else.
+Check a new label against the whole screen, not against its own row.
+
+And the grain row is «مقدار المقطع», which is the name README gives the same
+control, and **not** «يُكرّر كل». «كل» is a مضاف, so everything under it is
+مجرور, and `grainLabel(2)` returns the nominative dual «آيتان»: the legend
+made the screen read «كل آيتان». A label that governs the labels beneath it
+has to agree with all of them, and the labels here come from a shared
+counter that cannot know what is above it. Prefer a legend that governs
+nothing.
 
 ## The start screen fits the screen
 
@@ -158,22 +171,24 @@ desktop. Two rules go with it:
   editing the base rule appeared to do nothing. There is one place now. If a
   short screen needs more, shrink `--gap` there rather than re-listing every
   margin.
-- There are four height bands, and each one gives up as little as it can.
+- There are three height bands, and each one gives up as little as it can.
   Under 900px the rhythm tightens, the surah field sheds its roomiest padding,
-  and **the heading goes out of the flow**, to the accessible tree rather than
-  off the page: it is still the page's only h1 and still the first thing a
-  screen reader reaches, but the brand in the corner already says which app
-  this is and the form is self-evidently a form for choosing a passage, so its
-  70px buys a row of controls. Under 843px the promise line goes. Under 780px
-  the labels and the topbar tighten and the line about the position being
-  saved gives way, since «عن التطبيق» says it too. Under 700px the blocks
-  close up on each other, and nothing inside them moves.
-- **No row is ever dropped and every row keeps the 44px a finger needs.**
-  Measured in Chrome against the built app at 390 wide, the form fits whole at
-  844, 812, 780, 740 and 700 tall, and nothing overflows sideways down to
-  320px. At 667 and 640 it still scrolls, by about as much as it did before
-  the counts arrived. **If you add a row to this screen, measure those
-  heights again**, and measure the built app rather than the dev server.
+  and **the whole `.intro` goes out of the flow**, heading and promise line
+  together, to the accessible tree rather than off the page: the h1 is still
+  the page's only one and still the first thing a screen reader reaches, but
+  the brand in the corner already says which app this is and the form is
+  self-evidently a form for choosing a passage, so its 70px buys a row of
+  controls. Under 780px the labels and the topbar tighten and the caption
+  about the position being saved gives way, since «عن التطبيق» says it too.
+  Under 700px the blocks close up on each other, and nothing inside them
+  moves.
+- **No row is ever dropped and every row keeps its full height.** Measured in
+  Chrome against the built app at 390 wide, the form fits whole at 844, 812,
+  780, 740 and 700 tall, and nothing overflows sideways down to 320px. At 667
+  it scrolls 13px and at 640 37px, both **less** than the 24 and 49 it
+  scrolled before the counts arrived. **If you add a row to this screen,
+  measure those heights again**, and measure the built app rather than the
+  dev server.
 
 ## The verse frame
 
@@ -410,13 +425,25 @@ One button means one thing: it stops what is running and starts what is not.
 The learner's turn counts as running, because the silence is timed and the
 clock moves through it, and the turn used to be the one stretch of a session
 that could not be stopped. Ending the turn early is a **separate** control,
-in the slot that otherwise only balances the row, so the transport does not
-shift when it appears.
+in the slot that used to hold only the row's balance.
 
-`echo: 'manual'` («أنا أتحكّم») is the exception: there the drill really is
-halted until the learner says otherwise, so «تابِع» goes on the main button
-and there is nothing to stop. Phase `waiting` is that state; phase `echoing`
-is a timed silence, which is not the same thing.
+Three things about that control are load-bearing:
+
+- It **stays drawn once the turn is over** and goes `aria-disabled` rather
+  than away. Pressing it is exactly what makes it unavailable, and a control
+  that vanishes on press drops the keyboard on the floor, which is the same
+  reason the whole app prefers `aria-disabled` to `disabled`. It also keeps
+  the transport from shifting under a thumb.
+- It carries `←` and `Enter` while the turn is running, and the next-step
+  button gives them up for that phase. Forward during your own turn means «I
+  have finished repeating», not «skip the rest of this step»; without this
+  the only way to end a turn early was to reach the button with `Tab`.
+- `echo: 'manual'` («أنا أتحكّم») is the exception at both ends: there the
+  drill really is halted until the learner says otherwise, so «تابِع» goes on
+  the main button, and the separate control gives its slot back rather than
+  sitting inert under the same name a finger away, which is worse for a
+  screen reader than an empty slot. Phase `waiting` is that state; phase
+  `echoing` is a timed silence, which is not the same thing.
 
 ## Changing a setting while a drill is running
 
@@ -427,14 +454,26 @@ learner their place, and only one thing in it can even try.
   is built with `echo: 'off'` and given the real one straight away for exactly
   this reason.
 - **The reciter** rebuilds the drill, and `useSession` carries the cursor
-  across when it is the same drill: the same steps and the same segments in a
-  different voice. Comparing step boundaries is not enough, because two
+  across **when it is the same drill**: the same steps and the same segments
+  in a different voice. Comparing step boundaries is not enough, because two
   reciters can split different ayat of one passage into the same number of
   phrases; `sameDrill` compares segment ids too.
-- **`linkBack`** genuinely makes a different drill, since it decides what
-  every step after the first one is, so there is no step to carry a cursor to.
-  It starts over, and while a session is running the sheet says so. A
-  progress bar that jumps back with no explanation is the thing to avoid.
+
+  At `grain: 1` and above it is always the same drill, so the place is always
+  kept. At `'phrase'` it usually is, and there are two cases where it is not,
+  both real and neither a defect: a reciter whose vendored timings are missing
+  an ayah of the passage leaves that ayah whole, which changes the segment
+  count (about 1% of five-ayah windows between the closest pair of reciters,
+  12% between the furthest); and a reciter with **no** timings at all makes
+  `grainFor` demote the grain to `1`, which is in `SessionView`'s key, so the
+  screen remounts and the decoded audio goes with it. In both the drill really
+  is a different drill and starting over is the honest answer. Do not promise
+  more than that in the README.
+- **`linkBack`** always makes a different drill, since it decides what every
+  step after the first one is, so there is never a step to carry a cursor to.
+  It starts over, and while a session is running the sheet says so, naming
+  itself: the sentence before it in that paragraph is about a different count,
+  so «هذا العدد» pointed at the wrong one.
 - Everything else belongs to free review or to the appearance.
 
 Anything that shapes a sitting belongs on the start screen, where changing it

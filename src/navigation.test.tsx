@@ -306,10 +306,10 @@ it('connects Space and the play button to the same audio and carries it across a
     fireEvent.keyDown(document.body, { key: ' ' });
   });
   expect(
-    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقّتًا' }),
   ).toBeTruthy();
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }));
+    fireEvent.click(screen.getByRole('button', { name: 'إيقاف التلاوة مؤقّتًا' }));
   });
   expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
   // A move while it is paused leaves it paused: nothing starts on its own.
@@ -325,7 +325,7 @@ it('connects Space and the play button to the same audio and carries it across a
   });
   expect(position()).toBe(4);
   expect(
-    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقّتًا' }),
   ).toBeTruthy();
 });
 
@@ -339,7 +339,7 @@ it('does not restart a recitation the phone itself paused', async () => {
     fireEvent.keyDown(document.body, { key: ' ' });
   });
   expect(
-    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقّتًا' }),
   ).toBeTruthy();
   // Not through `pause()`: the element is stopped from outside the page.
   await act(async () => {
@@ -394,7 +394,7 @@ it('plays and repeats from the arrows while a button holds the focus', async () 
     fireEvent.keyDown(reveal, { key: 'ArrowUp' });
   });
   expect(
-    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقتًا' }),
+    screen.getByRole('button', { name: 'إيقاف التلاوة مؤقّتًا' }),
   ).toBeTruthy();
   await act(async () => {
     fireEvent.keyDown(reveal, { key: 'ArrowUp' });
