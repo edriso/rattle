@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   buildSegments,
@@ -13,8 +14,19 @@ const surahs = import.meta.glob<{ verses: string[] }>('../data/surahs/*.json', {
   eager: true,
 });
 const baqarah = surahs['../data/surahs/2.json'].verses;
-/** The committed boundaries for al-Husary, in seconds. */
-const kursi = [9.27, 15.42, 21.06, 30.2, 45.22];
+/* Al-Husary's committed boundaries for آية الكرسي, in seconds, read out of the
+   file rather than copied here: they moved when the cuts were measured against
+   the recordings, and a copy would have gone stale silently. What this file
+   pins about them is the shape, that there is one per gap between the ayah's
+   phrases; `phrases.test.ts` pins how many phrases that is. */
+const kursi = (
+  JSON.parse(
+    readFileSync(
+      new URL('../data/timings/husary.json', import.meta.url),
+      'utf8',
+    ),
+  ) as { bounds: Record<string, number[]> }
+).bounds['2:255'].map((ms) => ms / 1000);
 
 describe('building the segments a session drills', () => {
   it('makes one segment per ayah, played whole', () => {

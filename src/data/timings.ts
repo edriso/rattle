@@ -2,10 +2,18 @@
    and committed, so cutting an ayah at the reciter's own pauses needs no
    network call and no third-party API at run time. */
 
+/* Only `bounds` is read here. The rest is provenance, declared so the shape
+   of the file is described in one place rather than only in the script that
+   writes it. */
 type TimingFile = {
   reciter: string;
   recitation: number;
+  /** The exact endpoint the word timings came from. */
+  source?: string;
   generated: string;
+  /** When the cuts were last measured against the recordings themselves, by
+      `scripts/verify-cuts.ts`. Absent means they rest on the constant. */
+  verified?: string;
   /** Boundaries inside an ayah keyed `surah:ayah`, in milliseconds. */
   bounds: Record<string, number[]>;
 };

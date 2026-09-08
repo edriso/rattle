@@ -35,12 +35,14 @@ npm run build      # type check, then build
 Run `npm test`, `npm run lint` and `npm run build` before you commit. All three
 must pass. The GitHub Pages workflow runs the same three.
 
-Two more commands regenerate data that is committed to the repo. You almost
-never need them. See "Data" below.
+A few more commands regenerate or check something that is committed to the
+repo. You almost never need them. See "Data" below, and each script's own
+header comment.
 
 ```sh
 npm run prepare:quran
 npm run prepare:timings
+npm run verify:cuts        # then measure those cuts against the recordings
 ```
 
 ## Where things are
@@ -314,7 +316,10 @@ the recordings' own lengths instead.
 
 Both scripts run with plain `node` (Node 22 strips the types). Read
 `data/README.md` before you touch either. If you add a reciter, or change the
-splitting rules in `phrases.ts`, run `npm run prepare:timings` again.
+splitting rules in `phrases.ts`, run `npm run prepare:timings` again, and
+  then `npm run verify:cuts` after it: `prepare:timings` writes the
+  boundaries from the text and the constant, which discards the measurement,
+  and the `verified` date in each file is how you tell. See `data/README.md`.
 
 Audio itself is **not** committed. It is fetched from `everyayah.com`, one MP3
 per ayah. That host sends `access-control-allow-origin: *`, which is what lets
@@ -573,16 +578,17 @@ the last two. If you change this, check the estimate the home screen shows.
 
 Good next steps, roughly in order of value:
 
-1. **Verify the phrase cuts against the audio, offline.** This is the one that
-   would finish a job the current work only got most of the way through. The
-   vendored timings come from a source that records no silence, so where the
-   reciter actually stops is inferred from the waqf marks and corrected by a
-   constant. Fetching each splitting ayah's own MP3 once, taking a 10 ms RMS
-   envelope, snapping every cut to the nearest silence of 250 ms or more and
-   dropping the boundaries that have none would replace both the inference and
-   the constant with a measurement. About 1,500 files per reciter, `ffmpeg` on
-   the machine running the script, and the output is still vendored data.
-   `data/README.md` has the numbers that say how much it is worth.
+1. **Measure the remaining reciters' cuts against their audio.**
+   `scripts/verify-cuts.ts` does this and has been run on the recitations
+   marked `verified` in `src/data/timings/`; the rest still rest on a
+   constant. Each is one command, `node scripts/verify-cuts.ts <id> --write`,
+   about 350 MB of downloads and twenty minutes. `data/README.md` has the
+   method and what it found, which is stronger than a wrong constant: the
+   correct **sign** differs by recitation. Husary's cuts are a median 406 ms
+   early and Abdul Basit's mujawwad a median 432 ms late, so the one lag is
+   helping the first and hurting the second by about the same amount. And the
+   teaching mushaf needed almost nothing: 96.4% of its cuts were already
+   inside a real pause.
 2. Highlight each word as it is recited. The committed timing data already has
    what this needs.
 3. Give the review plan its own screen. Today the home screen shows only the

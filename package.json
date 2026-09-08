@@ -14,7 +14,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "prepare:quran": "node scripts/prepare-quran.mjs",
-    "prepare:timings": "node scripts/prepare-timings.ts && oxfmt src/data/timings"
+    "prepare:timings": "node scripts/prepare-timings.ts && oxfmt src/data/timings",
+    "verify:cuts": "node scripts/verify-cuts.ts && oxfmt src/data/timings"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

@@ -21,7 +21,7 @@ The source prefixes the basmala to ayah 1 of every surah except al-Fatihah and a
 
 - Source: Quran.com word-by-word segments, `https://api.qurancdn.com/api/qdc/audio/reciters/<id>/audio_files?chapter=<1..114>&segments=true`.
 - Generated: 2026-09-08, by `npm run prepare:timings`, into `src/data/timings/<reciter>.json`.
-- Eleven files for twelve reciters. Measured: 33 to 38 kB each as stored, 25 to 28 kB as built and 9 to 10 kB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Quote the built chunk rather than the stored JSON: Vite inlines the JSON into a chunk of its own, and the two differ by about a quarter.
+- Eleven files for twelve reciters. Measured: 33 to 38 kB each as stored, 25 to 28 kB as built and 9 to 11 kB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Quote the built chunk rather than the stored JSON: Vite inlines the JSON into a chunk of its own, and the two differ by about a quarter.
 - The twelfth reciter has no file: no source publishes word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks, and the start screen stops offering «جملة» when the answer is no.
 
 The API reports each word as a millisecond span into the **full-chapter** recording. The app plays the **per-ayah** files EveryAyah serves, so the script subtracts the ayah's own `timestamp_from`. The two are the same recording: across every reciter shipped here, `timestamp_to − timestamp_from` matched the length of the corresponding EveryAyah file to within about 0.3 s, and most to within 0.05 s.
@@ -64,13 +64,50 @@ An ayah keeps its timings out of the file, and plays whole, when:
 
 Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and Dussary 1,552, Husary Muallim 1,546, Minshawi 1,544, Sudais 1,537, Shatri 1,510, Abdul Basit's mujawwad 1,489, Alafasy 1,480, Abdul Basit 1,458, and Minshawi's mujawwad lowest at 1,398.
 
+### Cuts measured against the audio
+
+`scripts/verify-cuts.ts` replaces the constant with a measurement, for the reciters it has been run on. For every ayah that splits it fetches that reciter's own per-ayah MP3 once, asks `ffmpeg` where the silences are (`silencedetect` at -40 dBFS), and then, for each cut, either leaves it alone because it already falls in a pause of 250 ms or more, moves it 80 ms into the nearest such pause, or drops it because there is none within 1.5 s, which means the text said the reciter stops there and the recording says he does not.
+
+Run it from the repository root, reading only, and it prints what it would change:
+
+```sh
+node scripts/verify-cuts.ts husary          # one reciter
+node scripts/verify-cuts.ts --write         # every reciter with a file
+```
+
+It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files per reciter, so it caches them under `work/audio/` (git-ignored) and a second run costs nothing. A file it has measured carries a `verified` date. **Re-running `prepare:timings` discards that**, because it writes the boundaries again from the text and the constant; run the verification after it.
+
+Two properties worth knowing. It is **idempotent**: a second pass over a verified file changes nothing, because every cut already sits in a measured pause, which is a useful self-check. And it is **all or nothing per ayah**, because `buildSegments` only cuts an ayah that has exactly one boundary per gap between its phrases: a partial set is not something the app can use, so an ayah that loses one cut loses them all.
+
+Measured over the whole mushaf, three recitations so far:
+
+| | Husary (murattal) | Husary (المعلّم) | Abdul Basit (المجوّد) |
+| --- | --- | --- | --- |
+| cuts before | 2,124 | 2,105 | 1,969 |
+| already inside a pause | 371 (17.5%) | **2,030 (96.4%)** | 5 (0.3%) |
+| moved into one | 1,688 (79.5%) | 68 (3.2%) | 1,751 (88.9%) |
+| median move | **+406 ms** | +106 ms | **−432 ms** |
+| which way | 1,686 later | 64 later | 1,674 **earlier** |
+| no pause within 1.5 s | 65 (3.1%) | 7 (0.3%) | 213 (10.8%) |
+| ayat that split | 1,552 → 1,489 | 1,546 → 1,539 | 1,489 → 1,284 |
+
+Three findings, and the first is the one that matters.
+
+**A constant cannot do this job, because its correct sign is not the same for every recitation.** Husary's cuts arrive a median 406 ms *early* and Abdul Basit's mujawwad a median 432 ms *late*, over roughly two thousand cuts each, and almost none of either goes the other way. So the 300 ms lag is not merely imprecise for one reciter and fine for another: it is helping the first and actively hurting the second by about the same amount. No single number could have been right, which is the whole argument for measuring. That also supersedes, for these recitations, the 290 ms figure recorded above from a 130-ayah sample.
+
+**The teaching mushaf was already nearly right.** 96.4% of الحصري المعلّم's cuts fell inside a real pause before anything was measured, against 17.5% for the same reciter's murattal, and what did move moved a quarter as far. That is what a teaching mushaf is: recited slowly with a deliberate stop at every stopping place, so the pauses are long enough that even an aligner recording no silence puts its boundary inside one. It is also, empirically, the case for what was asked for in the reading group, that this kind of repetition belongs on a teacher's mushaf rather than on any recording that happens to have timings.
+
+**The mujawwad pays the most for it.** Abdul Basit's loses 205 ayat, a seventh of what it had, because 10.8% of its cuts have no pause within a second and a half of them. Melodic recitation holds and elongates where a murattal stops, so some of those marks he simply sings through. Those ayat now play whole, which is the honest answer, and they were being cut mid-breath before.
+
+The constant is left where it is rather than tuned, because tuning one number to one reciter's evidence is the mistake this measurement exists to replace. The answer for a recitation still on the constant is to measure that recitation.
+
 ### What this still does not fix
 
-Between 27% and 45% of the boundaries this app used to cut at were places the reciter never stopped, and dropping ۖ and the clause fallback removes most but not all of that: at the marks that remain he still runs on 0-2% of the time (Husary), 4-7% (Abdul Basit) and up to 32% (Minshawi at ۗ). The 300 ms lag is a constant standing in for a per-boundary measurement, and it lands inside real silence about half the time.
+Between 27% and 45% of the boundaries this app used to cut at were places the reciter never stopped, and dropping ۖ and the clause fallback removed most but not all of that: at the marks that remain he still runs on 0-2% of the time (Husary), 4-7% (Abdul Basit) and up to 32% (Minshawi at ۗ). For a verified reciter that residue is now gone, since a boundary with no pause is dropped outright.
 
-The fix for both is the same and it is a known next step: **verify the cuts against the audio offline**. For each ayah that splits, fetch the reciter's own per-ayah MP3 once, take a 10 ms RMS envelope, snap each cut to the nearest silence of 250 ms or more within about 1.5 s, and drop any boundary that has none. That is roughly 1,500 files per reciter, it needs `ffmpeg` on the machine running the script, and the output stays vendored data, so nothing changes at run time. It would replace both the constant and the static rule above with the thing they approximate.
+What is left is the reciters that have not been measured yet. Each is a single command and about 350 MB of downloads, and until then their cuts rest on the constant. `verified` in each timing file says which is which.
 
-Re-run the script only when a reciter is added, or the splitting rules in `src/memorize/phrases.ts` change, or `LAG` changes; the committed output is what the app ships.
+Re-run `prepare:timings` only when a reciter is added, or the splitting rules in `src/memorize/phrases.ts` change, or `LAG` changes; then re-run the verification. The committed output is what the app ships.
 
 ## Updating
 
