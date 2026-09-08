@@ -1,0 +1,57 @@
+Everything written for this repository is under the BSD Zero Clause License
+in LICENSE: take it, use it, ship it, no attribution asked for and no
+conditions attached. Do not add a licence header to a source file and do not
+add a credit-us line to anything.
+
+Material this repository only redistributes is the opposite case, because its
+terms are not ours to give away. There are two things in that position, and
+one that people assume is and is not.
+
+
+The Quran text
+--------------
+data/quran-uthmani.txt, and src/data/surahs/1.json through 114.json, which are
+generated from it by scripts/prepare-quran.mjs.
+
+    Tanzil Quran Text (Uthmani, Version 1.1)
+    Copyright (C) 2007-2026 Tanzil Project
+    License: Creative Commons Attribution 3.0
+    https://tanzil.net/docs/Text_License
+
+Tanzil must be named wherever this text is used, and the text itself may not
+be altered. The full copyright block travels with the data: it is at the head
+of quran-uthmani.txt, and prepare-quran.mjs copies it verbatim into the
+`notice` field of every one of the 114 generated files, so no copy of the text
+in this repository exists without it. src/text.test.ts checks all 6,236 verses
+and that notice against the pinned SHA256 on every run.
+
+In the app, the attribution is the «مشروع تنزيل» link in «عن التطبيق».
+
+
+The phrase timings
+------------------
+src/data/timings/husary.json and its ten siblings.
+
+Generated once by scripts/prepare-timings.ts from the word-level segment
+timings Quran.com publishes through api.qurancdn.com, one recitation per file.
+What is stored is not their data: it is the cut positions computed from it, in
+milliseconds, for the boundaries between the phrases of an ayah. Each file
+records the recitation id and the exact endpoint it came from in its own
+`source` field. Nothing is fetched from that interface at run time.
+
+
+The fonts, which are not redistributed
+--------------------------------------
+Amiri, IBM Plex Sans Arabic and Reem Kufi are all under the SIL Open Font
+License, and none of them is in this repository: index.html links them from
+Google Fonts and the browser fetches them. If you ever vendor a font file
+here, its OFL copy belongs beside it and its entry belongs in this file.
+
+The same goes for the recitations. Every MP3 comes from everyayah.com or the
+mirror at mirrors.quranicaudio.com at the moment it is played, and not one of
+them is stored here. See data/README.md for who recorded what and where each
+folder is.
+
+
+If you bring in a new corpus, dataset, font or audio source, add it here in
+the same pass.
