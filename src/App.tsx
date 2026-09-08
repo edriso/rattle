@@ -5,6 +5,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Settings, ChevronDown, ArrowRight } from 'lucide-react';
 import {
   defaults,
+  grainFor,
   restore,
   surahs,
   arabic,
@@ -64,6 +65,9 @@ export function App() {
         next.to = p.to + (v.ayah - p.ayah);
       next.ayah = Math.max(1, Math.min(count, next.ayah));
       next.to = Math.max(next.ayah, Math.min(count, next.to));
+      /* Here rather than at the control that changed: whichever of the reciter
+         and the grain moved, the pair has to stay one the app can drill. */
+      next.grain = grainFor(next.grain, next.reciter);
       return next;
     });
   const surah = surahs[prefs.surah - 1];

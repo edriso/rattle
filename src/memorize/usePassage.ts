@@ -4,6 +4,7 @@
    assets and works with no network. */
 
 import { useEffect, useState } from 'react';
+import { cutsPhrases } from '../data/audio';
 import { cachedSurah, loadSurah } from '../data/text';
 import {
   cachedTimings,
@@ -90,7 +91,10 @@ export function preparePassage(
  * Both come from vendored assets, so this resolves offline after first load.
  */
 export function usePassageSource(surah: number, reciter: string, grain: Grain) {
-  const needsTimings = grain === 'phrase';
+  /* A mushaf nobody has published word timings for is drilled by the ayah, so
+     nothing waits on a file that does not exist. `buildSegments` keeps an ayah
+     whole when it has no boundaries, which is the same answer. */
+  const needsTimings = grain === 'phrase' && cutsPhrases(reciter);
   const [result, setResult] = useState<{
     surah: number;
     reciter: string;

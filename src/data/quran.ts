@@ -1,4 +1,4 @@
-import { defaultReciter, findReciter } from './audio';
+import { cutsPhrases, defaultReciter, findReciter } from './audio';
 import {
   defaultPlan,
   restorePlan,
@@ -94,12 +94,21 @@ const clamped = (
     ? Math.min(high, Math.max(low, value as number))
     : fallback;
 
+/**
+ * The grain a reciter can actually be drilled at. Phrase level cuts inside an
+ * ayah, which needs that reciter's word timings; where they do not exist the
+ * choice falls back to one ayah rather than erroring in front of the learner.
+ */
+export const grainFor = (grain: Grain, reciter: string): Grain =>
+  grain === 'phrase' && !cutsPhrases(reciter) ? 1 : grain;
+
 export function restore(value: unknown): Preferences {
   if (!value || typeof value !== 'object') return defaults;
   const p = value as Partial<Preferences> & { started?: boolean };
   const surah = clamped(p.surah, 1, 114, 1);
   const count = surahs[surah - 1].count;
   const ayah = clamped(p.ayah, 1, count, 1);
+  const reciter = findReciter(p.reciter ?? '').id;
   return {
     // A store written before the two modes existed only knew free practice.
     screen: (['home', 'session', 'practice'] as const).includes(p.screen!)
@@ -110,7 +119,7 @@ export function restore(value: unknown): Preferences {
     surah,
     ayah,
     to: clamped(p.to, ayah, count, Math.min(count, ayah + PASSAGE - 1)),
-    reciter: findReciter(p.reciter ?? '').id,
+    reciter,
     theme: (['gold', 'sage', 'blue', 'rose'] as const).includes(p.theme!)
       ? p.theme!
       : defaults.theme,
@@ -120,7 +129,7 @@ export function restore(value: unknown): Preferences {
     perView: clamped(p.perView, 1, 5, 1),
     keepPlaying:
       typeof p.keepPlaying === 'boolean' ? p.keepPlaying : defaults.keepPlaying,
-    grain: isGrain(p.grain) ? p.grain : defaults.grain,
+    grain: grainFor(isGrain(p.grain) ? p.grain : defaults.grain, reciter),
     echo: isEcho(p.echo) ? p.echo : defaults.echo,
     plan: restorePlan(p.plan),
   };

@@ -17,7 +17,7 @@ import {
   timesCount,
   type Preferences,
 } from '../data/quran';
-import { findReciter } from '../data/audio';
+import { cutsPhrases, findReciter } from '../data/audio';
 import {
   echoLabel,
   grainLabel,
@@ -38,6 +38,9 @@ const LONG_SESSION = 30;
 
 /** The panel the estimate's own row opens, named once for both ends. */
 const REPS = 'repetition-counts';
+
+/** What is left to choose from for a mushaf with no published word timings. */
+const ayahGrains = grains.filter((grain) => grain !== 'phrase');
 
 /**
  * One end of the passage. The number it shows is the passage's own, so typing
@@ -128,6 +131,7 @@ export function HomeView({
   );
   const pending = due(items);
   const ayat = prefs.to - prefs.ayah + 1;
+  const phrases = cutsPhrases(prefs.reciter);
   /* Listening on its own is a way people use the app, not a setting turned
      off, so it sits here rather than in the sheet. Coming back to repeating
      restores the gap the learner had chosen, which is why it is kept. */
@@ -248,7 +252,11 @@ export function HomeView({
         <fieldset className="grain-row">
           <legend className="setting-label">يُكرّر كل</legend>
           <div className="segmented grain-choice">
-            {grains.map((grain: Grain) => (
+            {/* «جملة» is offered only for a mushaf whose word timings have
+                been published, because cutting inside an ayah is what needs
+                them. Offering it otherwise would promise a cut the app cannot
+                make. */}
+            {(phrases ? grains : ayahGrains).map((grain: Grain) => (
               <label key={String(grain)} data-active={prefs.grain === grain}>
                 <input
                   className="sr-only"
@@ -268,6 +276,12 @@ export function HomeView({
         {prefs.grain === 'phrase' && (
           <p className="field-note grain-note">
             تُقسَّم الآية الطويلة عند مواضع وقف القارئ، وتبقى القصيرة آيةً واحدة.
+          </p>
+        )}
+        {!phrases && (
+          <p className="field-note grain-note">
+            لم تُنشَر مواضع الكلمات لمصحف {reciter.name}، فالتكرار من الآية وما
+            فوقها.
           </p>
         )}
 
