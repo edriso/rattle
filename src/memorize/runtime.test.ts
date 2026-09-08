@@ -193,6 +193,39 @@ describe('session runtime', () => {
     expect(audio.runs).toHaveLength(2);
   });
 
+  /* The screen offers stopping during the learner's own turn now, so the
+     clock has to hold there too: the turn is timed, and a paused timer that
+     keeps counting is worse than no timer. */
+  it('holds the clock when the learner stops during their own turn', async () => {
+    const { session, audio } = build({ echo: 1 });
+    await session.start();
+    await settle();
+    audio.complete(10);
+    await settle();
+    await vi.advanceTimersByTimeAsync(4000);
+    const running = session.getSnapshot();
+    expect(running.phase).toBe('echoing');
+    expect(running.echoLeft).toBeLessThan(running.echoLength);
+    session.pause();
+    const paused = session.getSnapshot();
+    expect(paused.phase).toBe('paused');
+    // The ring has nothing to show while nothing is counting.
+    expect(paused.echoLeft).toBe(0);
+    expect(paused.echoLength).toBe(0);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(session.getSnapshot().remaining).toBe(paused.remaining);
+    // And the silence does not quietly run out behind the pause.
+    expect(session.getSnapshot().phase).toBe('paused');
+    // Coming back plays the run again, which the clock accounts for.
+    await session.resume();
+    await settle();
+    expect(session.getSnapshot().phase).toBe('reciting');
+    expect(session.getSnapshot().remaining).toBeGreaterThanOrEqual(
+      paused.remaining,
+    );
+    expect(audio.runs).toHaveLength(2);
+  });
+
   it('changes the echo without costing the learner their place', async () => {
     const { session, audio } = build({ echo: 'off' });
     await session.start();

@@ -412,6 +412,20 @@ describe('a talqeen session', () => {
     expect(screen.queryByRole('button', { name: 'إيقاف مؤقت' })).toBeNull();
   });
 
+  it('names the clock and shows it as minutes and padded seconds', async () => {
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    const clock = await screen.findByRole(
+      'timer',
+      { name: 'الوقت المتبقي' },
+      { timeout: 3000 },
+    );
+    // Arabic-Indic digits, two seconds digits, and read left to right, since
+    // «١:٠٥» is a number and not a phrase.
+    expect(clock.textContent).toMatch(/^[\u0660-\u0669]+:[\u0660-\u0669]{2}$/);
+    expect(clock.getAttribute('dir')).toBe('ltr');
+  });
+
   it('pauses from the up arrow and offers the down arrow for the step again', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);

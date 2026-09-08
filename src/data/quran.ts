@@ -31,6 +31,7 @@ export const surahs = names.map((name, i) => ({
 export {
   arabic,
   ayatCount,
+  clockLabel,
   counted,
   daysCount,
   digits,

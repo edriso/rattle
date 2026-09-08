@@ -100,6 +100,23 @@ export const daysCount = (n: number) =>
   });
 
 /**
+ * A countdown as «د:ثث», in Arabic-Indic digits with the seconds padded.
+ *
+ * Guarded at both ends, because it renders four times a second off a number
+ * the runtime computes: a negative value would print a minus, and a NaN
+ * would print «ليس رقمًا» in the middle of a drill. Both clamp to zero, which
+ * is what a clock with nothing left to say should read.
+ *
+ * Minutes are not carried into hours. Sixty-one minutes reads «٦١:٠٠», which
+ * is unusual to look at and unambiguous, and a sitting that long is one the
+ * start screen has already advised against.
+ */
+export function clockLabel(seconds: number) {
+  const total = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+  return `${arabic(Math.floor(total / 60))}:${arabic(total % 60).padStart(2, '\u0660')}`;
+}
+
+/**
  * The form of Arabic text this app searches by. Everything a plain keyboard
  * cannot type goes: harakat, the dagger alef, the mushaf's waqf marks and
  * small letters, the tatweel. Hamza and alef-wasla fold to a bare alef and

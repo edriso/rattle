@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   arabic,
   ayatCount,
+  clockLabel,
   counted,
   daysCount,
   digits,
@@ -98,6 +99,33 @@ describe('numerals', () => {
 
   it('writes Arabic-Indic digits without a thousands separator', () => {
     expect(arabic(6236)).toBe('٦٢٣٦');
+  });
+});
+
+describe('the countdown', () => {
+  it('pads the seconds with an Arabic zero and never carries into hours', () => {
+    expect(clockLabel(0)).toBe('٠:٠٠');
+    expect(clockLabel(5)).toBe('٠:٠٥');
+    expect(clockLabel(59)).toBe('٠:٥٩');
+    expect(clockLabel(60)).toBe('١:٠٠');
+    expect(clockLabel(65)).toBe('١:٠٥');
+    expect(clockLabel(600)).toBe('١٠:٠٠');
+    // A sitting past an hour reads as minutes, which is unambiguous.
+    expect(clockLabel(3661)).toBe('٦١:٠١');
+  });
+
+  it('rounds to the nearest second rather than truncating', () => {
+    expect(clockLabel(59.4)).toBe('٠:٥٩');
+    expect(clockLabel(59.6)).toBe('١:٠٠');
+  });
+
+  /* It renders four times a second off a number the runtime computes, so a
+     value it should never see must still not print «ليس رقمًا» or a minus
+     sign in the middle of a drill. */
+  it('reads zero for anything it should never be given', () => {
+    expect(clockLabel(-1)).toBe('٠:٠٠');
+    expect(clockLabel(Number.NaN)).toBe('٠:٠٠');
+    expect(clockLabel(Number.POSITIVE_INFINITY)).toBe('٠:٠٠');
   });
 });
 

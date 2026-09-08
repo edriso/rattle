@@ -8,7 +8,7 @@ import {
   RotateCcw,
   Check,
 } from 'lucide-react';
-import { arabic, surahs, type Preferences } from '../data/quran';
+import { arabic, clockLabel, surahs, type Preferences } from '../data/quran';
 import { findReciter } from '../data/audio';
 import { usePracticeNavigation } from '../usePracticeNavigation';
 import { useSession } from '../memorize/useSession';
@@ -16,12 +16,6 @@ import { buildPassage, usePassageSource } from '../memorize/usePassage';
 import type { StepKind } from '../memorize/schedule';
 import type { Grade } from '../memorize/review';
 import { GradeSheet } from './GradeSheet';
-
-const clock = (seconds: number) => {
-  const total = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(total / 60);
-  return `${arabic(minutes)}:${arabic(total % 60).padStart(2, '٠')}`;
-};
 
 /** Keep the ayah being recited in view when a joined run is taller than the
     space it has. Assigned as a ref callback, so it fires on every change. */
@@ -180,7 +174,7 @@ export function SessionView({
             role="timer"
             aria-label="الوقت المتبقي"
           >
-            {clock(state.remaining)}
+            {clockLabel(state.remaining)}
           </span>
         </div>
       </div>
