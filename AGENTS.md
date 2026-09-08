@@ -253,31 +253,18 @@ reintroduce the clause fallback.
 when the ayah changes or the page closes. Settings and the review plan go in
 `localStorage` and nowhere else.
 
-**A `localStorage` key is a reader's address, so renaming one takes a
-carry-over.** The keys are `rattle:v1` and `rattle:review:v1`. They were
-`rattil:*` before the app was renamed, and `readRenamed` in
-`src/data/storage.ts` is what makes the change safe: the first read that
-finds the new key empty adopts whatever is under the old name and moves it.
-Without it the rename would have handed every existing reader a fresh app and
-an **empty review plan**, which for this app is weeks of their work, and
-there is no server that could have put it back.
-
-Three things about that function are load-bearing:
-
-- It is **idempotent**, because React calls a `useState` initialiser twice
-  under StrictMode. The second call finds the new key written and returns
-  before touching anything.
-- It removes the old key once it has carried it, so the branch runs once per
-  reader rather than on every read.
-- It can be deleted once nobody is likely to be arriving for the first time
-  since the rename, and **not before**: until then, deleting it is deleting
-  their progress.
-
-The theme is read once more in `index.html`, before the bundle exists, so
-that copy checks both names; the bundle is what actually moves the value. If
-you ever rename a key again, do it the same way, and keep the tests spelling
-the names out as literals rather than importing them, so that a rename with
-no carry-over fails the suite loudly instead of passing quietly.
+**A `localStorage` key is where a reader's own data already sits, so renaming
+one takes a carry-over.** The keys are `rattle:v1` and `rattle:review:v1`,
+and the plan under the second is the half that matters: it is weeks of
+somebody's work and no server here could put it back. Renaming them cost
+nothing only because it happened before anybody had a plan worth keeping. A
+later one will not be free, so if you rename a key, have the first read adopt
+whatever sits under the old name and move it across, make that read
+idempotent, since React calls a `useState` initialiser twice under
+StrictMode, and do not forget that the theme is read once more in
+`index.html` before the bundle exists. The tests spell the key names out as
+literals rather than importing them, which is what makes a rename with no
+carry-over fail the suite loudly instead of passing quietly.
 
 **Nothing may assume the site's path.** The repository was renamed once
 already, from `rattil` to `rattle`, and the only thing that broke was one

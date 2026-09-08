@@ -12,7 +12,6 @@ import userEvent from '@testing-library/user-event';
 import { Recorder } from './components/Recorder';
 import { defaults, normalize, restore, surahs } from './data/quran';
 import { reciters } from './data/audio';
-import { readRenamed } from './data/storage';
 afterEach(cleanup);
 beforeEach(() => {
   localStorage.clear();
@@ -24,93 +23,6 @@ describe('catalogue and persisted state', () => {
     expect(surahs.reduce((n, s) => n + s.count, 0)).toBe(6236);
     expect(normalize('آل عِمْرَان')).toBe(normalize('ال عمران'));
   });
-  /* The app was Rattil before it was Rattle, and both storage keys carried
-     the old name. A reader who used it before the rename must not open it
-     afterwards and find a fresh app: the review plan in particular is weeks
-     of their work, and there is no server to migrate it for them. */
-  describe('the keys the rename left behind', () => {
-    it('carries a pre-rename position and review plan across, once', async () => {
-      localStorage.setItem(
-        'rattil:v1',
-        JSON.stringify({
-          ...defaults,
-          surah: 24,
-          ayah: 30,
-          to: 31,
-          theme: 'blue',
-        }),
-      );
-      /* A real item, and overdue, so what is asserted is that the plan is
-         usable and not merely that a string moved: `restoreReview` drops an
-         entry whose `due` is not a `YYYY-MM-DD` date, which the first draft
-         of this test did not know and so proved nothing. */
-      localStorage.setItem(
-        'rattil:review:v1',
-        JSON.stringify([
-          {
-            id: '24:30-31',
-            surah: 24,
-            from: 30,
-            to: 31,
-            reps: 1,
-            ease: 2.5,
-            interval: 3,
-            due: '2020-01-01',
-            last: '2019-12-29',
-            lapses: 0,
-          },
-        ]),
-      );
-      render(<App />);
-      // The position came through.
-      expect(
-        await screen.findByRole(
-          'button',
-          { name: 'اختيار السورة، سورة النور' },
-          { timeout: 3000 },
-        ),
-      ).toBeTruthy();
-      // And so did the plan, all the way to the screen that offers it back,
-      // which is what proves `restoreReview` accepted it rather than that a
-      // string was copied from one key to another.
-      expect(await screen.findByText('مراجعة اليوم')).toBeTruthy();
-      expect(screen.getByText(/متأخّرة/)).toBeTruthy();
-      await waitFor(() =>
-        expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
-          surah: 24,
-          ayah: 30,
-          to: 31,
-          theme: 'blue',
-        }),
-      );
-      expect(
-        JSON.parse(localStorage.getItem('rattle:review:v1')!),
-      ).toHaveLength(1);
-      // And the old names are gone, so this happens exactly once.
-      expect(localStorage.getItem('rattil:v1')).toBeNull();
-      expect(localStorage.getItem('rattil:review:v1')).toBeNull();
-    });
-
-    it('prefers what is under the new name when both exist', () => {
-      localStorage.setItem(
-        'rattil:v1',
-        JSON.stringify({ ...defaults, surah: 24 }),
-      );
-      localStorage.setItem(
-        'rattle:v1',
-        JSON.stringify({ ...defaults, surah: 36 }),
-      );
-      expect(readRenamed('rattle:v1', 'rattil:v1')).toContain('"surah":36');
-      // Nothing was moved, so the old value is left exactly where it was.
-      expect(localStorage.getItem('rattil:v1')).toContain('"surah":24');
-    });
-
-    it('has nothing to say to somebody arriving for the first time', () => {
-      expect(readRenamed('rattle:v1', 'rattil:v1')).toBeNull();
-      expect(localStorage.length).toBe(0);
-    });
-  });
-
   it('rejects corrupt preferences and bounds valid numeric values', () => {
     expect(restore(null)).toEqual(defaults);
     expect(

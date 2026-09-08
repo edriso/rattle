@@ -11,7 +11,6 @@ import {
   arabic,
   type Preferences,
 } from './data/quran';
-import { readRenamed } from './data/storage';
 import { useWebMCP } from './webmcp';
 import { useAppearance } from './useAppearance';
 import { useReviewPlan } from './memorize/useReviewPlan';
@@ -30,12 +29,10 @@ const SettingsSheet = lazy(() =>
 );
 
 const STORAGE = 'rattle:v1';
-/** What the key was called before the app was renamed. See `readRenamed`. */
-const WAS_STORAGE = 'rattil:v1';
 
 function stored(): Preferences {
   try {
-    return restore(JSON.parse(readRenamed(STORAGE, WAS_STORAGE) ?? 'null'));
+    return restore(JSON.parse(localStorage.getItem(STORAGE) ?? 'null'));
   } catch {
     return defaults;
   }

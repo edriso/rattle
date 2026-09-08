@@ -1,16 +1,13 @@
 /* The review plan on this device. Nothing leaves the browser. */
 
 import { useCallback, useState } from 'react';
-import { readRenamed } from '../data/storage';
 import { record, restoreReview, type Grade, type ReviewItem } from './review';
 
 const KEY = 'rattle:review:v1';
-/** What the key was called before the app was renamed. See `readRenamed`. */
-const WAS_KEY = 'rattil:review:v1';
 
 function read(): ReviewItem[] {
   try {
-    return restoreReview(JSON.parse(readRenamed(KEY, WAS_KEY) ?? 'null'));
+    return restoreReview(JSON.parse(localStorage.getItem(KEY) ?? 'null'));
   } catch {
     return [];
   }
