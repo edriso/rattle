@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Notes for anyone, human or AI, working on Rattil.
+Notes for anyone, human or AI, working on Rattle.
 
 ## What this app is
 
-Rattil (`رَتِّل`) helps people memorise the Quran. It is a small web app. It has
+Rattle (`رَتِّل`) helps people memorise the Quran. It is a small web app. It has
 no server, no database, and no accounts. Everything runs in the browser, and
 everything the user does stays on their own device.
 
@@ -252,6 +252,33 @@ reintroduce the clause fallback.
 **Do not send user data anywhere.** Recordings live in memory and are deleted
 when the ayah changes or the page closes. Settings and the review plan go in
 `localStorage` and nowhere else.
+
+**Do not rename the `localStorage` keys.** They are `rattil:v1` and
+`rattil:review:v1`, from before the app was renamed to Rattle, and they stay
+that way. A storage key is not a name, it is the address a reader's saved
+position and review schedule are already at on their own device, and nothing
+in a static site can reach over and migrate it. Renaming would hand every
+existing reader a fresh app and an empty review plan, which for this app is
+weeks of somebody's work. There are three copies of the first string, the
+third being in `index.html`, where the theme is read before the bundle
+arrives; they must agree. The tests spell the key out as a literal rather
+than importing it, on purpose: that way renaming it fails the suite loudly
+instead of passing quietly, which is the whole point.
+
+**Nothing may assume the site's path.** The repository was renamed once
+already, from `rattil` to `rattle`, and the only thing that broke was one
+deploy that had run a minute earlier. `vite.config.ts` takes `base` from
+`VITE_BASE_PATH`, the workflow takes that from `actions/configure-pages`, and
+the mirror builds with `./` so it does not care at all. Two consequences:
+
+- **An absolute path in `index.html` is a bug.** Vite rewrites the paths it
+  processes, but not one you write by hand: `href="/favicon.svg"` asked
+  `edriso.github.io` for a file that lives under `/rattle/`, so the Pages copy
+  had no icon at all while the custom domain, being at a root, looked fine.
+  Use `%BASE_URL%`, which Vite substitutes per build.
+- Do not put the repository's name in a build script, a document's example
+  command, or a test. The pre-push check in the README uses `/subpath/` for
+  exactly this reason.
 
 ## Data
 

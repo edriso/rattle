@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="theme-color" content="#171918" />
-    <link rel="icon" href="/favicon.svg" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -41,6 +41,7 @@
       :root[data-appearance='light'] .boot-shell { color: #6f6a60; }
     </style>
     <script>
+      // `rattil:v1` is deliberate after the rename: see the note in App.tsx.
       try {
         const saved = JSON.parse(localStorage.getItem('rattil:v1') || 'null');
         if (saved && ['gold', 'sage', 'blue', 'rose'].includes(saved.theme)) document.documentElement.dataset.theme = saved.theme;

@@ -67,7 +67,7 @@ function Panel({
     >
       <SheetContent
         side="left"
-        className="rattil-sheet"
+        className="rattle-sheet"
         showCloseButton={false}
         initialFocus={landOn ?? heading}
         dir="rtl"

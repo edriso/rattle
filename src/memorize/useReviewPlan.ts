@@ -3,6 +3,9 @@
 import { useCallback, useState } from 'react';
 import { record, restoreReview, type Grade, type ReviewItem } from './review';
 
+/* Still `rattil`, after the rename, for the reason given in `App.tsx`: this
+   is where a reader's review schedule already lives, and it is the one piece
+   of saved state that is weeks of their work rather than a preference. */
 const KEY = 'rattil:review:v1';
 
 function read(): ReviewItem[] {

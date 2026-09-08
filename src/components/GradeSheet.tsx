@@ -45,7 +45,7 @@ export function GradeSheet({
     >
       <SheetContent
         side="left"
-        className="rattil-sheet"
+        className="rattle-sheet"
         showCloseButton={false}
         initialFocus={heading}
         dir="rtl"

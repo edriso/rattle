@@ -601,7 +601,7 @@ progress::-moz-progress-bar {
   text-align: center;
   margin-top: 8px;
 }
-.rattil-sheet[data-slot='sheet-content'] {
+.rattle-sheet[data-slot='sheet-content'] {
   width: 400px;
   max-width: 100%;
   background: var(--surface);
@@ -1352,7 +1352,7 @@ progress::-moz-progress-bar {
   .play-controls {
     gap: clamp(8px, 4vw, 18px);
   }
-  .rattil-sheet[data-slot='sheet-content'] {
+  .rattle-sheet[data-slot='sheet-content'] {
     inset: auto 0 0;
     width: 100%;
     max-width: none;
