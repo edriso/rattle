@@ -201,13 +201,20 @@ for (const reciter of reciters) {
   const { bounds, report } = await build(reciter);
   writeFileSync(
     new URL(`${reciter.id}.json`, OUT),
-    JSON.stringify({
-      reciter: reciter.id,
-      recitation: reciter.recitation,
-      source: `${API}/${reciter.recitation}/audio_files?chapter=<1..114>&segments=true`,
-      generated,
-      bounds,
-    }) + '\n',
+    /* Indented, because a diff of this file should say which ayat changed.
+       `npm run prepare:timings` runs the formatter over the output afterwards,
+       which is what collapses the short arrays to a line an ayah. */
+    JSON.stringify(
+      {
+        reciter: reciter.id,
+        recitation: reciter.recitation,
+        source: `${API}/${reciter.recitation}/audio_files?chapter=<1..114>&segments=true`,
+        generated,
+        bounds,
+      },
+      null,
+      2,
+    ) + '\n',
   );
   const pace = report.seconds / report.letters;
   paces.push(`${reciter.id}: ${pace.toFixed(3)}`);

@@ -215,7 +215,7 @@ at run time.
   `data/quran-uthmani.txt` into one JSON file per surah.
 - **Phrase timings**, from Quran.com word timings.
   `scripts/prepare-timings.ts` works out where inside each ayah's recording the
-  phrases begin, and writes one file per reciter (about 26 KB each). The app
+  phrases begin, and writes one file per reciter (about 10 KB over the wire). The app
   loads a reciter's file only when the user drills phrase by phrase. Three
   things about that script are load-bearing, and `data/README.md` has the
   measurements behind all of them:

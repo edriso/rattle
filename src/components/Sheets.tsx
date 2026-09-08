@@ -141,7 +141,7 @@ function useVerses(surah: number) {
  * The value is held as plain digits so the field can be empty while it is
  * being retyped and still be checked as a number.
  */
-function AyahField({
+function AyahList({
   id,
   label,
   value,
@@ -218,9 +218,7 @@ function AyahField({
           <ComboboxList>
             {(item: AyahChoice) => (
               <ComboboxItem key={item.ayah} value={item}>
-                <span className="ayah-option-number">
-                  {arabic(item.ayah)}
-                </span>
+                <span className="ayah-option-number">{arabic(item.ayah)}</span>
                 <span className="ayah-option-head">{item.head}</span>
               </ComboboxItem>
             )}
@@ -333,7 +331,7 @@ export function Picker({
         السورة {arabic(id)} من ١١٤ <span>{arabic(selected.count)} آية</span>
       </div>
       <div className="range-fields">
-        <AyahField
+        <AyahList
           id="picker-from"
           label="من الآية"
           value={from}
@@ -347,7 +345,7 @@ export function Picker({
             if (digits_ && Number(to) < Number(digits_)) setTo(digits_);
           }}
         />
-        <AyahField
+        <AyahList
           id="picker-to"
           label="إلى الآية"
           value={to}
@@ -543,8 +541,8 @@ export function SettingsSheet({
           ))}
         </div>
         <p className="field-note">
-          في المراجعة الحرة، تنتقل التلاوة مع الآية بلا حاجة إلى زر التشغيل في
-          كل مرة.
+          في المراجعة الحرة، تنتقل التلاوة مع الآية بلا حاجة إلى زر التشغيل في كل
+          مرة.
         </p>
       </fieldset>
 

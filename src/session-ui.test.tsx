@@ -90,7 +90,9 @@ describe('choosing a passage', () => {
   it('costs the drill before anything is fetched and grows with the range', async () => {
     start({ surah: 2, ayah: 1, to: 3 });
     render(<App />);
-    const estimate = await screen.findByRole('status', { name: 'تقدير الجلسة' });
+    const estimate = await screen.findByRole('status', {
+      name: 'تقدير الجلسة',
+    });
     await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
     const before = estimate.textContent;
     fireEvent.change(screen.getByRole('textbox', { name: 'إلى الآية' }), {
@@ -114,15 +116,18 @@ describe('choosing a passage', () => {
     });
     fireEvent.click(counts);
     await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem('rattil:v1')!).plan.singleReps)
-        .toBe(defaults.plan.singleReps - 1),
+      expect(
+        JSON.parse(localStorage.getItem('rattil:v1')!).plan.singleReps,
+      ).toBe(defaults.plan.singleReps - 1),
     );
   });
 
   it('offers listening alone, and hands the gap back when repeating resumes', async () => {
     start({ surah: 112, ayah: 1, to: 4, echo: 2 });
     render(<App />);
-    const estimate = await screen.findByRole('status', { name: 'تقدير الجلسة' });
+    const estimate = await screen.findByRole('status', {
+      name: 'تقدير الجلسة',
+    });
     await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
     const repeating = estimate.textContent;
     fireEvent.click(screen.getByRole('radio', { name: 'أستمع فقط' }));
