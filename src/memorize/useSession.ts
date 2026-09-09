@@ -84,8 +84,15 @@ export function useSession(config: SessionConfig | null, echo: EchoMode) {
       previous.current = {
         config,
         step: cursor.step,
+        /* Named rather than «not running», because a drill that had not begun
+           is not a drill that was stopped: `idle` carries nothing across, so a
+           rebuild there behaves like a first arrival and the screen's own
+           check for a gesture decides, as it did before. */
         halted:
-          phase !== 'reciting' && phase !== 'preparing' && phase !== 'echoing',
+          phase === 'paused' ||
+          phase === 'waiting' ||
+          phase === 'error' ||
+          phase === 'done',
       };
       session.dispose();
     };

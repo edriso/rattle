@@ -404,6 +404,40 @@ describe('a talqeen session', () => {
     ).toBeTruthy();
   });
 
+  /* A drill that had not begun is not a drill that was stopped, so a rebuild
+     from `idle` still waits for the tap rather than reading as «متوقّفة».
+     This is the boundary of the phase the rebuild carries across. */
+  it('still waits for a tap after a rebuild it had not begun', async () => {
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: false },
+    });
+    const prefs = {
+      ...defaults,
+      screen: 'session',
+      surah: 112,
+      ayah: 1,
+      to: 3,
+    } as Preferences;
+    const noop = () => {};
+    const view = render(
+      <SessionView prefs={prefs} onExit={noop} onGraded={noop} />,
+    );
+    await screen.findByRole('button', { name: 'تشغيل' }, { timeout: 3000 });
+    expect(screen.queryByText('متوقّفة')).toBeNull();
+    view.rerender(
+      <SessionView
+        prefs={{ ...prefs, reciter: 'shuraim' }}
+        onExit={noop}
+        onGraded={noop}
+      />,
+    );
+    expect(
+      await screen.findByRole('button', { name: 'تشغيل' }, { timeout: 3000 }),
+    ).toBeTruthy();
+    expect(screen.queryByText('متوقّفة')).toBeNull();
+  });
+
   it('drills the first segment, names the step, and counts down', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);
