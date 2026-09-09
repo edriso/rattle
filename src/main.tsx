@@ -17,6 +17,8 @@ const fontsReady = document.fonts?.ready ?? Promise.resolve();
 const fontTimeout = new Promise<void>((resolve) =>
   window.setTimeout(resolve, 1200),
 );
-void Promise.race([fontsReady, fontTimeout]).then(() => {
+const mount = () =>
   ReactDOM.createRoot(document.getElementById('root')!).render(app);
-});
+// `document.fonts.ready` is not specified to reject, but a promise that did
+// would leave the boot shell on the screen for good.
+void Promise.race([fontsReady, fontTimeout]).then(mount, mount);

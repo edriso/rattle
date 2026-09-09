@@ -42,7 +42,6 @@ export type PreparedPassage = Passage & {
 type Loaded = {
   surah: number;
   verses: readonly string[];
-  reciter: string;
   timings: ReciterTimings | null;
 };
 
@@ -133,7 +132,7 @@ export function usePassageSource(surah: number, reciter: string, grain: Grain) {
           setResult({
             surah,
             reciter,
-            loaded: { surah, verses: text, reciter, timings },
+            loaded: { surah, verses: text, timings },
           });
       },
       () => {

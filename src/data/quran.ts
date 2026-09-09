@@ -32,7 +32,6 @@ export {
   arabic,
   ayatCount,
   clockLabel,
-  counted,
   daysCount,
   digits,
   minutesCount,

@@ -32,7 +32,9 @@ export type Clip = {
   to: number | null;
 };
 
-export type Passage = {
+/** The stretch of one surah a sitting covers. Named apart from `usePassage`'s
+    own `Passage`, which is the drill built over this one. */
+type AyahRange = {
   surah: number;
   from: number;
   to: number;
@@ -65,7 +67,7 @@ const wholeAyah = (surah: number, ayah: number): Clip => ({
  * because the reciter records it apart from the ayah.
  */
 export function buildSegments(
-  passage: Passage,
+  passage: AyahRange,
   verses: readonly string[],
   grain: Grain,
   bounds?: PhraseBounds,

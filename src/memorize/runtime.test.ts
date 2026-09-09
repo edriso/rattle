@@ -33,7 +33,11 @@ class FakeAudio implements Audio {
     this.pinned = urls;
   }
 
-  async load(url: string) {
+  /** Every signal a load was handed, so a test can see them abandoned. */
+  readonly signals: (AbortSignal | undefined)[] = [];
+
+  async load(url: string, signal?: AbortSignal) {
+    this.signals.push(signal);
     if (this.failOn && url.includes(this.failOn)) throw new Error('offline');
     this.held.add(url);
     this.evicted.delete(url);
@@ -544,6 +548,21 @@ describe('session runtime', () => {
     expect(audio.runs.at(-1)).toEqual([
       { url: audio.runs[0][0].url, from: 0, to: audio.seconds },
     ]);
+  });
+
+  /* `Audio.load` has always taken a signal and nothing ever passed one, so
+     changing the reciter mid-drill left up to four recordings of the voice the
+     learner had just moved away from downloading for as long as thirty
+     seconds, competing on a phone with the ones the new drill waits on. */
+  it('abandons the fetches it started when it is disposed', async () => {
+    const { session, audio } = build();
+    await session.start();
+    await settle();
+    expect(audio.signals.length).toBeGreaterThan(0);
+    expect(audio.signals.map((s) => s?.aborted)).not.toContain(undefined);
+    expect(audio.signals.some((s) => s?.aborted)).toBe(false);
+    session.dispose();
+    expect(audio.signals.every((s) => s?.aborted)).toBe(true);
   });
 
   it('stops the clock and the audio when disposed', async () => {

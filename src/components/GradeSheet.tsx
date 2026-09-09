@@ -16,7 +16,6 @@ import { gradeHint, gradeLabel, grades, type Grade } from '../memorize/review';
  * still counts for something if the learner says it does.
  */
 export function GradeSheet({
-  open,
   surah,
   from,
   to,
@@ -25,7 +24,6 @@ export function GradeSheet({
   onGrade,
   onLeave,
 }: {
-  open: boolean;
   surah: string;
   from: number;
   to: number;
@@ -38,7 +36,7 @@ export function GradeSheet({
   const heading = useRef<HTMLDivElement>(null);
   return (
     <Sheet
-      open={open}
+      open
       onOpenChange={(v) => {
         if (!v) onClose();
       }}

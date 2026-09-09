@@ -309,11 +309,6 @@ export class ClipPlayer implements Audio {
     this.live = [];
   }
 
-  async suspend() {
-    this.stop();
-    if (this.context?.state === 'running') await this.context.suspend();
-  }
-
   async dispose() {
     this.stop();
     this.pinned.clear();

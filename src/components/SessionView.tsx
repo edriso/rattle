@@ -339,7 +339,6 @@ export function SessionView({
 
       {grading && (
         <GradeSheet
-          open={grading}
           surah={surah.name}
           from={prefs.ayah}
           to={prefs.to}

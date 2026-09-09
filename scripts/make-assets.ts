@@ -378,7 +378,7 @@ type Cdp = {
     comes back with the same number, and anything without a number is an
     event. That is the entire protocol this script uses, which is why it does
     not carry a client library for it. */
-export async function connect(url: string): Promise<Cdp> {
+async function connect(url: string): Promise<Cdp> {
   const socket = new WebSocket(url);
   await new Promise<void>((resolve, reject) => {
     socket.addEventListener('open', () => resolve(), { once: true });
@@ -455,7 +455,7 @@ function getJson(url: string): Promise<Json> {
   });
 }
 
-export async function launch() {
+async function launch() {
   if (!existsSync(CHROME))
     throw new Error(`no Chrome at ${CHROME}. Set $CHROME to where yours is.`);
   const profile = mkdtempSync(join(tmpdir(), 'rattle-assets-'));
@@ -510,7 +510,7 @@ export async function launch() {
 /** Serves the pages over http rather than from a file, so the document has an
     ordinary origin: a font file is a cross-origin request whichever way, and
     from `file:` some of them do not arrive. */
-export function serve(pages: Map<string, string>) {
+function serve(pages: Map<string, string>) {
   const server = createServer((request, response) => {
     const html = pages.get(new URL(request.url ?? '/', 'http://x').pathname);
     if (html === undefined) {
@@ -604,7 +604,7 @@ async function shoot(cdp: Cdp, url: string, asset: Asset) {
 
 /** A PNG's own idea of its size, read out of the IHDR header, so the numbers
     reported below are the file's and not the request's. */
-export function pngSize(png: Buffer) {
+function pngSize(png: Buffer) {
   const signature = '89504e470d0a1a0a';
   if (png.subarray(0, 8).toString('hex') !== signature)
     throw new Error('not a PNG');

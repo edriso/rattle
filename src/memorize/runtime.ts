@@ -53,7 +53,6 @@ export type SessionOptions = {
   pace: number;
   echo: EchoMode;
   audio: Audio;
-  onFinished?: () => void;
 };
 
 type MutableOptions = SessionOptions & { echo: EchoMode };
@@ -118,6 +117,12 @@ export class Session {
   private pausedSpent = 0;
   private echoEndsAt = 0;
   private disposed = false;
+  /* Every fetch this session starts is hung on this, so disposing it stops
+     them. `Audio.load` has always taken a signal and nothing ever passed one,
+     which left up to four recordings of the voice a learner had just changed
+     away from downloading for as long as thirty seconds, competing on a phone
+     with the ones the new drill is waiting on. */
+  private readonly lifetime = new AbortController();
   /* A browser that has seen no gesture yet may leave `resume()` pending rather
      than rejecting. Everyone who asks to start waits on that same promise, and
      a latch makes sure only the first of them actually begins the drill. */
@@ -253,7 +258,7 @@ export class Session {
 
   private async load(url: string) {
     if (this.ready(url)) return;
-    const seconds = await this.options.audio.load(url);
+    const seconds = await this.options.audio.load(url, this.lifetime.signal);
     if (this.disposed) return;
     this.durations.set(url, seconds);
     this.set({
@@ -395,7 +400,6 @@ export class Session {
       echoLength: 0,
       sounding: null,
     });
-    this.options.onFinished?.();
   }
 
   /** Change the silence left for repeating without restarting the drill. */
@@ -571,6 +575,7 @@ export class Session {
 
   dispose() {
     this.disposed = true;
+    this.lifetime.abort();
     this.generation++;
     this.stopAudio();
     this.clearTimer();

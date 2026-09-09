@@ -58,11 +58,11 @@ export type ReviewItem = {
   lapses: number;
 };
 
-export const passageId = (surah: number, from: number, to: number) =>
+const passageId = (surah: number, from: number, to: number) =>
   `${surah}:${from}-${to}`;
 
 /** Local calendar day, so a review never shifts across a timezone boundary. */
-export function today(now: Date = new Date()): string {
+function today(now: Date = new Date()): string {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');

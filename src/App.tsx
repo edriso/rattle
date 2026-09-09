@@ -187,7 +187,6 @@ export function App() {
         <Suspense fallback={null}>
           {panel === 'picker' && (
             <Picker
-              open
               onClose={() => setPanel(null)}
               prefs={prefs}
               onSelect={(surahId, ayah, to) => {
@@ -198,7 +197,6 @@ export function App() {
           )}
           {(panel === 'settings' || panel === 'reciter') && (
             <SettingsSheet
-              open
               onClose={() => setPanel(null)}
               prefs={prefs}
               update={update}

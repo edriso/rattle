@@ -38,15 +38,15 @@ import { MAX_INTERVAL } from '../memorize/review';
 import type { SchedulePlan } from '../memorize/schedule';
 import { Stepper } from './Stepper';
 
+/* Drawn only while it is open, so there is no closed state to pass in: every
+   caller renders this conditionally. */
 function Panel({
-  open,
   onClose,
   title,
   description,
   landOn,
   children,
 }: {
-  open: boolean;
   onClose: () => void;
   title: string;
   description: string;
@@ -60,7 +60,7 @@ function Panel({
   const heading = useRef<HTMLDivElement>(null);
   return (
     <Sheet
-      open={open}
+      open
       onOpenChange={(v) => {
         if (!v) onClose();
       }}
@@ -198,8 +198,10 @@ function AyahList({
         itemToStringLabel={(item) => arabic(item.ayah)}
         isItemEqualToValue={(a, b) => a.ayah === b.ayah}
         filter={(item, text) => {
-          const typed = digits(text);
-          if (typed) return String(item.ayah).startsWith(typed);
+          // Not `typed`: that is the state this component holds, and it is in
+          // scope here.
+          const numerals = digits(text);
+          if (numerals) return String(item.ayah).startsWith(numerals);
           const words = normalize(text.trim());
           return !words || item.search.includes(words);
         }}
@@ -239,12 +241,10 @@ function AyahList({
 }
 
 export function Picker({
-  open,
   onClose,
   prefs,
   onSelect,
 }: {
-  open: boolean;
   onClose: () => void;
   prefs: Preferences;
   onSelect: (surah: number, from: number, to: number) => void;
@@ -287,7 +287,6 @@ export function Picker({
 
   return (
     <Panel
-      open={open}
       onClose={onClose}
       title="اختر المقطع"
       description="اختر السورة وأول آية وآخر آية."
@@ -302,8 +301,9 @@ export function Picker({
         onInputValueChange={setQuery}
         // Typing a name and pressing Enter should take it.
         autoHighlight
-        onOpenChange={(opening) =>
-          setQuery(opening ? '' : surahs[chosen.current - 1].name)
+        // Not `opening`: that is the helper above, which is in scope here.
+        onOpenChange={(shown) =>
+          setQuery(shown ? '' : surahs[chosen.current - 1].name)
         }
         itemToStringLabel={(s) => s.name}
         isItemEqualToValue={(a, b) => a.id === b.id}
@@ -382,13 +382,11 @@ export function Picker({
 }
 
 export function SettingsSheet({
-  open,
   onClose,
   prefs,
   update,
   landOn = 'title',
 }: {
-  open: boolean;
   onClose: () => void;
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
@@ -406,7 +404,6 @@ export function SettingsSheet({
 
   return (
     <Panel
-      open={open}
       onClose={onClose}
       title="الإعدادات"
       description="القارئ، وطريقة التكرار، والمظهر."
