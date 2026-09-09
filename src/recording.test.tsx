@@ -154,3 +154,41 @@ it('cancels pending private playback before recording again', async () => {
     expect(screen.queryByRole('button', { name: 'إيقاف مؤقّت' })).toBeNull(),
   );
 });
+/* Pressing this button is what makes it briefly unavailable, so `disabled`
+   dropped the keyboard while the browser was still asking about the
+   microphone: the learner came back to a permission dialog and a page with
+   nothing focused. `phase` is what holds the second press off, not the
+   attribute. */
+it('keeps the keyboard on the record button while the microphone is asked for', async () => {
+  let allow!: (stream: unknown) => void;
+  const asking = vi.fn(
+    () =>
+      new Promise((resolve) => {
+        allow = resolve;
+      }),
+  );
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia: asking },
+  });
+  render(<App />);
+  const button = await screen.findByRole('button', { name: 'تسجيل صوتك' });
+  button.focus();
+  fireEvent.click(button);
+  const waiting = await screen.findByRole('button', {
+    name: 'بانتظار الميكروفون…',
+  });
+  expect(waiting).toBe(button);
+  expect(waiting.getAttribute('aria-disabled')).toBe('true');
+  expect((waiting as HTMLButtonElement).disabled).toBe(false);
+  expect(document.activeElement).toBe(waiting);
+  fireEvent.click(waiting);
+  expect(asking).toHaveBeenCalledOnce();
+  await act(async () => {
+    allow({ getTracks: () => [{ stop: stopTrack }] });
+  });
+  expect(await screen.findByRole('button', { name: 'إنهاء التسجيل' })).toBe(
+    button,
+  );
+  expect(document.activeElement).toBe(button);
+});

@@ -137,6 +137,9 @@ export function SessionView({
   /* The learner's turn, timed: the one phase with a forward move of its own
      that is not the next step. */
   const inGap = state.phase === 'echoing';
+  /* The drill's first repetition. Walking back is how a learner arrives here,
+     so the button that does it must not turn `disabled` under their finger. */
+  const atStart = state.cursor.step === 0 && state.cursor.rep === 0;
   const total = passage.steps.length;
 
   function toggle() {
@@ -254,8 +257,8 @@ export function SessionView({
             aria-label="الخطوة السابقة"
             aria-keyshortcuts="ArrowRight"
             title="السابق (→)"
-            disabled={state.cursor.step === 0 && state.cursor.rep === 0}
-            onClick={() => session.previous()}
+            aria-disabled={atStart}
+            onClick={() => !atStart && session.previous()}
           >
             <ChevronRight />
           </button>

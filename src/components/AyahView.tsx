@@ -117,13 +117,18 @@ export function AyahView({
           {findReciter(prefs.reciter).name}
         </div>
         <div className="play-controls">
+          {/* `aria-disabled`, not `disabled`, at both ends of the surah:
+              arriving at the first or the last ayah is what these two buttons
+              do, and a control that disables itself under a finger drops the
+              keyboard where it stands. `move` already refuses to go past
+              either end, so nothing else holds the press off. */}
           <button
             className="icon-button"
             id="previous-ayah"
             aria-label="الآيات السابقة"
             aria-keyshortcuts="ArrowRight"
             title="السابق (→)"
-            disabled={prefs.ayah === 1}
+            aria-disabled={prefs.ayah === 1}
             onClick={() => move(-1)}
           >
             <ChevronRight />
@@ -160,7 +165,7 @@ export function AyahView({
             aria-label="الآيات التالية"
             aria-keyshortcuts="ArrowLeft Enter"
             title="التالي (← أو إدخال)"
-            disabled={last === surah.count}
+            aria-disabled={last === surah.count}
             onClick={() => move(1)}
           >
             <ChevronLeft />

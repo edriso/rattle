@@ -454,6 +454,31 @@ describe('a talqeen session', () => {
     expect(after.getAttribute('aria-keyshortcuts')).toBeNull();
   });
 
+  /* The same rule as «تابِع الآن» above, on the control two slots along:
+     walking back is how a learner reaches the first repetition, so the button
+     that walks back must not turn `disabled` under their finger. It went
+     inert with `disabled` and took the keyboard with it. */
+  it('keeps the keyboard on the back button at the first repetition', async () => {
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 });
+    const back = screen.getByRole('button', { name: 'الخطوة السابقة' });
+    expect(back.getAttribute('aria-disabled')).toBe('true');
+    expect((back as HTMLButtonElement).disabled).toBe(false);
+    back.focus();
+    fireEvent.click(back);
+    expect(document.activeElement).toBe(back);
+    expect(screen.getByText(/الخطوة ١ من/)).toBeTruthy();
+    // And it comes back to life one step along, where there is somewhere to go.
+    fireEvent.click(screen.getByRole('button', { name: 'الخطوة التالية' }));
+    await screen.findByText(/الخطوة ٢ من/);
+    expect(
+      screen
+        .getByRole('button', { name: 'الخطوة السابقة' })
+        .getAttribute('aria-disabled'),
+    ).toBe('false');
+  });
+
   it('ends the turn early from the button beside the main one', async () => {
     vi.stubGlobal('AudioContext', EndingAudioContext);
     start({ screen: 'session', surah: 112, ayah: 1, to: 3, echo: 2 });

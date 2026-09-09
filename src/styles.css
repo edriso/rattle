@@ -175,7 +175,7 @@ label:has(input:focus-visible) {
   border-radius: 10px;
   color: var(--muted-foreground);
 }
-.icon-button:hover:not(:disabled) {
+.icon-button:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--surface-raised);
   color: var(--foreground);
 }
@@ -290,7 +290,7 @@ label:has(input:focus-visible) {
   font-size: 16px;
   padding: 10px 16px;
 }
-.primary-button:hover:not(:disabled) {
+.primary-button:hover:not(:disabled, [aria-disabled='true']) {
   filter: brightness(1.08);
 }
 .save-hint {
@@ -510,7 +510,7 @@ label:has(input:focus-visible) {
   padding: 8px;
   min-width: 0;
 }
-.record-button:hover {
+.record-button:hover:not([aria-disabled='true']) {
   color: var(--accent);
 }
 .recording,

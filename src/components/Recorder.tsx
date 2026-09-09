@@ -278,10 +278,14 @@ export function Recorder({
         />
       )}
       <div className="record-row">
+        {/* Pressing this is what makes it briefly unavailable, so it may not
+            go `disabled`: that would drop the keyboard while the browser is
+            still asking about the microphone. `toggleRecording` acts on
+            `phase`, which is what actually holds the press off. */}
         <button
           id="record-toggle"
           className={`record-button ${state === 'recording' ? 'recording' : ''}`}
-          disabled={state === 'requesting' || state === 'stopping'}
+          aria-disabled={state === 'requesting' || state === 'stopping'}
           onClick={toggleRecording}
           aria-keyshortcuts="Shift+Enter"
         >

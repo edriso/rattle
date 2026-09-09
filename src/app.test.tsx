@@ -190,20 +190,26 @@ describe('catalogue and persisted state', () => {
       screen.getByRole('button', { name: 'ابدأ جلسة التلقين' }),
     ).toBeTruthy();
   });
-  it('does not pass the last verse', async () => {
+  /* The end of a surah is reached by pressing this button, so `disabled` here
+     dropped the keyboard the moment it was pressed, which is the failure the
+     Style notes in AGENTS.md name. It is `aria-disabled` instead, which means
+     the press has to be refused by `move` and the focus has to stay put. */
+  it('does not pass the last verse, and keeps the keyboard on the button', async () => {
     localStorage.setItem(
       'rattle:v1',
       JSON.stringify({ ...defaults, screen: 'practice', surah: 114, ayah: 6 }),
     );
     render(<App />);
+    const next = await screen.findByRole('button', { name: 'الآيات التالية' });
     await waitFor(() =>
-      expect(
-        (
-          screen.getByRole('button', {
-            name: 'الآيات التالية',
-          }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(true),
+      expect(next.getAttribute('aria-disabled')).toBe('true'),
+    );
+    expect((next as HTMLButtonElement).disabled).toBe(false);
+    next.focus();
+    fireEvent.click(next);
+    expect(document.activeElement).toBe(next);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
+      'الآية ٦',
     );
   });
 });
