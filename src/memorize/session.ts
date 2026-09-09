@@ -177,7 +177,7 @@ export const echoLabel = (echo: EchoMode) =>
         : echo === 1
           ? 'بقدر المقطع'
           : echo === 1.5
-            ? 'مرة ونصف'
+            ? 'مرة ونصف المقطع'
             : 'ضعف المقطع';
 
 export const isEcho = (value: unknown): value is EchoMode =>
