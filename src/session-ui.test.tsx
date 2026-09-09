@@ -806,6 +806,28 @@ describe('a talqeen session', () => {
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
+  /* Grading closes a modal and changes the screen in the same commit, so the
+     panel's own attempt to hand the cursor back to «أنهِ الجلسة» and the
+     shell's attempt to put it in the new screen land together, and the button
+     it would hand it back to no longer exists. The new screen has to win. */
+  it('leaves the cursor in the new screen after grading, not on nothing', async () => {
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole(
+        'button',
+        { name: /أنهِ الجلسة/ },
+        { timeout: 3000 },
+      ),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /جيد/ }));
+    const main = await screen.findByRole('main');
+    await waitFor(() => expect(document.activeElement).toBe(main));
+    // And it stays there once everything the panel had queued has run.
+    await new Promise((settle) => setTimeout(settle, 60));
+    expect(document.activeElement).toBe(main);
+  });
+
   it('schedules the passage for review once it is graded', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);
