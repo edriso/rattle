@@ -36,6 +36,14 @@ npm run preview    # serve the built app
 Run `npm test`, `npm run lint` and `npm run build` before you commit. All three
 must pass. The GitHub Pages workflow runs the same three.
 
+`npm run format` covers the code and not the documents. `oxfmt` would happily
+align every markdown table in the repository, and it cannot do it: it pads by
+code point, and a combining mark takes a column on screen and none in the
+count, so the tables carrying tashkeel come out a column short. They are
+aligned by hand instead, and `**/*.md` is in `.oxfmtrc.json`'s
+`ignorePatterns`, which is also what makes `npx oxfmt --check` clean enough to
+be worth running.
+
 `tsconfig.json` and `npm run lint` both cover `scripts/` as well as `src/`.
 They did not, and the tools the npm scripts run were checked by nothing at
 all. `allowImportingTsExtensions` is what lets one config hold both, since
