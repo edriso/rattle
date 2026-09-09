@@ -213,29 +213,54 @@ each ayah's recording, asks `ffmpeg` where the pauses are, and moves, keeps or
 drops every cut accordingly. `verified` in each file in `src/data/timings/`
 says which have been done.
 
-What is left is not just "run it on the rest", and this is the part worth
-reading before you start. **Five of the twelve cannot be measured this way at
-all.** They are modern masters with only 10 to 16 dB between the reciter's
-voice and their own noise floor, against 34 to 66 dB for the older ones, and
-four of them have a noise floor sitting *above* the detector's threshold, so
-they spend well under 1% of their length below it and most of that is the
-lead-in of the file. Run blind,
-that does not degrade their files, it empties them, because an ayah loses its
-whole set of cuts when a single one cannot be placed. The script now measures
-that before it measures anything else and refuses, printing the two numbers so
-you can check the refusal instead of believing it.
+What is left is not "run it on the rest", and this is the part worth reading
+before you start. The detector is a **fixed** threshold, -40 dBFS, applied to
+recordings whose noise floors span 60 dB, and that one decision is what stands
+between this and two more of the eight recitations still on the constant. Of
+the rest, five need a different kind of detector entirely, and the twelfth has
+no published word timings for any detector to measure.
 
-So there are three real projects here, in increasing size:
+**Five of the twelve cannot be measured by it at all.** They are modern
+masters with only 10 to 16 dB between the reciter's voice and their own noise
+floor, against 32 to 66 dB for the older ones, and every one of the five has a
+noise floor sitting *above* the threshold, so they spend under 4% of their
+length below it and most of that is the lead-in of the file. Run blind, that
+does not degrade their files, it empties them, because an ayah loses its whole
+set of cuts when a single one cannot be placed. The script measures that before
+it measures anything else and refuses, printing the two numbers so you can
+check the refusal instead of believing it.
 
-- **Measure Minshawi's murattal.** The last one this method reaches cleanly:
-  88% of a sample places. One command, about 350 MB of downloads, twenty
-  minutes.
-- **Recover the cuts the four measured recitations dropped** while the search
-  window was too narrow. Free on audio, because the recordings are cached, but
-  it re-derives all four from the API first.
-- **Hear the other five**, which needs a detector that follows the voice rather
-  than its level: something spectral, or a dip measured against the local
-  speech level instead of an absolute floor. That is the genuinely open one.
+**And one recitation that passes the check still cannot be written.** Minshawi's
+murattal places 62.6% of its ayat, under the floor the script will write at.
+That looks like a reciter who runs through the marks until you sweep the
+threshold with a mid-phrase control: at -32 dBFS he places 90%, while the
+share of points *inside* a phrase mistaken for a pause goes only from 1.2% to
+1.4%. The shipped threshold already mistakes 3.0% of them on Husary. So a
+threshold loose enough to hear all of Minshawi is less trigger-happy than the
+one in use, and his pauses are real: a threshold at -32 finds 90% of them and
+one at -28 finds 98%, so they bottom out between -40 and -28, filled with
+reverb rather than reaching silence.
 
-All three are written up with the numbers that say what each is worth, at the
-end of AGENTS.md and in [data/README.md](../data/README.md).
+So this is one project rather than three, and it is now a well-posed one:
+
+- **Choose the threshold per recitation, from the shape of its own level
+  histogram** rather than from a constant, and validate each one against a
+  control of points that cannot be pauses. The envelope the rule needs is
+  already computed on every run, for the mastering check. The three obvious
+  reparameterisations are tried and recorded in
+  [data/README.md](../data/README.md), and each one fails on some recitation,
+  so do read that before reaching for a formula. Getting it right unlocks
+  Minshawi's two, some 3,000 ayat; on the numbers it will not reach the five
+  modern masters, whose floors sit above where their pauses would have to be,
+  and those still want something spectral.
+
+Two smaller ones that came out of the same work and are already done, in case
+the write-ups are useful as a shape: the search window was widened from 1,500
+to 2,500 ms, which gave back 127 ayat across the four measured recitations with
+0 lost and 0 altered; and the mastering sampling was reading the front of each
+file instead of the whole mushaf, which had Minshawi's dynamic range 11 dB
+wrong. The 88% was a separate trap of the same shape, a `--limit=60` run whose
+yield was read as the whole mushaf's.
+
+The numbers that say what any of this is worth are at the end of AGENTS.md and
+in [data/README.md](../data/README.md).

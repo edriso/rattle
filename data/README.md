@@ -64,7 +64,7 @@ An ayah keeps its timings out of the file, and plays whole, when:
 
 Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and Dussary 1,552, Husary Muallim 1,546, Minshawi 1,544, Sudais 1,537, Shatri 1,510, Abdul Basit's mujawwad 1,489, Alafasy 1,480, Abdul Basit 1,458, and Minshawi's mujawwad lowest at 1,398.
 
-Those are the figures the generator writes. Measuring against the audio takes some of them back down, since a cut with no pause under it is dropped: as shipped, Husary Muallim covers 1,541 of the 1,560, Husary 1,517, Abdul Basit's mujawwad 1,374 and his murattal 1,277.
+Those are the figures the generator writes. Measuring against the audio takes some of them back down, since a cut with no pause under it is dropped: as shipped, Husary Muallim covers 1,541 of the 1,560, Husary 1,517, Abdul Basit's mujawwad 1,374 and his murattal 1,277. `src/data/timings.test.ts` checks every shipped file against what `buildSegments` requires of it, because that function answers a bad set of cuts by playing the ayah whole, which is right at run time and silent.
 
 ### Cuts measured against the audio
 
@@ -73,13 +73,16 @@ Those are the figures the generator writes. Measuring against the audio takes so
 Run it from the repository root, reading only, and it prints what it would change:
 
 ```sh
+node scripts/verify-cuts.ts --hearing            # can a gate hear these at all? 24 files each
 node scripts/verify-cuts.ts husary               # one reciter, reading only
-node scripts/verify-cuts.ts minshawi --limit=60  # a sample, to see if it is worth it
+node scripts/verify-cuts.ts minshawi --limit=60  # a sample, to try the pipeline out
 node scripts/verify-cuts.ts husary --write       # write what it measured
 node scripts/verify-cuts.ts --write              # every reciter with a file
 ```
 
-`--limit=N` measures the first N ayat and will not combine with `--write`, because writing a partial pass would throw away every ayah it did not reach. `--force` writes a run that fell below `MIN_YIELD` anyway; read the numbers first.
+`--hearing` is the thing to ask first: it reads the mastering and stops, which costs two dozen files rather than fifteen hundred, and it answers whether a level gate can find anything in a recitation before an hour is spent finding out the slow way.
+
+`--limit=N` measures the first N ayat and will not combine with `--write`, because writing a partial pass would throw away every ayah it did not reach. It is for trying the pipeline out and **not** for deciding whether a recitation is worth measuring: the first sixty ayat of a mushaf are not a sample of it, and a limited run once put Minshawi's yield at 88% where the whole file gives 62.6%. `--force` writes a run that fell below `MIN_YIELD` anyway; read the numbers first, and read the section on Minshawi below before believing that a low yield is a fact about the reciter.
 
 It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files per reciter, so it caches them under `work/audio/` (git-ignored) and a second run costs nothing. A file it has measured carries a `verified` date, and `prepare:timings` now **leaves such a file alone and says so**, because it cannot reproduce what is in it: those boundaries came from listening to the recordings, and all that script has is the text and a constant. So adding a reciter needs no flag and costs nothing that was measured. `prepare:timings -- --force` overwrites anyway, which is right for a change to the splitting rules or to `LAG`, and then the file needs measuring again. (That flag is unrelated to `verify-cuts`'s own `--force`, which overrides the yield floor.)
 
@@ -120,6 +123,8 @@ It was re-measured from the **committed constant-placed boundaries in git histor
 
 What the window is now sized against is the measured offsets, not a guess: the largest median measured over a whole mushaf is 578 ms, and 2,500 is more than four times that. It is still the binding constraint for a small tail, the largest single moves coming to 2,432, 2,139, 2,444 and 2,491 ms, and that is intended. Past a certain distance a correction is a different boundary rather than the same one measured.
 
+One recitation is missing from that reckoning, and it is the one most likely to test it. Minshawi's mujawwad has never been measured over its whole mushaf; its only figures come from the 60-ayah samples this section discards as unrepresentative, and those put its median between 861 and 1,045 ms. If the real figure is near a second, 2,500 is about two and a half times it rather than four, and the window would want looking at again when that recitation is finally measured.
+
 ### What this still does not fix
 
 Between 27% and 45% of the boundaries this app used to cut at were places the reciter never stopped, and dropping ۖ and the clause fallback removed most but not all of that: at the marks that remain he still runs on 0-2% of the time (Husary), 4-7% (Abdul Basit) and up to 32% (Minshawi at ۗ). For a verified reciter that residue is now gone, since a boundary with no pause is dropped outright.
@@ -128,30 +133,34 @@ What is left is the recitations that have not been measured, and they are not al
 
 ### Five recitations cannot be measured this way at all
 
-A gate at -40 dBFS only means something if a recording has somewhere for it to sit. Sampling 24 ayat spread across each of the twelve mushafs and reading the RMS envelope in 20 ms frames splits them in two, with nothing in between:
+A gate at -40 dBFS only means something if a recording has somewhere for it to sit. Sampling 24 ayat spread across each of the eleven mushafs that have timings, and reading the RMS envelope in 20 ms frames, splits them in two with nothing in between:
 
 The six a gate can hear:
 
 | recitation | noise floor | speech | apart | under -40 dBFS |
 | --- | --- | --- | --- | --- |
-| Minshawi (المجوّد) | −83.8 dBFS | −18.3 | 65.5 dB | 24.0% |
-| Abdul Basit (المجوّد) | −73.9 | −22.2 | 51.7 | 19.6% |
-| Abdul Basit (murattal) | −68.2 | −24.4 | 43.8 | 17.3% |
-| Minshawi (murattal) | −64.9 | −21.2 | 43.6 | 15.1% |
-| Husary (المعلّم) | −64.0 | −28.3 | 35.7 | 36.8% |
-| Husary (murattal) | −58.2 | −24.4 | 33.7 | 15.7% |
+| Minshawi (المجوّد) | −86.9 dBFS | −20.7 | 66.2 dB | 19.5% |
+| Abdul Basit (المجوّد) | −69.0 | −22.6 | 46.3 | 20.3% |
+| Husary (المعلّم) | −63.9 | −29.1 | 34.8 | 38.7% |
+| Husary (murattal) | −62.6 | −24.4 | 38.2 | 17.3% |
+| Abdul Basit (murattal) | −58.9 | −24.3 | 34.6 | 14.4% |
+| Minshawi (murattal) | −53.8 | −21.3 | 32.5 | 10.0% |
 
 And the five it cannot:
 
 | recitation | noise floor | speech | apart | under -40 dBFS |
 | --- | --- | --- | --- | --- |
-| Ash-Shaatree | −40.2 | −24.6 | **15.6 dB** | 5.1% |
-| Al-Afasy | −32.9 | −20.6 | **12.3** | 1.1% |
-| Ad-Dussary | −28.6 | −17.0 | **11.6** | 0.2% |
-| Ash-Shuraym | −30.5 | −20.1 | **10.4** | 0.3% |
-| As-Sudais | −31.7 | −21.5 | **10.1** | 0.2% |
+| Ash-Shaatree | −37.5 | −21.5 | **16.0 dB** | 3.5% |
+| Al-Afasy | −36.1 | −22.3 | **13.8** | 2.6% |
+| Ad-Dussary | −26.8 | −14.8 | **12.1** | 0.2% |
+| As-Sudais | −30.9 | −19.7 | **11.2** | 0.2% |
+| Ash-Shuraym | −32.1 | −22.0 | **10.1** | 0.5% |
 
-The first six have 34 to 66 dB between their speech and their own quietest stretches, and spend 15 to 37% of their length under the gate. The other five have 10 to 16 dB, and four of them have a **noise floor above the gate**, so they never cross it: they spend 0.2 to 5% of their length under -40 dBFS, most of that the lead-in of the file. These are modern masters, limited and reverberant, and there is no level a fixed gate could take that separates a pause from a held note in them.
+The first six have 32 to 66 dB between their speech and their own quietest stretches, and spend 10 to 39% of their length under the gate. The other five have 10 to 16 dB, and **every one of them has a noise floor above the gate**, so it is never crossed: they spend 0.2 to 3.5% of their length under -40 dBFS, most of that the lead-in of the file. These are modern masters, limited and reverberant, and there is no level a fixed gate could take that separates a pause from a held note in them.
+
+Two dozen ayat carry a couple of dB of sampling variance, so a re-run will differ in the decimal: Husary reads 38.2 dB over the 1,552 ayat he had before the window widened and 40.4 over the 1,517 he has after. The gap the decision sits in is 16 dB wide, so this does not come near mattering, which is the point of leaving `MIN_RANGE` in the middle of it.
+
+These figures replace a first set that was **measured wrong**, and the way it was wrong is worth keeping. They were taken from `--limit=60` runs, which sampled the front of each file rather than the mushaf, and the sampling code drew its two dozen ayat from the limited set. That put Minshawi's murattal at 43.6 dB of range where the mushaf-wide answer is 32.5, and Ash-Shaatree's floor just below the gate where it is in fact above it, like the other four. `verify-cuts.ts` now samples across the whole file whatever `--limit` says, because a verdict on a recitation should not depend on how much of it somebody asked for.
 
 Run blind, that failure is silent and looks like a finding. Sampling 60 ayat of each: Al-Afasy 0 of 95 cuts placed, Ad-Dussary 0 of 95, Ash-Shuraym 0 of 95, As-Sudais 0 of 91, Ash-Shaatree 2 of 94. Written, that would have emptied the phrase cuts of five of the twelve recitations and quietly withdrawn «جملة» from each, and the report would have read as five reciters who never stop for breath.
 
@@ -159,21 +168,36 @@ So `verify-cuts.ts` measures the mastering **before** it measures anything else,
 
 Hearing these five would take a detector that follows the voice rather than the level: a spectral or onset measure, or a relative dip against the local speech level instead of an absolute floor. That is a project, not a flag.
 
-### Two are measurable and only need running
+### Minshawi passes the mastering check and still cannot be measured, and the gate is why
 
-Minshawi's murattal and mujawwad both pass the mastering check comfortably, and both want a median offset near **a second**, three times the constant. That is why `WINDOW` is now 2500 ms and not 1500: at 1500 their largest move sat exactly on the edge, so the window was clipping the measurement rather than bounding it. Widened, a 60-ayah sample places 88% of the murattal's ayat and 65% of the mujawwad's.
+A 60-ayah sample put Minshawi's murattal at 88% of ayat placed and made it look like the obvious next recitation to measure. Run over the whole mushaf it places **62.6%**, and `MIN_YIELD` refused to write it. Nothing was written, and that refusal was right.
 
-| window | Minshawi murattal | median | Minshawi (المجوّد) | median |
-| --- | --- | --- | --- | --- |
-| 1500 ms | 49/60 ayat | 971 ms | 30/60 | 861 ms |
-| 2500 ms | 53/60 | 1002 ms | 39/60 | 984 ms |
-| 3500 ms | 54/60 | 1002 ms | 41/60 | 1045 ms |
+The 88% was the biased sampling described above, and so was the 43.6 dB of range and the near-1 s median. Mushaf-wide the murattal's median offset is 578 ms, not a second, and 31.9% of its cuts came back with no pause inside the window: 156 with none anywhere in the ayah, and 516 whose nearest pause is a median 7.9 s away.
 
-The murattal's median settles by 2500, which is the sign the distribution is being described rather than cut off; the mujawwad's is still climbing at 3500, and at 65% it sits below `MIN_YIELD` and would need `--force` and a decision about whether losing a third of its ayat is a finding about melodic recitation or a fault in the method. Abdul Basit's mujawwad lost a seventh, so a third is not obviously either.
+That reads like a reciter who runs through the marks. He does not. Sweeping the gate over the same 300 ayat throughout, with a mid-phrase control to catch a gate that has simply become permissive, points at the detector instead. Every figure in this table is over that sample, so the −40 dBFS row reads 67.0% where the mushaf-wide answer is 62.6%; they are compared with each other and not with the whole file:
 
-**So the murattal is the one worth running**: `node scripts/verify-cuts.ts minshawi --write`, about 350 MB and twenty minutes.
+| gate | ayat keeping a full set | cuts placed | called a pause **mid-phrase** |
+| --- | --- | --- | --- |
+| −40 dBFS (shipped) | 67.0% | 70.6% | 1.2% |
+| −36 | 80.0% | 84.0% | 1.3% |
+| −32 | 90.0% | 92.0% | 1.4% |
+| −28 | 98.0% | 98.5% | 1.9% |
 
-The wider window cannot disturb a verified file, because every cut in one already sits inside a pause, so the window is never consulted: read-only runs over all four at 2,500 come back 100% kept, 0 moved, 0 unfounded. The 127 ayat those four had dropped at 1,500 have been recovered; see the section on the window above for how, and why it was safe.
+The control is what makes this evidence rather than a knob being turned until the number improved. Two points are taken in the stretch running up to each cut, a third and two thirds of the way along it, 776 in all; they are inside a phrase and cannot be places he stopped. The share of them a gate mistakes for a pause barely moves, 1.2% to 1.9%, while real placement goes from 71% to 98%. For comparison, the same sweep over 250 ayat of Husary's constant-placed cuts, which the shipped gate places 98.8% of within that sample, mistakes 3.0% of mid-phrase points at −40 dBFS and 4.3% at −28. **A gate loose enough to hear all of Minshawi is still less trigger-happy than the one that already works on Husary.**
+
+It is the gate specifically, and not the 250 ms a pause has to last. Relaxing that to 120 ms, which is a consonant closure rather than a stop, takes the murattal only from 67.0% to 76.0%.
+
+So his pauses are real and simply never get quiet enough to cross a line drawn at a fixed −40 dBFS. What the sweep locates is not their level directly but where a gate has to sit to find them: −32 catches 90% of them and −28 catches 98%, so most bottom out somewhere between −40 and −28. His noise floor, −53.8 dBFS, is the highest of the six, and what fills the pause above it is reverb and room rather than silence.
+
+**What this does not yield is a one-line fix**, and the three obvious reparameterisations were each tried against the measured floors and speech levels:
+
+- a fixed gate, which is what ships: right for four, and 8 to 12 dB too strict for Minshawi, who needs −32 to place 90% of his ayat and −28 to place 98%.
+- `floor + 22 dB`, which fits Husary (−40.6) and Minshawi (−31.8) neatly, and then hands Abdul Basit's mujawwad −47.0 and Minshawi's own mujawwad −64.9, both far stricter than the −40 that already measures them well. Their floors are low because the recordings are quiet and wide, not because their pauses are.
+- `speech − 15 dB`, which fits Husary at −39.4 and gives Minshawi −36.3, where he places 80%.
+
+The gate has to come from the shape of each recitation's own level distribution, the valley between the mode its speech sits in and the mode its quiet sits in, and it has to be validated per recitation against a control of the kind above. That is the project, and it is now a well-posed one: an envelope the script already computes, a threshold rule to choose, and a false-positive measure to judge it by. It would unlock Minshawi's two, and on the numbers above it will not unlock the five modern masters, whose floors sit above where their pauses would have to be.
+
+Until then Minshawi stays on the constant, which is wrong by a median 578 ms and does not pretend to have listened.
 
 Ayman Sowaid has no published word timings, so there is nothing to measure. `verified` in each timing file says which recitations have been measured.
 

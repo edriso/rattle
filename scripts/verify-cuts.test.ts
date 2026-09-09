@@ -159,7 +159,7 @@ describe('judging a cut against the silences in a recording', () => {
        numbers passes 2^53, so plain multiplication loses exactly the low bits
        the modulus then reads. Written that way this generator could only
        reach 16,471 distinct values before cycling, and `seed % 4` took two of
-       them, which is not the walk this comment claims. */
+       them, which is not the walk the comment above claims. */
     const random = () => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return seed / 0x80000000;
@@ -205,27 +205,41 @@ describe('judging a cut against the silences in a recording', () => {
 });
 
 /* Whether a recitation can be measured at all, which is decided before any of
-   it is. The figures below are what the script itself reports over 24 ayat
-   spread across each mushaf, and the outcome beside each is what a full or
-   sampled run actually produced. Held here because `MIN_RANGE` and `NOISE`
-   are tuning knobs, and a test that only checked invented numbers would let
-   somebody move one and find out from a user which recitations went quiet. */
+   it is. The figures below are what the script reports over 24 ayat spread
+   across each whole mushaf, and the outcome beside each is what a real run
+   produced. Held here because `MIN_RANGE` and `NOISE` are tuning knobs, and a
+   test that only checked invented numbers would let somebody move one and
+   find out from a user which recitations went quiet.
+
+   These replace a first set taken with `--limit=60`, which sampled the front
+   of each file rather than the mushaf and was wrong by up to 11dB: it put
+   Minshawi's murattal at 43.6dB of range where the mushaf-wide answer is
+   32.5, and Ash-Shaatree's floor just under the gate where it is in fact
+   above it, like the other four. Sampling now ignores `--limit` for exactly
+   that reason.
+
+   Two dozen ayat carry a couple of dB of sampling variance, so a re-run will
+   not reproduce these to the decimal: Husary reads 38.2dB of range over the
+   1,552 ayat he had before the window widened and 40.4 over the 1,517 he has
+   after. That is well inside the margins asserted below, and it is why those
+   are margins rather than equalities. */
 const MASTERING = [
-  // Classic murattal and mujawwad: room to spare, and the gate works.
-  { id: 'husary', floor: -58.2, speech: -24.4, measurable: true },
-  { id: 'husary-muallim', floor: -64.0, speech: -28.3, measurable: true },
-  { id: 'abdulbasit', floor: -68.2, speech: -24.4, measurable: true },
-  { id: 'abdulbasit-mujawwad', floor: -73.9, speech: -22.2, measurable: true },
-  { id: 'minshawi', floor: -64.9, speech: -21.2, measurable: true },
-  { id: 'minshawi-mujawwad', floor: -83.8, speech: -18.3, measurable: true },
-  // Modern masters. Every one of these returned no pauses whatever, and
-  // shatri two out of ninety-four, which read in the report as reciters who
-  // never stop rather than as recordings with no quiet in them.
-  { id: 'alafasy', floor: -32.9, speech: -20.6, measurable: false },
-  { id: 'shatri', floor: -40.2, speech: -24.6, measurable: false },
-  { id: 'shuraim', floor: -30.5, speech: -20.1, measurable: false },
-  { id: 'sudais', floor: -31.7, speech: -21.5, measurable: false },
-  { id: 'dussary', floor: -28.6, speech: -17.0, measurable: false },
+  // Classic murattal and mujawwad: room to spare, and a gate finds pauses.
+  { id: 'minshawi-mujawwad', floor: -86.9, speech: -20.7, measurable: true },
+  { id: 'abdulbasit-mujawwad', floor: -69.0, speech: -22.6, measurable: true },
+  { id: 'husary-muallim', floor: -63.9, speech: -29.1, measurable: true },
+  { id: 'husary', floor: -62.6, speech: -24.4, measurable: true },
+  { id: 'abdulbasit', floor: -58.9, speech: -24.3, measurable: true },
+  { id: 'minshawi', floor: -53.8, speech: -21.3, measurable: true },
+  /* Modern masters, limited and reverberant. Sampled at 60 ayat each these
+     returned no pauses whatever, and Ash-Shaatree two of ninety-four, which
+     read in the report as reciters who never stop for breath. Every one of
+     the five has a noise floor *above* the gate, so it is never crossed. */
+  { id: 'shatri', floor: -37.5, speech: -21.5, measurable: false },
+  { id: 'alafasy', floor: -36.1, speech: -22.3, measurable: false },
+  { id: 'shuraim', floor: -32.1, speech: -22.0, measurable: false },
+  { id: 'sudais', floor: -30.9, speech: -19.7, measurable: false },
+  { id: 'dussary', floor: -26.8, speech: -14.8, measurable: false },
 ];
 
 /** A level array whose fifth percentile is `floor` and whose median is
@@ -280,8 +294,9 @@ describe('whether a level gate can hear a recitation at all', () => {
   });
 
   /** Median absolute move, per recitation, measured over whole mushafs:
-      Husary 409ms, his المعلّم 107, Abdul Basit 354, his المجوّد 435. */
-  const OFFSETS = [409, 107, 354, 435];
+      Husary 409ms, his المعلّم 107, Abdul Basit 354, his المجوّد 435,
+      Minshawi's murattal 578. */
+  const OFFSETS = [409, 107, 354, 435, 578];
 
   it('bounds a correction rather than truncating it', () => {
     /* A window near a recitation's own median offset is not a bound, it is a
@@ -295,10 +310,13 @@ describe('whether a level gate can hear a recitation at all', () => {
     expect(WINDOW).toBeGreaterThanOrEqual(4 * Math.max(...OFFSETS));
   });
 
-  it('keeps the write floor under every yield a real run has managed', () => {
-    // Measured: abdulbasit 59/60, minshawi 49/60, abdulbasit-mujawwad
-    // 1284/1489. The collapses it has to catch were 0/60 and 2/60.
-    expect(MIN_YIELD).toBeLessThan(49 / 60);
-    expect(MIN_YIELD).toBeGreaterThan(2 / 60);
+  it('keeps the write floor between a run that shipped and one it caught', () => {
+    /* Bracketed by two real mushaf-wide runs rather than by round numbers.
+       Below: Abdul Basit's murattal at 1277/1458, the lowest yield that has
+       been written. Above: Minshawi's murattal at 967/1544, which this floor
+       refused, and rightly, since a gate sweep afterwards showed his pauses
+       are real and simply never reach -40dBFS. */
+    expect(MIN_YIELD).toBeLessThan(1277 / 1458);
+    expect(MIN_YIELD).toBeGreaterThan(967 / 1544);
   });
 });

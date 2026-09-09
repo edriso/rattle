@@ -17,7 +17,9 @@
      node scripts/verify-cuts.ts husary
 
    With `--write` it rewrites `src/data/timings/<reciter>.json`. With no
-   reciter it does every one that has a file.
+   reciter it does every one that has a file. With `--hearing` it reports only
+   whether a level gate can hear each recitation at all, which costs two dozen
+   files rather than fifteen hundred and is the thing to ask first.
 
    Needs ffmpeg on the machine, which nothing else here does, and it downloads
    about 1,500 files per reciter, so it caches them under `work/audio/` and a
@@ -47,11 +49,16 @@ const MIN_SILENCE = 250;
  * is `WINDOW - MARGIN`.
  *
  * Sized against the offsets actually measured rather than fitted: the largest
- * median measured over a whole mushaf is 578ms, and 2500 is more than four
- * times that, so what the window cuts off is the tail of the distribution and
- * not its body. A window near a recitation's own median would not bound the
- * correction, it would clip it, and hide how wrong the constant was instead of
- * measuring it.
+ * median measured over a whole mushaf is 578ms (Minshawi's murattal), and 2500
+ * is more than four times that, so what the window cuts off is the tail of the
+ * distribution and not its body. A window near a recitation's own median would
+ * not bound the correction, it would clip it, and hide how wrong the constant
+ * was instead of measuring it.
+ *
+ * Minshawi's mujawwad is missing from that reckoning and is the one most likely
+ * to test it: it has never been measured over its whole mushaf, and its only
+ * figures come from 60-ayah samples that put its median between 861 and
+ * 1045ms. Worth revisiting when that recitation is finally measured.
  *
  * It was 1500 when the first four were measured, which dropped 463 of their
  * ayat for having no pause inside it. Re-measured at 2500, 127 of those came
@@ -80,15 +87,22 @@ const FRAME = 20;
  * quietest stretches, in dB, before `NOISE` can find anything in it.
  *
  * `NOISE` is a fixed gate, and a fixed gate only means something if there is
- * somewhere for it to sit. Measured over 24 ayat of each of the twelve: the
- * six classic murattal and mujawwad recitations have 34 to 63dB of room and
- * spend 16 to 36% of their length under -40dBFS. The five modern masters have
- * 10 to 16dB, and four of them have a noise floor *above* -40dBFS, so they
- * spend 0.2 to 6% of their length under the gate and it finds no pauses at
- * all. That is not a reciter running his boundaries together, it is limiting,
- * and in the output the two are indistinguishable unless something separates
- * them first. 24 is the middle of a gap with nothing in it: the lowest range
- * that works is 33.8dB and the highest that fails is 16.1.
+ * somewhere for it to sit. Measured over 24 ayat spread across each of the
+ * eleven mushafs that have timings: the six classic murattal and mujawwad
+ * recitations have 32.5 to 66.2dB of room and spend 10 to 39% of their length
+ * under -40dBFS. The five modern masters have 10.1 to 16.0dB, and every one of
+ * them has a noise floor *above* -40dBFS, so they spend 0.2 to 3.5% of their
+ * length under the gate and it finds no pauses at all. That is not a reciter
+ * running his boundaries together, it is limiting, and in the output the two
+ * are indistinguishable unless something separates them first. 24 is the
+ * middle of a gap with nothing in it: the lowest range that works is 32.5dB
+ * and the highest that fails is 16.0.
+ *
+ * Passing this is necessary and not sufficient. Minshawi's murattal has 32.5dB
+ * and still places only 62.6% of its ayat, because a range wide enough to hold
+ * a gate says nothing about where in it the pauses fall: a gate at -32 finds
+ * 90% of his and one at -28 finds 98%, so they bottom out between -40 and -28.
+ * See data/README.md, which has the sweep.
  */
 const MIN_RANGE = 24;
 
@@ -97,14 +111,28 @@ const MIN_RANGE = 24;
 const SOUNDINGS = 24;
 
 /**
+ * How many of a recitation's recordings may fail to read and still be written,
+ * as a fraction. An unread recording is not a measurement, and without this a
+ * run where every one of them failed passes every other check and is stamped
+ * `verified`.
+ */
+const MAX_UNREAD = 0.02;
+
+/**
  * How much of a recitation a `--write` has to leave standing, as a fraction of
  * the ayat that had cuts.
  *
  * An ayah loses its whole set when a single cut cannot be placed, so a
  * measurement that mishears a recording does not degrade that file, it empties
- * it, and «جملة» quietly stops being offered for that reciter. Every
- * recitation measured so far keeps 82% or more, so a run under this is
- * reporting a fault in the method and not a finding about the reciter.
+ * it, and «جملة» quietly stops being offered for that reciter. The four
+ * written keep 88 to 100%, so a run far under that is reporting a fault in the
+ * method rather than a finding about the reciter.
+ *
+ * That is not a guess any more. This floor refused Minshawi's murattal at
+ * 62.6%, and a gate sweep afterwards showed the refusal was right: his pauses
+ * are real and simply never reach -40dBFS, so writing it would have withdrawn
+ * «جملة» from 577 ayat he does stop in. `--force` exists for somebody who has
+ * read the numbers, and reading them is the point.
  */
 const MIN_YIELD = 0.7;
 
@@ -338,6 +366,7 @@ async function verify(
   write: boolean,
   limit: number,
   force: boolean,
+  only: boolean,
 ) {
   const path = new URL(`${id}.json`, TIMINGS);
   const file = JSON.parse(readFileSync(path, 'utf8')) as TimingFile;
@@ -350,27 +379,51 @@ async function verify(
 
   console.log(`\n${id}`);
   /* What the recording can be asked, before it is asked fifteen hundred
-     times. Spread across the run rather than taken off the front, so a sura
-     recorded on its own day does not stand for the whole mushaf. */
-  const step = Math.max(1, Math.floor(keys.length / SOUNDINGS));
+     times. Spread across the whole mushaf rather than taken off the front,
+     because the mastering belongs to the recording sessions and one sura
+     recorded on its own day does not stand for the rest.
+
+     Across `all` and not across `keys`, so a `--limit` shortens the
+     measurement without narrowing this: sampled from the limited set, a
+     `--limit=60` put Minshawi's murattal 11dB further from the gate than the
+     mushaf-wide answer, and those were the figures that reached the
+     documentation. A verdict on a recitation should not depend on how much of
+     it somebody asked for. */
+  const step = Math.max(1, Math.floor(all.length / SOUNDINGS));
+  const sampled = all.filter((_, i) => i % step === 0).slice(0, SOUNDINGS);
   const soundings: number[] = [];
-  for (const key of keys.filter((_, i) => i % step === 0).slice(0, SOUNDINGS)) {
+  let unread = 0;
+  for (const key of sampled) {
     const [surah, ayah] = key.split(':').map(Number);
     try {
       soundings.push(
         ...(await envelope(new URL(await recording(surah, ayah, id)).pathname)),
       );
     } catch {
-      // A file that will not read says nothing about the mastering either way.
+      // A file that will not read says nothing about the mastering either way,
+      // but a run where none of them read says nothing at all, which is what
+      // the count below is for.
+      unread++;
     }
   }
   const ear = soundings.length ? hearing(soundings) : null;
-  if (ear)
-    console.log(
-      `  mastering        floor ${ear.floor.toFixed(1)}dBFS, speech ${ear.speech.toFixed(1)}dBFS, ` +
-        `${ear.range.toFixed(1)}dB apart, ${(ear.under * 100).toFixed(1)}% of it under ${NOISE}`,
+  /* No ear is not a verdict. Without this the report skips the mastering line,
+     skips the refusal, and then says the gate can hear a recitation nothing
+     was heard of: ffmpeg missing from the PATH looked exactly like a pass. */
+  if (!ear) {
+    console.error(
+      `  could not read any of the ${sampled.length} recordings sampled, so nothing was measured.\n` +
+        `  Check that ffmpeg is on the PATH and that ${id}'s audio is reachable.`,
     );
-  if (ear && !ear.measurable) {
+    process.exitCode = 1;
+    return;
+  }
+  console.log(
+    `  mastering        floor ${ear.floor.toFixed(1)}dBFS, speech ${ear.speech.toFixed(1)}dBFS, ` +
+      `${ear.range.toFixed(1)}dB apart, ${(ear.under * 100).toFixed(1)}% of it under ${NOISE}` +
+      (unread ? `, ${unread} of ${sampled.length} sampled files unread` : ''),
+  );
+  if (!ear.measurable) {
     console.log(
       `  a gate at ${NOISE} cannot hear this recitation: it needs ${MIN_RANGE}dB of room and has ${ear.range.toFixed(1)}.\n` +
         `  Nothing measured, nothing written. These cuts stay on the constant, which at least does not\n` +
@@ -379,6 +432,19 @@ async function verify(
     );
     return;
   }
+  /* The whole question of whether a recitation can be measured, answered off
+     two dozen files instead of fifteen hundred. It is what `--limit` was
+     being used for and did badly: a limited run reports a mastering read off
+     the front of the mushaf and then spends an hour measuring cuts nobody
+     asked about. */
+  if (only) {
+    console.log(
+      `  a gate at ${NOISE} can hear this recitation (${MIN_RANGE}dB needed).` +
+        ` ${all.length} ayat to measure.`,
+    );
+    return;
+  }
+
   const kept: number[] = [];
   const moved: number[] = [];
   const unfounded: number[] = [];
@@ -429,6 +495,8 @@ async function verify(
   });
 
   const total = kept.length + moved.length + unfounded.length;
+  const share = (n: number) =>
+    total ? `${((n / total) * 100).toFixed(1)}%` : 'n/a';
   const away = moved.map(Math.abs);
   console.log(
     `  ayat with cuts   ${keys.length} -> ${Object.keys(next).length}`,
@@ -437,15 +505,13 @@ async function verify(
      lost one of its own go with it, so the two differ. */
   const written = Object.values(next).reduce((n, cuts) => n + cuts.length, 0);
   console.log(`  cuts             ${total} -> ${written} written`);
-  console.log(
-    `  already in silence ${kept.length} (${((kept.length / total) * 100).toFixed(1)}%)`,
-  );
+  console.log(`  already in silence ${kept.length} (${share(kept.length)})`);
   /* Signed as well as absolute, because the sign is the diagnostic: if the
      cuts that move mostly move later, LAG is too short, and by how much. */
   const later = moved.filter((by) => by > 0);
   const earlier = moved.filter((by) => by < 0);
   console.log(
-    `  moved into one     ${moved.length} (${((moved.length / total) * 100).toFixed(1)}%), median ${median(away)}ms, max ${away.length ? Math.max(...away) : 0}ms`,
+    `  moved into one     ${moved.length} (${share(moved.length)}), median ${median(away)}ms, max ${away.length ? Math.max(...away) : 0}ms`,
   );
   console.log(
     `    later            ${later.length}, median +${median(later)}ms`,
@@ -456,7 +522,7 @@ async function verify(
   const nowhere = unfounded.filter((d) => !Number.isFinite(d)).length;
   const missed = unfounded.filter((d) => Number.isFinite(d));
   console.log(
-    `  no silence at all  ${unfounded.length} (${((unfounded.length / total) * 100).toFixed(1)}%)`,
+    `  no silence at all  ${unfounded.length} (${share(unfounded.length)})`,
   );
   console.log(`    none in the ayah ${nowhere}`);
   /* Labelled with the gap the figures are, not the window they are compared
@@ -479,6 +545,20 @@ async function verify(
       `  note: the largest move reaches ${WINDOW}ms, the window itself, so this recitation's offset is\n` +
         `  truncated by the window rather than measured by it.`,
     );
+
+  /* A recording that could not be read keeps its cuts exactly as they were,
+     which is right, and means an unread ayah counts as intact: with every
+     file unreadable the yield is a perfect 100%, `MIN_YIELD` waves it
+     through, and the file is stamped `verified` saying it was listened to.
+     So the reading is checked before the yield is. */
+  if (write && failed > keys.length * MAX_UNREAD && !force) {
+    console.log(
+      `  Nothing written: ${failed} of ${keys.length} recordings could not be read, past the ${(MAX_UNREAD * 100).toFixed(0)}% this will\n` +
+        `  write through. Their cuts would be kept as they are and the file stamped «verified» anyway,\n` +
+        `  which would say it had been listened to. Check ffmpeg and the network first.`,
+    );
+    return;
+  }
 
   const intact = Object.keys(next).length / (keys.length || 1);
   if (write && intact < MIN_YIELD && !force) {
@@ -507,20 +587,53 @@ async function verify(
   }
 }
 
+/* Every option this takes. Checked rather than merely read, because what an
+   unrecognised one used to do was nothing: `--hearng` quietly started the
+   fifteen-hundred-file run the flag exists to avoid, and `--limit 60`, written
+   with a space, put `60` among the reciters where it was dropped for having no
+   timing file, leaving `limit` at 0 and a `--write` running over the whole
+   mushaf past the refusal that is supposed to stop exactly that. */
+const OPTIONS = ['--write', '--force', '--hearing'];
+const LIMIT = /^--limit=(\d+)$/;
+
 async function main() {
   const args = process.argv.slice(2);
+  const given = args.filter((a) => a.startsWith('-'));
+  const unknown = given.filter((a) => !OPTIONS.includes(a) && !LIMIT.test(a));
+  if (unknown.length)
+    throw new Error(
+      `unknown option ${unknown.join(', ')}. Options are ${OPTIONS.join(', ')} and --limit=N.`,
+    );
   const write = args.includes('--write');
   const force = args.includes('--force');
-  const wanted = args.filter((a) => !a.startsWith('--'));
-  const limit = Number(/--limit=(\d+)/.exec(args.join(' '))?.[1] ?? 0);
-  const ids = (
-    wanted.length
-      ? wanted
-      : reciters.filter((r) => r.recitation !== undefined).map((r) => r.id)
-  ).filter((id) => existsSync(new URL(`${id}.json`, TIMINGS)));
+  const only = args.includes('--hearing');
+  if (only && write)
+    throw new Error('--hearing measures no cuts, so there is nothing to write');
+  const wanted = args.filter((a) => !a.startsWith('-'));
+  const limit = Number(
+    given.map((a) => LIMIT.exec(a)?.[1]).find((n) => n !== undefined) ?? 0,
+  );
+  // Zero matches the shape and then reads as "no limit", so a `--limit=0
+  // --write` would quietly write the whole mushaf past the refusal below.
+  if (given.includes('--limit=0'))
+    throw new Error(
+      '--limit=0 measures nothing; leave it out for the whole mushaf',
+    );
+  /* A named reciter with no timing file is a typo, and saying so beats
+     measuring the eleven others instead. The same filter over the default list
+     is not: several reciters legitimately have no file. */
+  for (const id of wanted)
+    if (!existsSync(new URL(`${id}.json`, TIMINGS)))
+      throw new Error(`no timing file for «${id}»`);
+  const ids = wanted.length
+    ? wanted
+    : reciters
+        .filter((r) => r.recitation !== undefined)
+        .map((r) => r.id)
+        .filter((id) => existsSync(new URL(`${id}.json`, TIMINGS)));
   if (!ids.length) throw new Error('no timing files for the reciters given');
   mkdirSync(CACHE, { recursive: true });
-  for (const id of ids) await verify(id, write, limit, force);
+  for (const id of ids) await verify(id, write, limit, force, only);
 }
 
 if (pathToFileURL(process.argv[1]).href === import.meta.url)

@@ -42,6 +42,7 @@ header comment.
 ```sh
 npm run prepare:quran
 npm run prepare:timings
+node scripts/verify-cuts.ts --hearing   # can a gate hear each recitation at all?
 npm run verify:cuts        # then measure those cuts against the recordings
 npm run assets             # the share card and the icons, in headless Chrome
 ```
@@ -327,11 +328,11 @@ at run time.
     still finishing his word. The 290 ms that number was fitted to came from a
     130-ayah sample of three reciters and **is superseded**: measured over
     whole mushafs, the correction wanted is +409 ms for Husary, +354 for Abdul
-    Basit's murattal, +107 for the teaching mushaf and **−435** for Abdul
-    Basit's mujawwad. So do not tune `LAG` to any of them. It is left at 300
-    deliberately, since fitting one number to one reciter's evidence is the
-    mistake measuring exists to replace, and a recitation still resting on it
-    wants measuring rather than fitting.
+    Basit's murattal, +107 for the teaching mushaf, +578 for Minshawi's
+    murattal and **−435** for Abdul Basit's mujawwad. So do not tune `LAG` to
+    any of them. It is left at 300 deliberately, since fitting one number to
+    one reciter's evidence is the mistake measuring exists to replace, and a
+    recitation still resting on it wants measuring rather than fitting.
   - **Timings are read by `verse_key`, never by position.** One shipped
     recitation returns its ayat out of order, and one is missing an ayah.
 
@@ -609,32 +610,43 @@ the last two. If you change this, check the estimate the home screen shows.
 
 Good next steps, roughly in order of value:
 
-1. **Measure Minshawi's two recitations against their audio**, which are the
-   only ones left that this method can reach. `scripts/verify-cuts.ts` has
-   been run on the four marked `verified` in `src/data/timings/`; what it
+1. **Give the silence detector a gate of its own per recitation.** This is the
+   one piece of work that unblocks everything else about phrase cuts, and it
+   is now well posed rather than speculative. `scripts/verify-cuts.ts` has
+   measured the four marked `verified` in `src/data/timings/`, and what it
    found is stronger than a wrong constant, because the correct **sign**
-   differs by recitation. Husary's cuts are a median 406 ms early and Abdul
-   Basit's mujawwad a median 432 ms late, so the one lag helps the first and
-   hurts the second by about the same amount. The teaching mushaf needed
-   almost nothing: 96.4% of its cuts were already inside a real pause.
+   differs by recitation: Husary's cuts are a median 409 ms early and Abdul
+   Basit's mujawwad 435 ms late, so one lag helps the first and hurts the
+   second by about the same amount. The teaching mushaf needed almost nothing,
+   96.4% of its cuts already sitting in a real pause.
 
-   **Read `data/README.md` before running it, and do not assume the rest are
-   one command each.** Five of the twelve recitations cannot be measured by
-   level at all: they are modern masters with 10 to 16 dB between speech and
-   their own noise floor, against 34 to 66 dB for the six classic ones, and
-   four of them have a floor *above* the -40 dBFS gate, so it is never
-   crossed. Run blind, that emptied the phrase cuts of five recitations and
-   read in the report as five reciters who never stop for breath. The script
-   now measures the mastering first and refuses, and prints the two numbers so
-   the refusal can be checked. Both guards are pinned by a table in
-   `scripts/verify-cuts.test.ts` holding what each recitation actually
-   measured, so moving `MIN_RANGE` or `NOISE` tells you by name which
-   recitations you just broke. `WINDOW` has already been widened to 2500 ms for
-   them, on the evidence in `data/README.md`: both of Minshawi's want a median
-   offset near a second, and at 1500 their largest move sat exactly on the
-   edge. His murattal then places 88% of a sample and is worth the bandwidth;
-   his mujawwad places 65%, below `MIN_YIELD`, and needs a decision before
-   `--force` rather than after.
+   The blocker is that `NOISE` is a **fixed** -40 dBFS across recordings whose
+   noise floors span 60 dB. Minshawi's murattal passes the mastering check,
+   and then places only 62.6% of its ayat mushaf-wide, which `MIN_YIELD`
+   refuses. A gate sweep with a mid-phrase control shows why, and it is not
+   the reciter: at -32 dBFS he places 90% while the share of mid-phrase points
+   mistaken for a pause moves from 1.2% to 1.4%, against 3.0% that the shipped
+   gate already mistakes on Husary. His pauses are real: a gate at -32 finds
+   90% of them and one at -28 finds 98%, so they bottom out between -40 and
+   -28, filled with reverb and room rather than reaching silence.
+
+   **Read `data/README.md` before touching any of it.** The three obvious
+   reparameterisations are already tried and recorded there, and each fails on
+   some recitation, so the gate has to come from the valley in each
+   recitation's own level histogram and be validated per recitation against a
+   control. Two things are load-bearing while you do it. Five of the twelve
+   recitations cannot be measured by level at all: modern masters with 10 to
+   16 dB between speech and their own floor, against 32 to 66 dB for the six
+   classic ones, and **every one of the five has a floor above the -40 dBFS
+   gate**. Written blind, that would have emptied the phrase cuts of five
+   recitations, and in the report it read as five reciters who never stop for
+   breath. And a limited run
+   is not a sample: `--limit=60` reads the front of a file, and it is what put
+   Minshawi at 88% and 43.6 dB of range when the answers are 62.6% and 32.5.
+   Ask `--hearing` instead, which reads the mastering mushaf-wide off two dozen
+   files. Both guards are pinned by a table in `scripts/verify-cuts.test.ts`
+   holding what each recitation actually measured, so moving `MIN_RANGE`,
+   `NOISE` or `MIN_YIELD` tells you by name which recitations you just broke.
 2. Highlight each word as it is recited. The committed timing data already has
    what this needs.
 3. Give the review plan its own screen. Today the home screen shows only the
