@@ -97,6 +97,12 @@ export class Session {
   private readonly listeners = new Set<() => void>();
   private readonly durations = new Map<string, number>();
   private readonly urls: string[];
+  /* Each segment's length before any of its audio has been measured, worked
+     out once. `segmentSeconds` is asked for every segment of every step still
+     ahead of the learner, four times a second, and `paceEstimate` counts the
+     letters of a segment's text with a regular expression: costing al-Baqarah
+     whole at «الكل» spent 850 of every 1,000 ms here, and now spends 4. */
+  private readonly estimates: readonly number[];
   private state: SessionState;
   private generation = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -126,6 +132,9 @@ export class Session {
       for (const clip of segment.clips)
         seen.add(ayahAudioUrl(clip.surah, clip.ayah, options.reciter));
     this.urls = [...seen];
+    this.estimates = options.segments.map((segment) =>
+      paceEstimate(segment, options.pace),
+    );
     this.state = {
       phase: 'idle',
       cursor: startCursor,
@@ -165,7 +174,7 @@ export class Session {
       const known = this.durations.get(
         ayahAudioUrl(clip.surah, clip.ayah, this.options.reciter),
       );
-      if (known === undefined) return paceEstimate(segment, this.options.pace);
+      if (known === undefined) return this.estimates[index] ?? 0;
       const to = clip.to === null ? known : Math.min(clip.to, known);
       total += Math.max(0, to - Math.min(clip.from, known));
     }

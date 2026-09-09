@@ -78,9 +78,12 @@ export function preparePassage(
   pace: number,
 ): PreparedPassage {
   const { segments, steps } = buildPassage(loaded, from, to, grain, plan);
+  // One pass over the segments, not one per index of every step: a link step
+  // that reaches back over the whole passage asks for each of them again.
+  const estimates = segments.map((segment) => paceEstimate(segment, pace));
   const seconds = costSession(
     steps,
-    (index) => paceEstimate(segments[index], pace),
+    (index) => estimates[index] ?? 0,
     echo,
   ).total;
   return { segments, steps, seconds, plays: totalPlays(steps) };
