@@ -105,6 +105,21 @@ A few rules the class keeps to. Break one and something will get stuck:
   front of the learner whole, so `spent()` has to account for every second
   already behind them: the audio played, the echo elapsed, and what a paused
   run had covered. Miss one and the clock climbs back up instead of down.
+- **The forecast is published once and left alone while the audio loads.** A
+  recording's real length replaces one segment's estimate, and the estimates
+  scatter about 20% either side of the truth per ayah, so republishing on
+  every arrival put six different totals on the screen in three seconds and
+  climbed on most of them: measured against Husary's own recordings,
+  2:228-232 went 7294 → 7377 → 7694 → 7896 → 7927 → 8097 seconds, upwards
+  every time. So `load()` publishes `loaded` and not `remaining`, and a tick
+  during `preparing` publishes nothing at all, since nothing is sounding and
+  nothing is elapsing. The correction lands once, on the first tick after the
+  drill starts, and from there the clock only counts down.
+
+  Do not reach for a better estimate instead. Correcting the unmeasured tail
+  by the ratio measured so far is worse, not better: the error is scatter and
+  not a wrong pace, measured at 0.979 over 400 of Husary's ayat, so summing
+  five estimates averages it down where scaling by one sample does not.
 
 ## Audio
 

@@ -35,7 +35,8 @@ export type SessionState = {
   cursor: Cursor;
   /** Fraction of the passage's recordings already fetched, 0 to 1. */
   loaded: number;
-  /** Seconds left in the whole drill, sharpening as real lengths arrive. */
+  /** Seconds left in the whole drill: the reciter's pace until the run's own
+      recordings are measured, then corrected once and counting down. */
   remaining: number;
   /** Seconds left of the current echo, and its full length, for the ring. */
   echoLeft: number;
@@ -261,10 +262,19 @@ export class Session {
     const seconds = await this.fetch(url);
     if (this.disposed) return;
     this.durations.set(url, seconds);
-    this.set({
-      loaded: this.durations.size / Math.max(1, this.urls.length),
-      remaining: this.countdown(),
-    });
+    /* `loaded` only. The countdown is deliberately not republished here: a
+       recording's real length replaces one segment's estimate, and the
+       estimates scatter about 20% either side of the truth per ayah, so a
+       five-ayah passage used to publish six different totals in three seconds
+       and climb on most of them. Measured against Husary's own recordings,
+       2:228-232 went 7294 -> 7377 -> 7694 -> 7896 -> 7927 -> 8097, upwards
+       every single time. Correcting the unmeasured tail by the ratio measured
+       so far is worse rather than better: the error is scatter, not a wrong
+       pace, so summing five estimates averages it down where scaling by one
+       sample does not. So the forecast stands as it was until the drill
+       starts, which is when the tick picks it up with the run's own lengths
+       known and it counts down from there. */
+    this.set({ loaded: this.durations.size / Math.max(1, this.urls.length) });
   }
 
   /**
@@ -560,6 +570,10 @@ export class Session {
         this.pause();
         return;
       }
+      /* Nothing is sounding and nothing is elapsing while the recordings
+         arrive, so a tick has nothing of its own to publish, and rewriting the
+         forecast is precisely what made the clock jump about. */
+      if (this.state.phase === 'preparing') return;
       const spent = this.spent();
       const echoLeft =
         this.state.phase === 'echoing'

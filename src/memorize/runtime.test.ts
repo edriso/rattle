@@ -44,9 +44,25 @@ class FakeAudio implements Audio {
   abandonFirst: string | null = null;
   abandonTimes = 0;
 
+  /** Substring of a URL whose loads wait for `release()`. Holding back the
+      one recording a run needs, and no other, is what leaves the session in
+      `preparing` while the prefetch goes on measuring the rest, which is the
+      state a learner watches for the first seconds of every sitting. */
+  holdOn: string | null = null;
+  private gate: (() => void)[] = [];
+
+  release() {
+    this.holdOn = null;
+    const queued = this.gate;
+    this.gate = [];
+    for (const go of queued) go();
+  }
+
   async load(url: string, signal?: AbortSignal) {
     this.signals.push(signal);
     this.loads.push(url);
+    if (this.holdOn && url.includes(this.holdOn))
+      await new Promise<void>((go) => this.gate.push(go));
     if (
       this.abandonFirst &&
       url.includes(this.abandonFirst) &&
@@ -342,6 +358,11 @@ describe('session runtime', () => {
     const { session, audio } = build({ echo: 1 });
     await session.start();
     await settle();
+    /* Watched from the correction rather than from the forecast: replacing an
+       estimate with the run's own measured length is the one change to this
+       number that is allowed to go upwards, and it happens once, on the first
+       tick after the drill starts. */
+    await vi.advanceTimersByTimeAsync(250);
     const seen = [session.getSnapshot().remaining];
     const watch = () => seen.push(session.getSnapshot().remaining);
     audio.now += 4;
@@ -475,6 +496,37 @@ describe('session runtime', () => {
        recosting the whole drill four times a second, publishing nothing, for
        as long as it was open. */
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  /* A five-ayah passage used to publish six different totals in three seconds
+     and climb on most of them, because a recording's real length replaces one
+     segment's estimate and the estimates scatter about 20% either side of the
+     truth per ayah. Measured against Husary's own recordings, 2:228-232 went
+     7294 -> 7377 -> 7694 -> 7896 -> 7927 -> 8097 seconds, upwards every
+     single time. Correcting the unmeasured tail by the ratio measured so far
+     is worse, not better: the error is scatter rather than a wrong pace, so
+     summing five estimates averages it down where scaling by one sample does
+     not. The forecast therefore stands until the drill starts. */
+  it('holds the forecast still while the recitation is loading', async () => {
+    const { session, audio } = build();
+    // Three times the estimate, so any sharpening at all is unmistakable.
+    audio.seconds = 30;
+    audio.holdOn = '100001';
+    const forecast = session.getSnapshot().remaining;
+    void session.start();
+    await settle();
+    await vi.advanceTimersByTimeAsync(700);
+    /* The run is still waiting on its own recording while the prefetch has
+       measured the others, which is exactly when the total used to move. */
+    expect(session.getSnapshot().phase).toBe('preparing');
+    expect(session.getSnapshot().loaded).toBeGreaterThan(0);
+    expect(session.getSnapshot().remaining).toBe(forecast);
+    audio.release();
+    await settle();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(session.getSnapshot().phase).toBe('reciting');
+    // Corrected once, now that the run's own length is known too.
+    expect(session.getSnapshot().remaining).toBeGreaterThan(forecast);
   });
 
   it('sharpens the estimate once real lengths are known', async () => {
