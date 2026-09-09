@@ -786,6 +786,13 @@ progress::-moz-progress-bar {
   color: var(--muted-foreground);
   margin: 8px 0 0;
 }
+/* A live region is drawn before it has anything to say, so that a screen
+   reader has a region to announce a change inside. Empty, it must take up
+   no room at all. */
+.field-note:empty,
+.storage-notice:empty {
+  margin: 0;
+}
 .swatches {
   display: flex;
   gap: 24px;

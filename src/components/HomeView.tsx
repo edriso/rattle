@@ -295,8 +295,18 @@ export function HomeView({
         <fieldset className="grain-row">
           <legend className="setting-label">
             الترديد
-            {typeof prefs.echo === 'number' && (
-              <span className="muted"> · سكتة {echoLabel(prefs.echo)}</span>
+            {/* «أنا أتحكّم» is named without «سكتة» in front of it, because it
+                is not a length: it is the drill waiting to be told to go on.
+                It used to be the one mode this screen did not name, and it is
+                the one whose meaning a learner most needs before they begin,
+                since the drill stops after the first segment and waits. */}
+            {prefs.echo !== 'off' && (
+              <span className="muted">
+                {' · '}
+                {typeof prefs.echo === 'number'
+                  ? `سكتة ${echoLabel(prefs.echo)}`
+                  : echoLabel(prefs.echo)}
+              </span>
             )}
           </legend>
           <div className="segmented">

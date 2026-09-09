@@ -149,7 +149,11 @@ export function AyahView({
             aria-label={playing ? 'إيقاف التلاوة مؤقّتًا' : 'تشغيل التلاوة'}
             aria-keyshortcuts="Space ArrowUp"
             title="تشغيل أو إيقاف (مسافة أو ↑)"
-            disabled={capturing}
+            /* Recording starts from Shift+Enter, which can be pressed while
+               this button holds the focus, and going `disabled` then would
+               drop the keyboard just as the microphone dialog opens.
+               `toggleReciter` refuses the press while capturing. */
+            aria-disabled={capturing}
             onClick={toggleReciter}
           >
             {playing ? (
@@ -171,7 +175,11 @@ export function AyahView({
             <ChevronLeft />
           </button>
         </div>
-        {notice && <output className="field-note">{notice}</output>}
+        {/* Always drawn, empty when there is nothing to say: a status region
+            inserted into the page together with its text is a region a screen
+            reader has nothing to compare against, and it announces nothing.
+            `.session-phase` on the session screen is the same pattern. */}
+        <output className="field-note">{notice}</output>
         <Recorder
           ref={recording}
           onCaptureChange={setCapturing}

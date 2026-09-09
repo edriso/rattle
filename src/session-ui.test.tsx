@@ -224,6 +224,22 @@ describe('choosing a passage', () => {
     );
   });
 
+  /* Everything that decides what a sitting will be is drawn on this screen.
+     «أنا أتحكّم» was the exception, and it is the mode whose meaning a learner
+     most needs before they begin: the drill stops after the first segment and
+     waits to be told to go on. The screen named every other gap and not that
+     one. */
+  it('names the gap it was given, including the one that waits', async () => {
+    start({ surah: 112, ayah: 1, to: 4, echo: 'manual' });
+    render(<App />);
+    const group = await screen.findByRole('group', { name: /الترديد/ });
+    expect(group.textContent).toContain('أنا أتحكّم');
+    expect(group.textContent).not.toContain('سكتة أنا أتحكّم');
+    fireEvent.click(screen.getByRole('radio', { name: 'أستمع فقط' }));
+    // And says nothing about a gap once there is none to name.
+    await waitFor(() => expect(group.textContent).not.toContain('أنا أتحكّم'));
+  });
+
   it('offers the ayah before the passage so it can be joined to what came before', async () => {
     start({ surah: 2, ayah: 6, to: 10 });
     render(<App />);

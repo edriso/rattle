@@ -176,11 +176,13 @@ export function App() {
           )}
         </main>
 
-        {(storageError || review.failed) && (
-          <output className="storage-notice">
-            تعذّر حفظ التقدّم في هذا المتصفح.
-          </output>
-        )}
+        {/* Drawn empty rather than conditionally, so that the text arriving
+            is a change inside a region a screen reader is already watching. */}
+        <output className="storage-notice">
+          {storageError || review.failed
+            ? 'تعذّر حفظ التقدّم في هذا المتصفح.'
+            : ''}
+        </output>
 
         <Suspense fallback={null}>
           {panel === 'picker' && (

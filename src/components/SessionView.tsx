@@ -303,7 +303,10 @@ export function SessionView({
               className="icon-button skip-echo"
               aria-label="تابِع الآن"
               aria-keyshortcuts={inGap ? 'ArrowLeft Enter' : undefined}
-              title="تابِع الآن (← أو إدخال)"
+              // Named the same way whatever the phase, but the keys are only
+              // claimed while it holds them: outside the turn they belong to
+              // «الخطوة التالية» beside it.
+              title={inGap ? 'تابِع الآن (← أو إدخال)' : 'تابِع الآن'}
               aria-disabled={!inGap}
               onClick={() => inGap && session.continue()}
             >

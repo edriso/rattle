@@ -86,9 +86,10 @@ it('records with Shift+Enter, ignores repeated stop, and plays with Shift+Space'
   await screen.findByRole('button', { name: 'إنهاء التسجيل' });
   expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledOnce();
   expect(
-    (screen.getByRole('button', { name: 'تشغيل التلاوة' }) as HTMLButtonElement)
-      .disabled,
-  ).toBe(true);
+    screen
+      .getByRole('button', { name: 'تشغيل التلاوة' })
+      .getAttribute('aria-disabled'),
+  ).toBe('true');
   key('Enter');
   key('Enter');
   expect(recorder.stop).toHaveBeenCalledOnce();
@@ -191,4 +192,21 @@ it('keeps the keyboard on the record button while the microphone is asked for', 
     button,
   );
   expect(document.activeElement).toBe(button);
+});
+
+/* Recording starts from Shift+Enter, which can be pressed while the
+   recitation button holds the focus. `disabled` on that button dropped the
+   keyboard at exactly the moment the microphone dialog opened. */
+it('keeps the keyboard on the recitation button when recording starts', async () => {
+  render(<App />);
+  const play = await screen.findByRole('button', { name: 'تشغيل التلاوة' });
+  play.focus();
+  key('Enter');
+  await screen.findByRole('button', { name: 'إنهاء التسجيل' });
+  expect(play.getAttribute('aria-disabled')).toBe('true');
+  expect((play as HTMLButtonElement).disabled).toBe(false);
+  expect(document.activeElement).toBe(play);
+  // And the press it would have taken is refused rather than queued.
+  fireEvent.click(play);
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
 });

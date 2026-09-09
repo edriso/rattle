@@ -74,6 +74,13 @@ export function Recorder({
   }
   function clear() {
     pausePlayback();
+    /* Both controls below go with the recording, so anybody standing on one
+       of them is moved to the record button rather than left on nothing.
+       Here rather than in the delete handler, because re-recording drops the
+       previous take the same way. */
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && focused.closest('.recording-result'))
+      document.getElementById('record-toggle')?.focus();
     if (audio.current) {
       audio.current.removeAttribute('src');
       audio.current.load();
@@ -313,7 +320,7 @@ export function Recorder({
           />
         </div>
         {state === 'recording' && (
-          <span className="record-time" role="timer">
+          <span className="record-time" role="timer" aria-label="مدة التسجيل">
             {arabic(Math.floor(seconds / 60))}:
             {arabic(seconds % 60).padStart(2, '٠')}
           </span>
@@ -323,7 +330,7 @@ export function Recorder({
             <button
               id="record-play"
               className="icon-button"
-              disabled={state !== 'idle'}
+              aria-disabled={state !== 'idle'}
               onClick={() => {
                 void playback();
               }}
@@ -334,14 +341,15 @@ export function Recorder({
               {playing ? <Pause size={19} /> : <Play size={19} />}
             </button>
             <button
+              id="record-delete"
               className="icon-button"
-              disabled={state !== 'idle'}
+              aria-disabled={state !== 'idle'}
               aria-label="حذف التسجيل"
               title="حذف التسجيل"
               onClick={() => {
+                if (state !== 'idle') return;
                 clear();
                 setError('');
-                document.getElementById('record-toggle')?.focus();
               }}
             >
               <Trash2 size={17} />
