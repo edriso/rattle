@@ -1,12 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Check, ChevronLeft } from 'lucide-react';
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetDescription,
-  SheetClose,
-} from '@/components/ui/sheet';
+import { useMemo, useRef, useState } from 'react';
+import { Check, ChevronLeft } from 'lucide-react';
 import {
   Combobox,
   ComboboxInput,
@@ -23,7 +16,9 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { findReciter, paceLabel, reciters } from '../data/audio';
-import { cachedSurah, loadSurah, openVerse } from '../data/text';
+import { openVerse } from '../data/text';
+import { useSurah } from '../useSurah';
+import { Panel } from './Panel';
 import {
   surahs,
   arabic,
@@ -37,54 +32,6 @@ import { echoLabel, echoModes, type EchoMode } from '../memorize/session';
 import { MAX_INTERVAL } from '../memorize/review';
 import type { SchedulePlan } from '../memorize/schedule';
 import { Stepper } from './Stepper';
-
-/* Drawn only while it is open, so there is no closed state to pass in: every
-   caller renders this conditionally. */
-function Panel({
-  onClose,
-  title,
-  description,
-  landOn,
-  children,
-}: {
-  onClose: () => void;
-  title: string;
-  description: string;
-  /** Where the cursor goes, when it is not the panel's own name. */
-  landOn?: React.RefObject<HTMLElement | null>;
-  children: React.ReactNode;
-}) {
-  /* Opening a panel puts the cursor on its title, not on the close button:
-     landing on «إغلاق» reads as though leaving were the thing to do, and a
-     screen reader hears the panel's name instead of "close". */
-  const heading = useRef<HTMLDivElement>(null);
-  return (
-    <Sheet
-      open
-      onOpenChange={(v) => {
-        if (!v) onClose();
-      }}
-    >
-      <SheetContent
-        side="left"
-        className="rattle-sheet"
-        showCloseButton={false}
-        initialFocus={landOn ?? heading}
-        dir="rtl"
-      >
-        <div className="sheet-handle" />
-        <div className="sheet-heading" ref={heading} tabIndex={-1}>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetClose className="icon-button" aria-label="إغلاق">
-            <X size={21} />
-          </SheetClose>
-        </div>
-        <SheetDescription className="sr-only">{description}</SheetDescription>
-        {children}
-      </SheetContent>
-    </Sheet>
-  );
-}
 
 /** An ayah of the chosen surah: its number, and enough of its opening to be
     recognised by somebody who knows the verse and not the number. */
@@ -106,38 +53,6 @@ const opening = (text: string) => {
     ? `${words.slice(0, HEAD_WORDS).join(' ')}…`
     : words.join(' ');
 };
-
-/**
- * The chosen surah's verses, or null until they arrive. Nothing waits on them:
- * the ayah fields work as number fields meanwhile, and a surah whose text
- * cannot be loaded simply never shows its openings.
- */
-function useVerses(surah: number) {
-  const [result, setResult] = useState<{
-    id: number;
-    verses?: readonly string[];
-  }>(() => ({ id: surah, verses: cachedSurah(surah) }));
-  /* Read through the module cache during render rather than reaching for it in
-     the effect, so a surah already in memory has its openings on first paint. */
-  const verses =
-    cachedSurah(surah) ?? (result.id === surah ? result.verses : undefined);
-  useEffect(() => {
-    if (verses) return;
-    let active = true;
-    void loadSurah(surah).then(
-      (text) => {
-        if (active) setResult({ id: surah, verses: text });
-      },
-      () => {
-        if (active) setResult({ id: surah });
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [surah, verses]);
-  return verses;
-}
 
 /**
  * One end of the passage, chosen by number or by the verse itself. Typing a
@@ -265,7 +180,7 @@ export function Picker({
   /* Every ayah of the chosen surah, so either field can be read down rather
      than typed into. Costing al-Baqarah whole is a couple of milliseconds and
      happens once per surah, not per keystroke. */
-  const verses = useVerses(id);
+  const { verses } = useSurah(id);
   const choices = useMemo(
     () =>
       Array.from({ length: selected.count }, (_, i) => {

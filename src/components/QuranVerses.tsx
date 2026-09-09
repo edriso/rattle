@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { arabic } from '../data/quran';
-import { cachedSurah, loadSurah, openVerse } from '../data/text';
+import { openVerse } from '../data/text';
+import { useSurah } from '../useSurah';
 export function QuranVerses({
   surah,
   first,
@@ -10,42 +10,14 @@ export function QuranVerses({
   first: number;
   last: number;
 }) {
-  const [result, setResult] = useState<{
-    id: number;
-    verses?: readonly string[];
-    error?: boolean;
-  }>(() => ({ id: surah, verses: cachedSurah(surah) }));
-  const [attempt, setAttempt] = useState(0);
-  const verses =
-    cachedSurah(surah) ?? (result.id === surah ? result.verses : undefined);
-  useEffect(() => {
-    if (verses) return;
-    let active = true;
-    void loadSurah(surah).then(
-      (text) => {
-        if (active) setResult({ id: surah, verses: text });
-      },
-      () => {
-        if (active) setResult({ id: surah, error: true });
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [surah, attempt, verses]);
+  const { verses, failed, retry } = useSurah(surah);
   if (!verses)
     return (
       <div className="placeholder" aria-live="polite">
-        {result.id === surah && result.error ? (
+        {failed ? (
           <>
             <p>تعذّر تحميل النص.</p>
-            <button
-              className="reveal-button"
-              onClick={() => {
-                setResult({ id: surah });
-                setAttempt((n) => n + 1);
-              }}
-            >
+            <button className="reveal-button" onClick={retry}>
               إعادة المحاولة
             </button>
           </>

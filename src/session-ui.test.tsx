@@ -749,6 +749,29 @@ describe('a talqeen session', () => {
     ).toBeTruthy();
   });
 
+  /* Every panel opens with the cursor on its own name rather than on «إغلاق»,
+     which reads as though leaving were the thing to do and gives a screen
+     reader "close" instead of what it is looking at. This sheet carried its
+     own copy of the frame that does it, so the rule was written down twice
+     and a fix to one would have missed the panel a learner sees at the end of
+     every sitting. */
+  it('opens the grading sheet on its own name, not on the way out', async () => {
+    start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
+    render(<App />);
+    fireEvent.click(
+      await screen.findByRole(
+        'button',
+        { name: /أنهِ الجلسة/ },
+        { timeout: 3000 },
+      ),
+    );
+    const heading = (await screen.findByText('كيف كان السرد؟')).closest(
+      '.sheet-heading',
+    );
+    expect(heading).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+  });
+
   it('schedules the passage for review once it is graded', async () => {
     start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
     render(<App />);
