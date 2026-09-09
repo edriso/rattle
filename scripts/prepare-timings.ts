@@ -26,7 +26,11 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { reciters } from '../src/data/audio.ts';
 import { openVerse } from '../src/data/verse.ts';
-import { splitVerse, verseWords } from '../src/memorize/phrases.ts';
+import {
+  splitVerse,
+  spokenLetters,
+  verseWords,
+} from '../src/memorize/phrases.ts';
 
 const API = 'https://api.qurancdn.com/api/qdc/audio/reciters';
 const OUT = new URL('../src/data/timings/', import.meta.url);
@@ -187,7 +191,7 @@ async function build(reciter: (typeof reciters)[number]) {
       }
       // Counted here rather than above, so an ayah the source has no timing
       // for contributes neither letters nor seconds to the measured pace.
-      report.letters += text.replace(/[ً-ٰٕۖ-ۭـ\s]/g, '').length;
+      report.letters += spokenLetters(text);
       report.seconds += (timing.timestamp_to - timing.timestamp_from) / 1000;
       const phrases = splitVerse(text);
       if (phrases.length < 2) return;

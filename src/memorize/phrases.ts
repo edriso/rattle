@@ -129,3 +129,24 @@ export function splitVerse(verse: string): Phrase[] {
 export function verseWords(verse: string): string[] {
   return verse.split(' ').filter((token) => token && !isMark(token));
 }
+
+/**
+ * Everything in the Uthmani text that is not a letter the reciter voices: the
+ * harakat and tanwin through to the dagger alef (U+064B to U+0670, which takes
+ * in the shadda, the sukun and the madda), every mark and small letter above
+ * or below the line (U+06D6 to U+06ED, the waqf marks among them), the tatweel
+ * that only stretches a join, and the spaces between words. Checked against
+ * all 6,236 verses in `phrases.test.ts`: over the whole mushaf what it takes
+ * out is marks, symbols, spaces and the modifiers written above the line, and
+ * what it leaves is base letters and nothing else.
+ */
+const UNVOICED = /[\u064B-\u0670\u06D6-\u06ED\u0640\s]/g;
+
+/**
+ * Letters a reciter actually voices, which is what recitation time tracks. The
+ * pace figures in `src/data/audio.ts` were measured with this same count by
+ * `scripts/prepare-timings.ts`, so the two must not drift: a session's
+ * estimate is letters times a pace fitted to letters counted this way.
+ */
+export const spokenLetters = (text: string) =>
+  text.replace(UNVOICED, '').length;

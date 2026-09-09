@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitVerse, verseWords } from './phrases';
+import { splitVerse, spokenLetters, verseWords } from './phrases';
 
 const surahs = import.meta.glob<{ verses: string[] }>('../data/surahs/*.json', {
   import: 'default',
@@ -93,6 +93,34 @@ describe('phrase splitting', () => {
        the figure to expect from anything that goes through `openVerse` and
        neither number is stale. */
     expect(phrases).toBe(8380);
+  });
+
+  /* `spokenLetters` reads a character class of ranges, and a range is exactly
+     what a bidirectional editor reorders on screen without changing the file,
+     which is why it is written in escapes. This is the self-test that makes
+     the escapes provable, and it is worth having because nothing else would
+     notice: a range that lost a member would leave marks in the count, and
+     every session estimate in the app would be quietly long. The invariant is
+     that the count is base letters and nothing else. What goes out with the
+     harakat is every combining mark, the two mushaf symbols (۞ and ۩), the
+     spaces, and the three letter-shaped modifiers written above the line, the
+     tatweel and the small waw and yeh, which stretch or vowel a letter rather
+     than being one. */
+  it('counts base letters across the mushaf, and nothing else', () => {
+    const dropped = new Set<string>();
+    const counted = new Set<string>();
+    for (let surah = 1; surah <= 114; surah++)
+      for (const text of surahs[`../data/surahs/${surah}.json`].verses)
+        for (const character of text)
+          (spokenLetters(character) ? counted : dropped).add(character);
+    expect(
+      [...dropped].filter((c) => !/[\p{Mn}\p{Lm}\p{So}\s]/u.test(c)),
+    ).toEqual([]);
+    expect([...counted].filter((c) => !/\p{Lo}/u.test(c))).toEqual([]);
+    // Both kinds are really in the mushaf, so neither list is empty for want
+    // of having looked.
+    expect(dropped.size).toBeGreaterThan(30);
+    expect(counted.size).toBeGreaterThan(30);
   });
 
   /* Half of all phrases are eight words, which is the length this is for. The

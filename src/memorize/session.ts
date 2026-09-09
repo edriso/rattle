@@ -3,7 +3,7 @@
 
 import { ayatCount } from '../data/arabic';
 import { openVerse } from '../data/verse';
-import { splitVerse } from './phrases';
+import { splitVerse, spokenLetters } from './phrases';
 import {
   runsRemaining,
   type Cursor,
@@ -155,12 +155,6 @@ export function buildSegments(
   }
   return segments;
 }
-
-const DIACRITICS = /[ً-ٰٕۖ-ۭـ\s]/g;
-
-/** Letters a reciter actually voices, which is what recitation time tracks. */
-export const spokenLetters = (text: string) =>
-  text.replace(DIACRITICS, '').length;
 
 /**
  * The silence left after each pass for the learner to recite it back, as a
