@@ -326,8 +326,8 @@ at run time.
     (`LAG`), because a clip ending at the boundary ended while the reciter was
     still finishing his word. The 290 ms that number was fitted to came from a
     130-ayah sample of three reciters and **is superseded**: measured over
-    whole mushafs, the correction wanted is +406 ms for Husary, +347 for Abdul
-    Basit's murattal, +106 for the teaching mushaf and **−432** for Abdul
+    whole mushafs, the correction wanted is +409 ms for Husary, +354 for Abdul
+    Basit's murattal, +107 for the teaching mushaf and **−435** for Abdul
     Basit's mujawwad. So do not tune `LAG` to any of them. It is left at 300
     deliberately, since fitting one number to one reciter's evidence is the
     mistake measuring exists to replace, and a recitation still resting on it

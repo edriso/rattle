@@ -41,25 +41,24 @@ const DETECT = 0.15;
     rather than a consonant closure or a breath inside a phrase. */
 const MIN_SILENCE = 250;
 /**
- * How far from its current position a cut may be moved to reach a silence.
- * Wider than this and it is a different boundary, not the same one measured.
+ * How far a cut may be moved to reach a silence. Wider than this and it is a
+ * different boundary, not the same one measured. The bound is on the move, and
+ * entering a pause costs `MARGIN`, so the furthest a pause may sit from a cut
+ * is `WINDOW - MARGIN`.
  *
- * 1500 was sized for an error of a few hundred milliseconds, which is what the
- * first recitations measured. Minshawi's two want about a second, and at 1500
- * their largest move sat exactly on the edge: the window was clipping the
- * answer rather than bounding it. 2500 is where his murattal's median stops
- * moving (971ms at a window of 1500, 1002 at 2500, 1002 at 3500) and it takes
- * the ayat it can place from 82% of a 60-ayah sample to 88%.
+ * Sized against the offsets actually measured rather than fitted: the largest
+ * median measured over a whole mushaf is 578ms, and 2500 is more than four
+ * times that, so what the window cuts off is the tail of the distribution and
+ * not its body. A window near a recitation's own median would not bound the
+ * correction, it would clip it, and hide how wrong the constant was instead of
+ * measuring it.
  *
- * Widening it costs the recitations already measured nothing, and that is not
- * a judgement call: every cut in a verified file already sits inside a pause,
- * so `judge` returns `kept` and never reaches this. Read-only over all of
- * Husary and all of Abdul Basit's mujawwad at 2500, both come back 100% kept,
- * 0 moved, 0 unfounded.
- *
- * What it does not do is give those four back the cuts they dropped at 1500,
- * because a dropped cut is not in the file to reconsider. Recovering those
- * means `prepare:timings --force` and then measuring again.
+ * It was 1500 when the first four were measured, which dropped 463 of their
+ * ayat for having no pause inside it. Re-measured at 2500, 127 of those came
+ * back, 0 were lost and 0 altered: nothing in a verdict depends on the window
+ * except whether a correction is accepted, so widening it can only ever add.
+ * `verify-cuts.test.ts` pins that, and it is why the recovery was a safe
+ * operation rather than a judgement.
  */
 const WINDOW = 2500;
 /**
@@ -252,10 +251,20 @@ type Verdict =
   | { kind: 'moved'; at: number; by: number }
   | { kind: 'unfounded'; nearest: number };
 
-/** What the recording says about one cut. */
+/**
+ * What the recording says about one cut. `window` is how far it may be moved,
+ * and it decides only whether a correction is accepted; nothing else in the
+ * verdict depends on it, because which pause a cut belongs in, where inside it
+ * the cut lands and how far the nearest pause was are all read off the
+ * recording. So re-measuring a file at a wider window returns a byte-identical
+ * verdict wherever it accepted one before, and can only ever add: that is what
+ * made recovering the ayat a 1500ms window had dropped a safe operation rather
+ * than a judgement. It is a parameter so a test can say so.
+ */
 function judge(
   cut: number,
   heard: readonly { from: number; to: number }[],
+  window = WINDOW,
 ): Verdict {
   const long = heard.filter((s) => s.to - s.from >= MIN_SILENCE);
   const holding = long.find((s) => cut >= s.from && cut <= s.to);
@@ -269,10 +278,17 @@ function judge(
       best = s;
     }
   }
-  // The distance is carried out even when it is too far, so the report can
-  // say whether an unfounded cut just missed the window or is nowhere near a
-  // pause at all. Those are different findings and want different answers.
-  if (!best || distance > WINDOW)
+  /* One bound, on the move. Entering a pause costs `MARGIN` on top of the gap
+     to its near edge, so the move is always `distance + MARGIN` and a guard on
+     the gap alone can never be the binding one: this was written as two
+     guards, and the first could not refuse anything the second would not, so
+     it only ever changed which figure got reported. The distance is carried
+     out even when it is too far, so the report can say whether an unfounded
+     cut just missed or is nowhere near a pause at all, and it is the true gap
+     rather than the gap plus the margin. Reporting the latter put a handful of
+     cuts 80ms outside a window they were inside, which is exactly the number
+     somebody reads to decide whether widening further would help. */
+  if (!best || distance + MARGIN > window)
     return { kind: 'unfounded', nearest: best ? distance : Infinity };
   /* The nearest point inside the pause, entered from the side the cut came
      from: a step past the start for a cut that is early, a step back from the
@@ -289,9 +305,6 @@ function judge(
      away. The two of Husary's that travelled backwards were the same bug
      showing a symptom, and the window guard hid it rather than fixing it. */
   const at = cut < best.from ? best.from + MARGIN : best.to - MARGIN;
-  // The window bounds the move itself, not the distance to the nearest edge.
-  if (Math.abs(at - cut) > WINDOW)
-    return { kind: 'unfounded', nearest: Math.abs(at - cut) };
   return { kind: 'moved', at, by: at - cut };
 }
 
@@ -446,8 +459,11 @@ async function verify(
     `  no silence at all  ${unfounded.length} (${((unfounded.length / total) * 100).toFixed(1)}%)`,
   );
   console.log(`    none in the ayah ${nowhere}`);
+  /* Labelled with the gap the figures are, not the window they are compared
+     against: a cut is refused when the *move* would exceed `WINDOW`, and the
+     move is the gap plus `MARGIN`. */
   console.log(
-    `    outside ${WINDOW}ms    ${missed.length}, median ${median(missed)}ms, min ${missed.length ? Math.min(...missed) : 0}ms`,
+    `    further than ${WINDOW - MARGIN}ms  ${missed.length}, median ${median(missed)}ms, min ${missed.length ? Math.min(...missed) : 0}ms`,
   );
   console.log(
     `  ayat left whole    ${emptied.length} (one cut lost costs the ayah: a partial set is unusable)`,

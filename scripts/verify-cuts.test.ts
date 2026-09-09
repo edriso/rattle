@@ -107,16 +107,91 @@ describe('judging a cut against the silences in a recording', () => {
     expect(verdict).toMatchObject({ nearest: cut - 2000 });
   });
 
-  /* And the guard on the move itself still matters, for the case the edge
-     measure lets through: a cut just outside a pause longer than the window,
-     where stepping in from the near edge is a short trip and from the far one
-     is not. */
-  it('bounds the move and not only the gap', () => {
-    const cut = 1000;
-    const verdict = judge(cut, [
-      silence(cut + WINDOW + 1, cut + WINDOW + 5000),
-    ]);
-    expect(verdict.kind).toBe('unfounded');
+  /* Where the bound actually falls, which is not where the constant's name
+     suggests. `WINDOW` bounds the *move*, and a move is the gap to the pause
+     plus the `MARGIN` step into it, so the furthest a pause may sit is
+     `WINDOW - MARGIN`. This was two guards, one on each quantity, and the gap
+     guard could never refuse anything the move guard would not: it was dead
+     as a decision and alive only in the figure it reported. Pinning both
+     sides of the edge is what would catch it being split again. */
+  it('bounds the move, so a pause may sit at most WINDOW - MARGIN away', () => {
+    const reach = WINDOW - MARGIN;
+    const at = 10_000;
+    const pause = silence(at, at + 3000);
+
+    const justInside = judge(at - reach, [pause]);
+    expect(justInside).toMatchObject({ kind: 'moved', by: WINDOW });
+
+    const justOutside = judge(at - reach - 1, [pause]);
+    // And it reports the gap it measured, not the gap plus the margin.
+    expect(justOutside).toEqual({ kind: 'unfounded', nearest: reach + 1 });
+
+    // The same on the late side, where the step is backwards out of the end.
+    expect(judge(pause.to + reach, [pause])).toMatchObject({
+      kind: 'moved',
+      by: -WINDOW,
+    });
+    expect(judge(pause.to + reach + 1, [pause])).toEqual({
+      kind: 'unfounded',
+      nearest: reach + 1,
+    });
+  });
+
+  /* The property that made recovering the ayat a 1500ms window had dropped a
+     safe operation rather than a judgement. Widening the window may admit a
+     correction it used to reject, and that is the *only* thing it may do:
+     which pause a cut belongs in, where inside it the cut lands, and how far
+     the nearest pause was are all read off the recording, so a verdict that
+     was accepted comes back byte for byte. Checked against the files as well
+     as here: over the four recitations re-measured at 2500, 127 ayat came back
+     and not one of the 5,582 already in them lost or altered a cut.
+
+     It only holds because the two window guards were made one. While a guard
+     on the gap and a guard on the move both existed, an unfounded verdict in
+     the band between them reported a `nearest` 80ms larger at the wider
+     window, which is the figure somebody reads to decide whether to widen
+     again. So the assertion covers the whole verdict, `nearest` included. */
+  it('only ever gains when the window widens', () => {
+    // A deterministic walk over layouts rather than the handful that happened
+    // to occur to me, because the property has to hold for all of them.
+    let seed = 20260909;
+    /* `Math.imul` and a mask, not `*` and `%`: the product of two 31-bit
+       numbers passes 2^53, so plain multiplication loses exactly the low bits
+       the modulus then reads. Written that way this generator could only
+       reach 16,471 distinct values before cycling, and `seed % 4` took two of
+       them, which is not the walk this comment claims. */
+    const random = () => {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return seed / 0x80000000;
+    };
+    let admitted = 0;
+    let stable = 0;
+    for (let trial = 0; trial < 2000; trial++) {
+      const pauses: { from: number; to: number }[] = [];
+      let at = Math.floor(random() * 500);
+      // Drawn once, so the count really is uniform over 1 to 4 rather than
+      // re-rolled on every iteration of the condition.
+      const count = 1 + Math.floor(random() * 4);
+      for (let n = 0; n < count; n++) {
+        at += Math.floor(random() * 4000);
+        // Some too short to count, so the length filter is exercised too.
+        pauses.push({ from: at, to: at + 100 + Math.floor(random() * 900) });
+        at = pauses[pauses.length - 1].to;
+      }
+      const cut = Math.floor(random() * (at + 2000));
+      const narrow = judge(cut, pauses, 1500);
+      const wide = judge(cut, pauses, WINDOW);
+      if (narrow.kind === 'unfounded' && wide.kind !== 'unfounded') {
+        admitted++;
+      } else {
+        // Including unfounded on both sides, where `nearest` has to agree.
+        expect(wide).toEqual(narrow);
+        stable++;
+      }
+    }
+    // And the trials actually reached both halves of the claim.
+    expect(stable).toBeGreaterThan(100);
+    expect(admitted).toBeGreaterThan(10);
   });
 
   it('takes the nearest pause when several would do', () => {
@@ -204,18 +279,20 @@ describe('whether a level gate can hear a recitation at all', () => {
     expect(ear.measurable).toBe(false);
   });
 
-  /** Median absolute move per recitation, from the runs recorded in
-      data/README.md, and from 60-ayah samples for Minshawi's two. */
-  const OFFSETS = [406, 106, 347, 432, 1002, 1045];
+  /** Median absolute move, per recitation, measured over whole mushafs:
+      Husary 409ms, his المعلّم 107, Abdul Basit 354, his المجوّد 435. */
+  const OFFSETS = [409, 107, 354, 435];
 
   it('bounds a correction rather than truncating it', () => {
-    // A window near a recitation's own median offset is not a bound, it is a
-    // clip, and it hides how wrong the constant was instead of measuring it:
-    // at 1500 Minshawi's largest move landed exactly on the edge and his
-    // median rose the moment it was widened. Twice the largest median any
-    // recitation has measured is the margin that keeps the distribution
-    // described rather than cut off.
-    expect(WINDOW).toBeGreaterThanOrEqual(2 * Math.max(...OFFSETS));
+    /* A window near a recitation's own median offset is not a bound, it is a
+       clip: it hides how wrong the constant was instead of measuring it. The
+       window has to be a multiple of the largest systematic offset measured,
+       so what it cuts off is the tail and not the body of the distribution.
+       At 2500 the largest single moves come to 2432, 2139, 2444 and 2491, so
+       it is still the binding constraint for a few per cent of cuts, which is
+       intended: past this a correction is a different boundary, not the same
+       one measured. */
+    expect(WINDOW).toBeGreaterThanOrEqual(4 * Math.max(...OFFSETS));
   });
 
   it('keeps the write floor under every yield a real run has managed', () => {

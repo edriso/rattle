@@ -21,7 +21,7 @@ The source prefixes the basmala to ayah 1 of every surah except al-Fatihah and a
 
 - Source: Quran.com word-by-word segments, `https://api.qurancdn.com/api/qdc/audio/reciters/<id>/audio_files?chapter=<1..114>&segments=true`.
 - Generated: 2026-09-08, by `npm run prepare:timings`, into `src/data/timings/<reciter>.json`.
-- Eleven files for twelve reciters. Measured: 33 to 38 kB each as stored, 25 to 28 kB as built and 9 to 11 kB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Quote the built chunk rather than the stored JSON: Vite inlines the JSON into a chunk of its own, and the two differ by about a quarter.
+- Eleven files for twelve reciters. Measured: 31 to 37 kB each as stored, 22 to 28 kB as built and 9 to 11 kB over the wire, down from 63, 47 and 17 under the looser splitting rule; loaded only when the learner drills at phrase level. Quote the built chunk rather than the stored JSON: Vite inlines the JSON into a chunk of its own, and the two differ by about a quarter.
 - The twelfth reciter has no file: no source publishes word timings for أيمن سويد's mushaf, so it is drilled by the ayah. `cutsPhrases()` in `src/data/audio.ts` is what the app asks, and the start screen stops offering «جملة» when the answer is no.
 
 The API reports each word as a millisecond span into the **full-chapter** recording. The app plays the **per-ayah** files EveryAyah serves, so the script subtracts the ayah's own `timestamp_from`. The two are the same recording: across every reciter shipped here, `timestamp_to − timestamp_from` matched the length of the corresponding EveryAyah file to within about 0.3 s, and most to within 0.05 s.
@@ -64,6 +64,8 @@ An ayah keeps its timings out of the file, and plays whole, when:
 
 Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and Dussary 1,552, Husary Muallim 1,546, Minshawi 1,544, Sudais 1,537, Shatri 1,510, Abdul Basit's mujawwad 1,489, Alafasy 1,480, Abdul Basit 1,458, and Minshawi's mujawwad lowest at 1,398.
 
+Those are the figures the generator writes. Measuring against the audio takes some of them back down, since a cut with no pause under it is dropped: as shipped, Husary Muallim covers 1,541 of the 1,560, Husary 1,517, Abdul Basit's mujawwad 1,374 and his murattal 1,277.
+
 ### Cuts measured against the audio
 
 `scripts/verify-cuts.ts` replaces the constant with a measurement, for the reciters it has been run on. For every ayah that splits it fetches that reciter's own per-ayah MP3 once, asks `ffmpeg` where the silences are (`silencedetect` at -40 dBFS), and then, for each cut, either leaves it alone because it already falls in a pause of 250 ms or more, moves it 80 ms into the nearest such pause, or drops it because there is none within `WINDOW` of it, which means the text said the reciter stops there and the recording says he does not.
@@ -83,27 +85,40 @@ It needs `ffmpeg`, which nothing else here does, and downloads about 1,500 files
 
 Two properties worth knowing. It is **idempotent**: a second pass over a verified file changes nothing, because every cut already sits in a measured pause, which is a useful self-check. And it is **all or nothing per ayah**, because `buildSegments` only cuts an ayah that has exactly one boundary per gap between its phrases: a partial set is not something the app can use, so an ayah that loses one cut loses them all.
 
-Measured over the whole mushaf, four recitations so far:
+Measured over the whole mushaf, four recitations so far, at a window of 2,500 ms:
 
 | | Husary (murattal) | Husary (المعلّم) | Abdul Basit (murattal) | Abdul Basit (المجوّد) |
 | --- | --- | --- | --- | --- |
 | cuts before | 2,124 | 2,105 | 1,967 | 1,969 |
 | already inside a pause | 371 (17.5%) | **2,030 (96.4%)** | 341 (17.3%) | 5 (0.3%) |
-| moved into one | 1,688 (79.5%) | 68 (3.2%) | 1,419 (72.1%) | 1,751 (88.9%) |
-| median move | **+406 ms** | +106 ms | +347 ms | **−432 ms** |
-| which way | 1,686 later | 64 later | 1,399 later | 1,674 **earlier** |
-| no pause in the window | 65 (3.1%) | 7 (0.3%) | 207 (10.5%) | 213 (10.8%) |
-| ayat that split | 1,552 → 1,489 | 1,546 → 1,539 | 1,458 → 1,270 | 1,489 → 1,284 |
+| moved into one | 1,716 (80.8%) | 70 (3.3%) | 1,427 (72.5%) | 1,846 (93.8%) |
+| median move | **+409 ms** | +107 ms | +354 ms | **−435 ms** |
+| which way | 1,714 later | 66 later | 1,401 later | 1,745 **earlier** |
+| no pause in the window | 37 (1.7%) | 5 (0.2%) | 199 (10.1%) | 118 (6.0%) |
+| ayat that split | 1,552 → 1,517 | 1,546 → 1,541 | 1,458 → 1,277 | 1,489 → 1,374 |
+| cuts written | 2,067 | 2,095 | 1,699 | 1,783 |
 
 Three findings, and the first is the one that matters.
 
-**A constant cannot do this job, because its correct sign is not the same for every recitation.** Husary's cuts arrive a median 406 ms *early* and Abdul Basit's mujawwad a median 432 ms *late*, over roughly two thousand cuts each, and almost none of either goes the other way. So the 300 ms lag is not merely imprecise for one reciter and fine for another: it is helping the first and actively hurting the second by about the same amount. No single number could have been right, which is the whole argument for measuring. That also supersedes, for these recitations, the 290 ms figure recorded above from a 130-ayah sample. Abdul Basit's *murattal*, at +347 ms, is the one the constant nearly fits, which is the coincidence that made it look serviceable.
+**A constant cannot do this job, because its correct sign is not the same for every recitation.** Husary's cuts arrive a median 409 ms *early* and Abdul Basit's mujawwad a median 435 ms *late*, over roughly two thousand cuts each. Husary's is almost unanimous, 1,714 of 1,716 going one way; the mujawwad's is 1,745 of 1,846, with 101 going the other at a median +915 ms. So the 300 ms lag is not merely imprecise for one reciter and fine for another: it is helping the first and actively hurting the second by about the same amount. No single number could have been right, which is the whole argument for measuring. That also supersedes, for these recitations, the 290 ms figure recorded above from a 130-ayah sample. Abdul Basit's *murattal*, at +354 ms, is the one the constant nearly fits, which is the coincidence that made it look serviceable.
 
 **The teaching mushaf was already nearly right.** 96.4% of الحصري المعلّم's cuts fell inside a real pause before anything was measured, against 17.5% for the same reciter's murattal, and what did move moved a quarter as far. That is what a teaching mushaf is: recited slowly with a deliberate stop at every stopping place, so the pauses are long enough that even an aligner recording no silence puts its boundary inside one. It is also, empirically, the case for what was asked for in the reading group, that this kind of repetition belongs on a teacher's mushaf rather than on any recording that happens to have timings.
 
-**The mujawwad pays the most for it.** Abdul Basit's loses 205 ayat, a seventh of what it had, because 10.8% of its cuts have no pause within a second and a half of them. Melodic recitation holds and elongates where a murattal stops, so some of those marks he simply sings through. Those ayat now play whole, which is the honest answer, and they were being cut mid-breath before.
+**What the mujawwad pays is mostly the measurement, and what the murattal pays is real.** At a 1,500 ms window Abdul Basit's mujawwad looked like the expensive one: it dropped 205 ayat, a seventh of what it had. Widening the window to 2,500 gave 90 of them back, because a mujawwad's offsets are simply wider, and its loss is now 115. His *murattal* dropped 188 at the narrower window and got only 7 back, and 30 of its cuts have no pause anywhere in the ayah at all, at any window. So the murattal is now the one that pays most, 181 ayat, and that cost is a fact about the recording rather than about the tool: he recites through those marks. Those ayat play whole, which is the honest answer, and they were being cut mid-breath before.
 
 The constant is left where it is rather than tuned, because tuning one number to one reciter's evidence is the mistake this measurement exists to replace. The answer for a recitation still on the constant is to measure that recitation.
+
+### The window, and the 127 ayat a narrower one had dropped
+
+`WINDOW` was 1,500 ms when these four were first measured, sized for an error of a few hundred milliseconds. Between 0.5% and 14% of each was dropped for having no pause inside it: 63 ayat of Husary's murattal, 7 of his المعلّم, 188 of Abdul Basit's murattal and 205 of his المجوّد. Re-measured at 2,500, **127 of those 463 came back**, and 192 cuts with them.
+
+Doing that is safe, and provably rather than probably. The window decides only whether a correction is *accepted*; which pause a cut belongs in, and where inside it the cut lands, are read off the recording. So re-measuring a file at a wider window can only ever add, and the check bears it out: across the four, 127 ayat recovered, **0 lost and 0 altered** of the 5,582 already there. `scripts/verify-cuts.test.ts` pins the property over two thousand generated pause layouts, and `judge` takes the window as an argument so it can.
+
+And the 192 cuts that came back were then re-read off the audio independently of the pass that placed them: **all 192 sit inside a detected pause of 250 ms or more**, which is the property the file claims for every cut in it.
+
+It was re-measured from the **committed constant-placed boundaries in git history**, not from a fresh `prepare:timings --force`. That is not a shortcut. Nothing that feeds the generation had changed since those files were written, so the two are the same input, and taking it from history means the comparison is against exactly what the first measurement saw rather than against whatever the API returns today. A re-derivation would have confounded recovery with drift, and cost 456 API requests to do it.
+
+What the window is now sized against is the measured offsets, not a guess: the largest median measured over a whole mushaf is 578 ms, and 2,500 is more than four times that. It is still the binding constraint for a small tail, the largest single moves coming to 2,432, 2,139, 2,444 and 2,491 ms, and that is intended. Past a certain distance a correction is a different boundary rather than the same one measured.
 
 ### What this still does not fix
 
@@ -158,7 +173,7 @@ The murattal's median settles by 2500, which is the sign the distribution is bei
 
 **So the murattal is the one worth running**: `node scripts/verify-cuts.ts minshawi --write`, about 350 MB and twenty minutes.
 
-Two things the wider window does *not* do. It cannot disturb a verified file, because every cut in one already sits inside a pause, so the window is never consulted; read-only runs over all of Husary and all of Abdul Basit's mujawwad at 2500 come back 100% kept. And for the same reason it cannot give those four back the cuts they dropped at 1500, because a dropped cut is no longer in the file to reconsider. Between 3% and 11% of each was dropped for having no pause in a 1.5 s window, and on the Minshawi evidence roughly a third of those would fall inside 2500. Recovering them means `npm run prepare:timings -- --force` to write the boundaries again from the text, then `npm run verify:cuts` to measure them at the wider window: free on audio, since the recordings are cached, but it re-derives all four from the API.
+The wider window cannot disturb a verified file, because every cut in one already sits inside a pause, so the window is never consulted: read-only runs over all four at 2,500 come back 100% kept, 0 moved, 0 unfounded. The 127 ayat those four had dropped at 1,500 have been recovered; see the section on the window above for how, and why it was safe.
 
 Ayman Sowaid has no published word timings, so there is nothing to measure. `verified` in each timing file says which recitations have been measured.
 
