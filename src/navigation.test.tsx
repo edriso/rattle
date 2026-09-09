@@ -375,6 +375,42 @@ it('stops the recitation on a move for a reader who has asked it to', async () =
   expect(screen.getByRole('button', { name: 'تشغيل التلاوة' })).toBeTruthy();
 });
 
+/* `repeat` and `keepPlaying` reach the media element's own callbacks through
+   refs, because putting either in the effect that builds the element would
+   tear a sounding element down. Those refs are synchronised from an effect,
+   which has to be declared before the one that reads them: a setting changed
+   in the same commit as a move must be the one the new element is built with,
+   not the one before it. Nothing covered carrying the sound across at all. */
+it('carries a sounding run into a new range, and stops when told not to', async () => {
+  const player = new FakeAudio();
+  vi.stubGlobal(
+    'Audio',
+    class {
+      constructor() {
+        return player;
+      }
+    },
+  );
+  const view = renderHook(
+    ({ urls, carry }: { urls: string[]; carry: boolean }) =>
+      useRangeAudio(urls, false, carry),
+    { initialProps: { urls: ['/one.mp3'], carry: true } },
+  );
+  await act(() => view.result.current.toggle());
+  expect(view.result.current.playing).toBe(true);
+  await act(async () => {
+    view.rerender({ urls: ['/two.mp3'], carry: true });
+  });
+  expect(view.result.current.playing).toBe(true);
+  expect(player.src).toBe('/two.mp3');
+  // And the setting changing alongside the move is the one that is obeyed.
+  await act(async () => {
+    view.rerender({ urls: ['/three.mp3'], carry: false });
+  });
+  expect(view.result.current.playing).toBe(false);
+  expect(player.src).toBe('/three.mp3');
+});
+
 /* A tab or a tap leaves focus on a button, and that button owns Space and
    Enter from then on. The arrows are the twins that keep the drill reachable. */
 it('plays and repeats from the arrows while a button holds the focus', async () => {

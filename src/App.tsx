@@ -1,6 +1,3 @@
-/* Storage is written from an effect, so a failing store surfaces as a notice
-   rather than throwing out of a state updater. */
-/* eslint-disable react/react-compiler */
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Settings, ChevronDown, ArrowRight } from 'lucide-react';
 import {
@@ -50,11 +47,16 @@ export function App() {
   const [storageError, setStorageError] = useState(false);
   const review = useReviewPlan();
 
+  /* Written from an effect rather than from `update`, so a store that refuses
+     the write surfaces as a notice instead of throwing out of a state
+     updater. There is nowhere else for the notice to be set from: the failure
+     is only known here, which is what the rule is silenced for. */
   useEffect(() => {
     document.documentElement.dataset.theme = prefs.theme;
     try {
       localStorage.setItem(STORAGE, JSON.stringify(prefs));
     } catch {
+      // eslint-disable-next-line react/react-compiler
       setStorageError(true);
     }
   }, [prefs]);

@@ -1,6 +1,3 @@
-/* State mirrors microphone, playback, and page lifecycle changes. Cleanup must
-   invalidate the current asynchronous request and release the current URL. */
-/* eslint-disable react/react-compiler, react-hooks/exhaustive-deps */
 /* Canvas describes the live waveform. Private user audio has no transcript. */
 /* eslint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/media-has-caption */
 import {

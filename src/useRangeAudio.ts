@@ -1,6 +1,3 @@
-/* State mirrors native media events and source changes. */
-/* Cleanup invalidates the live request counter, rather than a captured request. */
-/* eslint-disable react/react-compiler, react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { audioMirrors } from './data/audio';
 
@@ -49,8 +46,17 @@ export function useRangeAudio(
   const [notice, setNotice] = useState('');
   const key = urls.join('|');
 
-  looping.current = repeat;
-  carries.current = keepPlaying;
+  /* Both belong to the media element's own callbacks, which outlive the
+     render that installed them, so they are refs rather than closed-over
+     props: putting either in the effect below would rebuild the element and
+     stop the sound. Synchronised from an effect rather than during render,
+     because a render React throws away must not leave a value behind, and
+     declared above that effect so that a change arriving with a new range is
+     in place before the new element reads it. */
+  useEffect(() => {
+    looping.current = repeat;
+    carries.current = keepPlaying;
+  }, [repeat, keepPlaying]);
 
   /** Start the element sounding, and own the outcome: only the latest attempt
       is allowed to publish it, so a range change mid-attempt stays quiet. */
@@ -73,6 +79,15 @@ export function useRangeAudio(
     }
   }, []);
 
+  /* Two rules are silenced for this effect and for nothing else in the file.
+     `EffectSetState`: a new range publishes «not playing» here because the
+     element it would be read from does not exist yet, and there is no event
+     to hang it on. `exhaustive-deps`: the dependency is `key`, the join of
+     `urls`, so that a list rebuilt with the same addresses does not tear down
+     a sounding element; and the refs the cleanup reads are counters of this
+     hook's own, not a node React rendered, so reading `.current` there is the
+     point rather than the mistake. */
+  /* eslint-disable react/react-compiler, react-hooks/exhaustive-deps */
   useEffect(() => {
     /* Whether the recitation the learner asked for is to carry into this
        range. The address that was answering carries with it: a run that is
@@ -159,6 +174,7 @@ export function useRangeAudio(
       audio.current = null;
     };
   }, [key]);
+  /* eslint-enable react/react-compiler, react-hooks/exhaustive-deps */
 
   const pause = useCallback(() => {
     request.current++;
