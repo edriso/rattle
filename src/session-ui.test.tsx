@@ -756,6 +756,41 @@ describe('a talqeen session', () => {
     expect(screen.getByRole('button', { name: 'تشغيل' })).toBeTruthy();
   });
 
+  /* A change of grain is in this screen's key, so choosing the one reciter
+     with no published timings while «جملة» is set remounts the screen, and
+     the carry that keeps a stopped drill stopped goes with it. Nothing may
+     start itself from behind an open sheet: the transport is under a modal
+     there and Space is unbound, so there would be no way to stop it. */
+  it('does not start itself while a panel is open over it', async () => {
+    const prefs = {
+      ...defaults,
+      screen: 'session',
+      surah: 112,
+      ayah: 1,
+      to: 3,
+    } as Preferences;
+    const noop = () => {};
+    const view = render(
+      <SessionView
+        prefs={prefs}
+        navigationEnabled={false}
+        onExit={noop}
+        onGraded={noop}
+      />,
+    );
+    await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 });
+    expect(screen.getByRole('button', { name: 'تشغيل' })).toBeTruthy();
+    // And begins the moment the panel is out of the way.
+    view.rerender(<SessionView prefs={prefs} onExit={noop} onGraded={noop} />);
+    expect(
+      await screen.findByRole(
+        'button',
+        { name: 'إيقاف مؤقّت' },
+        { timeout: 3000 },
+      ),
+    ).toBeTruthy();
+  });
+
   it('starts over when the joins change', async () => {
     const prefs = {
       ...defaults,

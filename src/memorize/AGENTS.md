@@ -121,6 +121,12 @@ A few rules the class keeps to. Break one and something will get stuck:
   not a wrong pace, measured at 0.979 over 400 of Husary's ayat, so summing
   five estimates averages it down where scaling by one sample does not.
 
+- **Reading ahead belongs to the first run, not to `start()`.** A drill held
+  across a rebuild is `paused`, which `start()` refuses, so a session that
+  arrived that way used to play with nothing fetched in front of it and stop
+  to load at every step. `readAhead()` is called from `run()` and has a flag
+  of its own, because `launched` is also `start()`'s re-entry guard.
+
 ## Audio
 
 - Recordings come from `everyayah.com`, one MP3 per ayah. That host allows

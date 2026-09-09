@@ -54,7 +54,12 @@ async function fetchAudio(urls: readonly string[], signal?: AbortSignal) {
   const left = () => DEADLINE - (Date.now() - started);
   let last: unknown;
   for (let round = 0; round < 2 && left() > 0; round++) {
-    if (round) await new Promise((resolve) => setTimeout(resolve, RETRY));
+    if (round) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY));
+      // Checked on the way out of the pause as well as inside the loop, or a
+      // caller who gave up during it waits out the rest of the round first.
+      if (signal?.aborted) throw signal.reason;
+    }
     for (const url of urls) {
       if (signal?.aborted) throw signal.reason;
       if (left() <= 0) break;

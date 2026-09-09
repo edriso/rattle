@@ -78,10 +78,19 @@ export function SessionView({
   const autoStarted = useRef<unknown>(null);
   useEffect(() => {
     if (!session || autoStarted.current === session) return;
+    /* And never while a panel is open over the screen. `useSession` carries a
+       stopped drill across a rebuild, but a change of grain is in this
+       screen's key, so choosing the one reciter with no published timings
+       while «جملة» is set remounts the screen and the carry goes with it.
+       Without this, that one choice sets the new voice reciting from behind
+       the sheet, where the transport is under a modal and Space is unbound.
+       The flag is set only once the decision is actually taken, so closing
+       the panel is what lets the drill begin. */
+    if (!navigationEnabled) return;
     autoStarted.current = session;
     if (navigator.userActivation?.hasBeenActive === false) return;
     void session.start();
-  }, [session]);
+  }, [session, navigationEnabled]);
 
   // Finishing opens the grading sheet on its own, and closing it keeps it shut.
   const [sheet, setSheet] = useState<'open' | 'closed' | null>(null);

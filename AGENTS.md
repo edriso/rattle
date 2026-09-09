@@ -559,13 +559,20 @@ learner their place, and only one thing in it can even try.
 - **The silence** is handed to the running session by `setEcho`. The session
   is built with `echo: 'off'` and given the real one straight away for exactly
   this reason.
-- **A drill the learner had stopped stays stopped**, whichever setting caused
-  the rebuild. A new `Session` begins `idle`, which the screen reads as a
-  drill nobody has begun, so it began one: somebody who pressed pause and then
-  chose a slower voice was recited at from behind the open sheet, where the
-  transport is under a modal and Space is unbound, with no way to stop him but
-  to close the panel. `useSession` carries the phase as well as the place now,
-  and `Session.hold()` is what the new one is put into.
+- **A drill the learner had stopped stays stopped.** A new `Session` begins
+  `idle`, which the screen reads as a drill nobody has begun, so it began one:
+  somebody who pressed pause and then chose a slower voice was recited at from
+  behind the open sheet, where the transport is under a modal and Space is
+  unbound, with no way to stop him but to close the panel. `useSession`
+  carries the phase as well as the place now, and `Session.hold()` is what the
+  new one is put into.
+
+  There is one path the carry cannot reach, and the screen answers it instead.
+  A change of grain is in `SessionView`'s key, so choosing أيمن سويد, the one
+  reciter with no published timings, while «جملة» is set demotes the grain,
+  remounts the screen and takes `useSession`'s ref with it. So the auto-start
+  is also gated on `navigationEnabled`: **nothing starts itself while a panel
+  is open over it**, and closing the panel is what lets it begin.
 - **The reciter** rebuilds the drill, and `useSession` carries the cursor
   across **when it is the same drill**: the same steps and the same segments
   in a different voice. Comparing step boundaries is not enough, because two

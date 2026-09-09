@@ -184,6 +184,23 @@ describe('catalogue and persisted state', () => {
     );
   });
 
+  /* Arriving on a screen puts the cursor on `<main>`, which carries no
+     accessible name, so a move has to hand it to the verse frame: that
+     frame's label names the ayah just arrived at, and it is the whole of what
+     announces a move made from an arrow or a swipe. */
+  it('announces a move made on the screen it has just arrived on', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /راجِع بنفسك/ }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('main')),
+    );
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+    expect(document.activeElement?.id).toBe('current-verse');
+    expect(document.activeElement?.getAttribute('aria-label')).toContain(
+      'الآية ٢',
+    );
+  });
+
   /* Free review used to be remounted on every move, which switched looping
      off underneath the learner. Hiding is per ayah and must still reset. */
   it('keeps looping across a move, and shows each new ayah', async () => {

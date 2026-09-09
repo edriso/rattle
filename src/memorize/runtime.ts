@@ -130,6 +130,7 @@ export class Session {
   private unlocking: Promise<void> | null = null;
   private launched = false;
   private resuming = false;
+  private reading = false;
 
   constructor(private readonly options: MutableOptions) {
     // Distinct recordings in the order the drill first reaches them.
@@ -304,6 +305,23 @@ export class Session {
     return this.options.audio.load(url, this.lifetime.signal);
   }
 
+  /**
+   * Read ahead of the learner, once per session, whenever it first plays.
+   *
+   * `start()` is not the only way in, and this used to live there. A drill
+   * held across a rebuild is `paused`, which `start()` refuses, so that one
+   * arrives through `resume()` and played with nothing fetched ahead of it:
+   * every step whose recording was not already decoded stopped to load, and
+   * «جارٍ تحميل التلاوة… ٪» undercounted for the rest of the sitting. It has a
+   * flag of its own rather than sharing `launched`, which is also `start()`'s
+   * re-entry guard.
+   */
+  private readAhead() {
+    if (this.reading) return;
+    this.reading = true;
+    this.prefetch();
+  }
+
   /** Fetch the rest of the passage quietly behind whatever is playing. */
   private prefetch() {
     let index = 0;
@@ -335,12 +353,12 @@ export class Session {
     }
     if (this.disposed || this.launched) return;
     this.launched = true;
-    this.prefetch();
     this.startTicking();
     void this.run();
   }
 
   private async run() {
+    this.readAhead();
     const generation = ++this.generation;
     const step = this.options.steps[this.state.cursor.step];
     if (!step) return this.finish();

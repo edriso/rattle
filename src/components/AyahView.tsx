@@ -58,7 +58,15 @@ export function AyahView({
       (direction < 0 && prefs.ayah === 1)
     )
       return;
-    const focusId = document.activeElement?.id;
+    /* Only a control of this screen's own counts. The shell puts the cursor
+       on `<main>` when a screen changes, and `<main>` has no accessible name,
+       so treating it as «the control that was pressed» left the focus where
+       it stood and an arrow or a swipe announced nothing at all. */
+    const focused = document.activeElement;
+    const focusId =
+      focused instanceof HTMLElement && focused.closest('.practice-controls')
+        ? focused.id
+        : '';
     flushSync(() =>
       update({
         ayah:
@@ -66,9 +74,8 @@ export function AyahView({
       }),
     );
     /* Back on the control that was pressed, so a run of moves stays under one
-       finger, or on the verse when the move came from a key with nothing
-       focused. Nothing on this screen goes `disabled` any more, so there is no
-       longer a case where the control cannot take it back. */
+       finger, or on the verse otherwise, whose `aria-label` names the ayah
+       just arrived at and is therefore what announces the move. */
     const control = focusId ? document.getElementById(focusId) : null;
     (control ?? document.getElementById('current-verse'))?.focus({
       preventScroll: true,

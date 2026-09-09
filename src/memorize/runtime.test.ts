@@ -664,6 +664,23 @@ describe('session runtime', () => {
     expect(audio.loads.filter((url) => url.includes('100001'))).toHaveLength(2);
   });
 
+  /* Reading ahead used to live in `start()`, and a drill held across a
+     rebuild is `paused`, which `start()` refuses. So the one flow that keeps
+     a learner's place across a change of reciter then played with nothing
+     fetched ahead of it: every step whose recording was not already decoded
+     stopped to load, and the loading figure undercounted all sitting. */
+  it('reads ahead even when it was held before it ever began', async () => {
+    const { session, audio } = build();
+    session.hold();
+    expect(session.getSnapshot().phase).toBe('paused');
+    await session.resume();
+    await settle();
+    expect(session.getSnapshot().phase).toBe('reciting');
+    // Every recording of the passage, not only the one the first step needs.
+    expect(new Set(audio.loads).size).toBe(3);
+    expect(session.getSnapshot().loaded).toBe(1);
+  });
+
   it('stops the clock and the audio when disposed', async () => {
     const { session, audio } = build();
     await session.start();
