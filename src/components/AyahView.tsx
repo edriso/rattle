@@ -65,12 +65,14 @@ export function AyahView({
           direction > 0 ? last + 1 : Math.max(1, prefs.ayah - prefs.perView),
       }),
     );
+    /* Back on the control that was pressed, so a run of moves stays under one
+       finger, or on the verse when the move came from a key with nothing
+       focused. Nothing on this screen goes `disabled` any more, so there is no
+       longer a case where the control cannot take it back. */
     const control = focusId ? document.getElementById(focusId) : null;
-    const target =
-      control && !control.matches(':disabled')
-        ? control
-        : document.getElementById('current-verse');
-    target?.focus({ preventScroll: true });
+    (control ?? document.getElementById('current-verse'))?.focus({
+      preventScroll: true,
+    });
   };
   const gestures = usePracticeNavigation({
     enabled: navigationEnabled,

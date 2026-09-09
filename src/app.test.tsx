@@ -162,6 +162,28 @@ describe('catalogue and persisted state', () => {
     );
     expect(screen.queryByRole('button', { name: /راجِع بنفسك/ })).toBeNull();
   });
+  /* There is no router, so nothing moved the cursor when a screen changed: it
+     fell to the body, which left a screen reader with nothing announced about
+     having arrived and Tab beginning again at the skip link. */
+  it('puts the cursor in the screen it has just changed to', async () => {
+    render(<App />);
+    const review = await screen.findByRole('button', { name: /راجِع بنفسك/ });
+    // Not on the first paint, where nobody has asked to go anywhere.
+    expect(document.activeElement).toBe(document.body);
+    review.focus();
+    fireEvent.click(review);
+    const main = await screen.findByRole('main');
+    await waitFor(() => expect(document.activeElement).toBe(main));
+    // Which is what puts the screen's own heading first for a screen reader.
+    expect(main.querySelector('h1')?.textContent).toContain('سورة الفاتحة');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'رجوع إلى اختيار المقطع' }),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('main')),
+    );
+  });
+
   /* Free review used to be remounted on every move, which switched looping
      off underneath the learner. Hiding is per ayah and must still reset. */
   it('keeps looping across a move, and shows each new ayah', async () => {

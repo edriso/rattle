@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Settings, ChevronDown, ArrowRight } from 'lucide-react';
 import {
   defaults,
@@ -62,6 +62,19 @@ export function App() {
   }, [prefs]);
   useAppearance(prefs.appearance);
   useWebMCP(setPrefs);
+
+  /* There is no router, so nothing moved the cursor when a screen changed: it
+     fell to the body, which meant a screen reader announced nothing about
+     having arrived and Tab began again at the skip link, five stops from the
+     transport. The main landmark takes it, so the screen's own h1 is the
+     first thing read. Not on the first paint, where nobody has asked to go
+     anywhere. */
+  const shown = useRef(prefs.screen);
+  useEffect(() => {
+    if (shown.current === prefs.screen) return;
+    shown.current = prefs.screen;
+    document.getElementById('main')?.focus({ preventScroll: true });
+  }, [prefs.screen]);
 
   /* Free review moves `ayah` on its own. The passage keeps its length and
      follows, so returning to the start screen never leaves an empty range. */
@@ -132,7 +145,13 @@ export function App() {
           </button>
         </header>
 
-        <main id="main" className={home ? 'start-main' : 'memorizing-main'}>
+        {/* Focusable so a screen change can put the cursor here; -1, so it is
+            not a tab stop of its own. */}
+        <main
+          id="main"
+          tabIndex={-1}
+          className={home ? 'start-main' : 'memorizing-main'}
+        >
           {home ? (
             <HomeView
               prefs={prefs}
