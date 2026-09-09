@@ -35,9 +35,26 @@ class FakeAudio implements Audio {
 
   /** Every signal a load was handed, so a test can see them abandoned. */
   readonly signals: (AbortSignal | undefined)[] = [];
+  /** Every URL a load was asked for, in order, retries included. */
+  readonly loads: string[] = [];
+  /** Substring of a URL whose loads are abandoned, the way a fetch shared
+      with another session is when that session is torn down, and how many of
+      them. The prefetch and the run both ask for the first recording, so a
+      test that wants the run's own attempt abandoned has to spend two. */
+  abandonFirst: string | null = null;
+  abandonTimes = 0;
 
   async load(url: string, signal?: AbortSignal) {
     this.signals.push(signal);
+    this.loads.push(url);
+    if (
+      this.abandonFirst &&
+      url.includes(this.abandonFirst) &&
+      this.abandonTimes > 0
+    ) {
+      this.abandonTimes--;
+      throw new DOMException('aborted', 'AbortError');
+    }
     if (this.failOn && url.includes(this.failOn)) throw new Error('offline');
     this.held.add(url);
     this.evicted.delete(url);
@@ -563,6 +580,36 @@ describe('session runtime', () => {
     expect(audio.signals.some((s) => s?.aborted)).toBe(false);
     session.dispose();
     expect(audio.signals.every((s) => s?.aborted)).toBe(true);
+  });
+
+  /* The audio layer is shared across drills, so decoded recitation survives a
+     rebuild, and it keeps one fetch per recording however many callers want
+     it. Changing the joins therefore builds a new session over the same
+     recordings while the old one is still fetching them, and disposing the old
+     one aborts a fetch the new one is waiting on. That abort is not the new
+     session's failure, and it must not become an error screen. */
+  it('asks again when a shared fetch is abandoned under it', async () => {
+    const { session, audio } = build();
+    /* Two, so the run's own attempt is one of them however it races with the
+       prefetch, whose failures are swallowed. */
+    audio.abandonFirst = '100001';
+    audio.abandonTimes = 2;
+    await session.start();
+    await settle();
+    expect(session.getSnapshot().phase).toBe('reciting');
+    expect(audio.runs).toHaveLength(1);
+  });
+
+  /* And only that: a recording nowhere answers must not be asked for twice as
+     long before the message appears. Two callers want the first one, the run
+     and the prefetch, so two attempts is the ceiling without a retry. */
+  it('does not ask again when a load simply fails', async () => {
+    const { session, audio } = build();
+    audio.failOn = '100001';
+    await session.start();
+    await settle();
+    expect(session.getSnapshot().phase).toBe('error');
+    expect(audio.loads.filter((url) => url.includes('100001'))).toHaveLength(2);
   });
 
   it('stops the clock and the audio when disposed', async () => {

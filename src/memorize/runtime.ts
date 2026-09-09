@@ -258,13 +258,40 @@ export class Session {
 
   private async load(url: string) {
     if (this.ready(url)) return;
-    const seconds = await this.options.audio.load(url, this.lifetime.signal);
+    const seconds = await this.fetch(url);
     if (this.disposed) return;
     this.durations.set(url, seconds);
     this.set({
       loaded: this.durations.size / Math.max(1, this.urls.length),
       remaining: this.countdown(),
     });
+  }
+
+  /**
+   * Ask the audio layer for a recording, once, and then once more if the
+   * attempt was abandoned by somebody else.
+   *
+   * The layer is shared across drills, so decoded recitation survives a
+   * rebuild, and it keeps one fetch per recording however many callers want
+   * it. Changing the joins therefore builds a new session over the same
+   * recordings while the old one is still fetching them, and disposing the old
+   * one aborts a fetch the new one is waiting on. That abort is not this
+   * session's failure and must not become an error screen: the abandoned
+   * fetch is no longer held, so asking again starts one of this session's own.
+   * Anything else, and any abort of our own signal, is passed straight on.
+   */
+  private async fetch(url: string) {
+    try {
+      return await this.options.audio.load(url, this.lifetime.signal);
+    } catch (error) {
+      if (
+        this.lifetime.signal.aborted ||
+        !(error instanceof DOMException) ||
+        error.name !== 'AbortError'
+      )
+        throw error;
+    }
+    return this.options.audio.load(url, this.lifetime.signal);
   }
 
   /** Fetch the rest of the passage quietly behind whatever is playing. */
