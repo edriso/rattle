@@ -202,7 +202,7 @@ export function HomeView({
         </section>
       )}
 
-      <section className="start-form" aria-label="اختر المقطع">
+      <section aria-label="اختر المقطع">
         <button
           className="surah-field"
           aria-label={`اختيار السورة، سورة ${surah.name}`}

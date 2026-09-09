@@ -14,7 +14,7 @@
    of each pairing over the eight combinations, read in real Chrome as
    composited 8-bit sRGB, and AGENTS.md carries the same table under Style. If
    this file and that table ever disagree, one of them is stale. */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const CSS = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
@@ -310,6 +310,42 @@ describe('the tokens in styles.css', () => {
      asserted against the converter. Getting oklch, the oklab mix or the
      luminance weights subtly wrong would otherwise produce a test that is
      confidently wrong in both directions. */
+  /* `--destructive` was declared in this file and never registered as a
+     Tailwind colour, so every `aria-invalid:border-destructive` and
+     `aria-invalid:ring-destructive` in `components/ui` compiled to nothing
+     while its `ring-3` sibling compiled: an ayah number out of range took a
+     3px ring in whatever `currentcolor` happened to be rather than a red one.
+     Nothing noticed, because the utility is in a generated file and the token
+     is in this one. So anything this stylesheet declares and those parts
+     style with has to be registered in `@theme inline`. */
+  it('registers every token the generated parts style with', () => {
+    const dir = new URL('../components/ui/', import.meta.url);
+    const parts = readdirSync(dir)
+      .filter((name) => name.endsWith('.tsx'))
+      .map((name) => readFileSync(new URL(name, dir), 'utf8'))
+      .join('\n');
+    // Or the whole check passes on nothing, twice over.
+    expect(parts.length).toBeGreaterThan(1000);
+    const declared = new Set(
+      [...CSS.matchAll(/^\s+--([a-z-]+):/gm)].map((match) => match[1]),
+    );
+    const theme = /@theme inline\s*\{([^}]*)\}/.exec(CSS)?.[1] ?? '';
+    const registered = new Set(
+      [...theme.matchAll(/--color-([a-z-]+):/g)].map((match) => match[1]),
+    );
+    expect(registered.size).toBeGreaterThan(5);
+    const utility =
+      /\b(?:bg|text|border|ring|fill|stroke|outline|divide|shadow|caret|from|via|to)-([a-z][a-z-]*)/g;
+    const styled = new Set(
+      [...parts.matchAll(utility)].map((match) => match[1]),
+    );
+    /* Only the names this file declares: `primary` and `secondary` come with
+       the registry's own variants, which this app does not render. */
+    expect(
+      [...styled].filter((n) => declared.has(n) && !registered.has(n)).sort(),
+    ).toEqual([]);
+  });
+
   it('reproduces what was measured in Chrome, to within 0.05', () => {
     const worst = new Map<string, number>();
     for (const { theme, appearance } of COMBINATIONS)

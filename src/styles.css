@@ -69,6 +69,12 @@
   --color-ring: var(--ring);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  /* Registered as a colour, not only declared as a variable: without this
+     every `aria-invalid:border-destructive` and `aria-invalid:ring-destructive`
+     in `components/ui` compiled to nothing while its `ring-3` sibling
+     compiled, so an ayah number out of range took a 3px ring in whatever
+     `currentcolor` happened to be instead of a red one. */
+  --color-destructive: var(--destructive);
   --font-sans: 'IBM Plex Sans Arabic', sans-serif;
 }
 :root[data-appearance='light'] {
@@ -632,15 +638,6 @@ progress::-moz-progress-bar {
   font-size: 14px;
   margin-bottom: 10px;
 }
-.full-input {
-  width: 100%;
-  min-height: 48px;
-  border: 1px solid var(--control-border);
-  border-radius: 8px;
-  background: var(--background);
-  padding: 8px 12px;
-  color: var(--foreground);
-}
 .surah-search[data-slot='input-group'] {
   height: 50px;
   width: 100%;
@@ -1053,6 +1050,19 @@ progress::-moz-progress-bar {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+/* Retrying reads as part of the sentence it follows rather than as a control
+   parked under it. `.text-button` is a full-width block everywhere else,
+   which inside this wrapping row put it on a line of its own in a column
+   narrower than half the screen. The height stays, so the target does. */
+.session-estimate .text-button {
+  width: auto;
+  margin: 0;
+  padding-inline: 10px;
+  color: var(--accent);
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .text-button {
   display: inline-flex;
@@ -1492,20 +1502,6 @@ progress::-moz-progress-bar {
 .long-session {
   text-align: center;
   margin-bottom: var(--gap-sm, 10px);
-}
-/* Inline, so the offer reads as part of the sentence rather than as a control
-   parked under it. `.text-button` is a full-width block everywhere else. */
-.long-session .text-button {
-  display: inline;
-  width: auto;
-  margin: 0;
-  padding: 0;
-  min-height: 0;
-  font-size: inherit;
-  color: var(--accent);
-  white-space: nowrap;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 .sheet-about {
   border-top: 1px solid var(--border);
