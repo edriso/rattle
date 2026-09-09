@@ -60,6 +60,8 @@ type MutableOptions = SessionOptions & { echo: EchoMode };
 
 const clamp = (n: number) => (Number.isFinite(n) && n > 0 ? n : 0);
 
+const NO_AUDIO = 'تعذّر تشغيل الصوت في هذا المتصفح.';
+
 /** Slack allowed between two slices of one recording before they count as
     meeting rather than as two separate places in it. */
 const TOUCHING = 0.05;
@@ -263,18 +265,23 @@ export class Session {
     for (let i = 0; i < PREFETCH; i++) void worker();
   }
 
+  /** Wake the audio context once, however many callers ask at the same time. */
+  private wake() {
+    this.unlocking ??= this.options.audio.unlock();
+    return this.unlocking.finally(() => {
+      this.unlocking = null;
+    });
+  }
+
   async start() {
     if (this.launched) return;
     if (this.state.phase !== 'idle' && this.state.phase !== 'error') return;
-    this.unlocking ??= this.options.audio.unlock();
     try {
-      await this.unlocking;
+      await this.wake();
     } catch {
-      this.unlocking = null;
-      this.set({ phase: 'error', error: 'تعذّر تشغيل الصوت في هذا المتصفح.' });
+      this.set({ phase: 'error', error: NO_AUDIO });
       return;
     }
-    this.unlocking = null;
     if (this.disposed || this.launched) return;
     this.launched = true;
     this.prefetch();
@@ -293,11 +300,16 @@ export class Session {
       try {
         await Promise.all([...new Set(pending)].map((url) => this.load(url)));
       } catch {
-        if (generation === this.generation)
+        if (generation === this.generation) {
+          // Every other way out of a run stops the clock. This one did not,
+          // so an error screen left open went on recosting the drill four
+          // times a second and publishing nothing.
+          this.stopTicking();
           this.set({
             phase: 'error',
             error: 'تعذّر تحميل التلاوة. تحقّق من الاتصال ثم أعِد المحاولة.',
           });
+        }
         return;
       }
       if (generation !== this.generation || this.disposed) return;
@@ -331,8 +343,14 @@ export class Session {
       });
       return;
     }
-    const length =
-      typeof echo === 'number' && echo > 0 ? this.runLength * echo : BREATH;
+    /* Priced off the whole run rather than off the playback that just ended.
+       A resumed run only replays what a pause left, so `runLength` is that
+       tail: a learner who stopped nine seconds into a ten-second ayah got one
+       second of silence to recite the whole of it back. `costSession` has
+       always priced the echo off the full run, so the clock disagreed with
+       the silence as well. */
+    const run = this.runFrom + this.runLength;
+    const length = typeof echo === 'number' && echo > 0 ? run * echo : BREATH;
     const echoing = typeof echo === 'number' && echo > 0;
     this.echoEndsAt = Date.now() + length * 1000;
     if (echoing)
@@ -428,14 +446,33 @@ export class Session {
     // button from starting a second recitation over the first.
     this.resuming = true;
     try {
-      if (!this.options.audio.running)
-        await this.options.audio.unlock().catch(() => {});
+      if (!this.options.audio.running) await this.wake();
+    } catch {
+      /* Said, rather than swallowed. Going on to `run()` scheduled into a
+         context that is not running, and the tick that notices then set the
+         phase back to «متوقّفة» four times a second: a learner pressing play
+         on a browser that will not give it got no reason and no way out. */
+      this.set({ phase: 'error', error: NO_AUDIO });
+      return;
     } finally {
       this.resuming = false;
     }
     if (this.disposed || this.state.phase !== from) return;
     this.startTicking();
     void this.run();
+  }
+
+  /**
+   * Carry the fact that a drill was stopped across a rebuild. A new `Session`
+   * always starts `idle`, which reads to the screen as a drill nobody has
+   * begun, so it starts one; a learner who had pressed pause before changing
+   * the reciter would then be recited at from behind the open sheet. `start()`
+   * refuses every phase but `idle` and `error`, so holding here is also what
+   * keeps that auto-start off.
+   */
+  hold() {
+    if (this.disposed || this.state.phase !== 'idle') return;
+    this.set({ phase: 'paused', remaining: this.countdown() });
   }
 
   /** Move to another step, restarting it from its first repetition. */

@@ -668,6 +668,44 @@ describe('a talqeen session', () => {
   /* But a change that makes a different drill has no step to carry a cursor
      to, and says so rather than pretending: the joins decide what every step
      after the first one even is. */
+  /* A learner who had stopped the drill stays stopped through a rebuild. A new
+     session begins `idle`, which the screen read as a drill nobody had begun,
+     so it began one: choosing a slower reciter from the sheet set him reciting
+     from behind the open sheet, where the transport is under a modal and Space
+     is unbound, so there was no way to stop him without closing the sheet. */
+  it('leaves a paused drill paused when the reciter changes', async () => {
+    const prefs = {
+      ...defaults,
+      screen: 'session',
+      surah: 112,
+      ayah: 1,
+      to: 3,
+    } as Preferences;
+    const noop = () => {};
+    const view = render(
+      <SessionView prefs={prefs} onExit={noop} onGraded={noop} />,
+    );
+    await screen.findByText(/الخطوة ١ من/, {}, { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: 'الخطوة التالية' }));
+    await screen.findByText(/الخطوة ٢ من/);
+    fireEvent.click(await screen.findByRole('button', { name: 'إيقاف مؤقّت' }));
+    expect(await screen.findByText('متوقّفة')).toBeTruthy();
+    view.rerender(
+      <SessionView
+        prefs={{ ...prefs, reciter: 'shuraim' }}
+        onExit={noop}
+        onGraded={noop}
+      />,
+    );
+    expect(
+      await screen.findByText(/الخطوة ٢ من/, {}, { timeout: 3000 }),
+    ).toBeTruthy();
+    expect(screen.getByText('سعود الشريم')).toBeTruthy();
+    // Still stopped, and the way on is the learner's own press.
+    expect(screen.getByText('متوقّفة')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'تشغيل' })).toBeTruthy();
+  });
+
   it('starts over when the joins change', async () => {
     const prefs = {
       ...defaults,

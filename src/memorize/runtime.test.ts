@@ -272,6 +272,48 @@ describe('session runtime', () => {
     ]);
   });
 
+  /* The silence is for reciting the segment back, so it is priced off the run
+     and not off the tail a resume replayed. Stopping eight seconds into a ten
+     second ayah used to leave two seconds to say the whole of it in, and the
+     clock disagreed too: `costSession` has always costed the echo off the
+     whole run. */
+  it('leaves a whole run of silence after a resumed run, not the tail', async () => {
+    const { session, audio } = build({ echo: 1 });
+    await session.start();
+    await settle();
+    audio.now += 8;
+    session.pause();
+    await session.resume();
+    await settle();
+    expect(audio.runs.at(-1)).toEqual([
+      { url: expect.stringContaining('100001.mp3'), from: 8, to: 10 },
+    ]);
+    audio.complete(2);
+    await settle();
+    expect(session.getSnapshot()).toMatchObject({
+      phase: 'echoing',
+      echoLength: 10,
+    });
+  });
+
+  /* Swallowing this scheduled into a context that was not running, and the
+     tick that noticed set the phase back to «متوقّفة» four times a second:
+     a learner pressing play on a browser that will not give it audio got no
+     reason and no way out. */
+  it('reports a refusal to wake the audio when resuming', async () => {
+    const { session, audio } = build();
+    await session.start();
+    await settle();
+    session.pause();
+    audio.running = false;
+    audio.unlock = () => Promise.reject(new Error('blocked'));
+    await session.resume();
+    await settle();
+    expect(session.getSnapshot().phase).toBe('error');
+    expect(session.getSnapshot().error).toContain('تعذّر');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   /* The clock used to climb back up: a tick subtracted only the audio playing
      at that instant, so the moment a run ended and the silence began it added
      a whole run back on, and pausing put back whatever had been played. */
@@ -407,6 +449,11 @@ describe('session runtime', () => {
     expect(session.getSnapshot().phase).toBe('error');
     expect(session.getSnapshot().error).toContain('تعذّر');
     expect(audio.runs).toHaveLength(0);
+    /* And the clock is stopped, as it is on every other way out of a run.
+       This was the one path that left it running: an error screen went on
+       recosting the whole drill four times a second, publishing nothing, for
+       as long as it was open. */
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('sharpens the estimate once real lengths are known', async () => {

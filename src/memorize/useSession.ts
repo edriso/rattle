@@ -72,13 +72,20 @@ export function useSession(config: SessionConfig | null, echo: EchoMode) {
 
   /* Where the drill that was just torn down stood. Written in a cleanup and
      read in an effect, never during a render. */
-  const previous = useRef<{ config: SessionConfig; step: number } | null>(null);
+  const previous = useRef<{
+    config: SessionConfig;
+    step: number;
+    halted: boolean;
+  } | null>(null);
   useEffect(() => {
     if (!session || !config) return;
     return () => {
+      const { phase, cursor } = session.getSnapshot();
       previous.current = {
         config,
-        step: session.getSnapshot().cursor.step,
+        step: cursor.step,
+        halted:
+          phase !== 'reciting' && phase !== 'preparing' && phase !== 'echoing',
       };
       session.dispose();
     };
@@ -89,8 +96,14 @@ export function useSession(config: SessionConfig | null, echo: EchoMode) {
      on a session that has not begun only moves the cursor. */
   useEffect(() => {
     const carried = previous.current;
-    if (!session || !config || !carried || carried.step === 0) return;
-    if (sameDrill(carried.config, config)) session.goTo(carried.step);
+    if (!session || !config || !carried) return;
+    if (carried.step > 0 && sameDrill(carried.config, config))
+      session.goTo(carried.step);
+    /* A drill the learner had stopped stays stopped, and this holds whether or
+       not the new one is the same drill: without it, choosing a reciter from
+       the sheet sets him reciting over the open sheet, and the transport
+       behind a modal is out of reach to stop him. */
+    if (carried.halted) session.hold();
   }, [session, config]);
 
   useEffect(() => session?.setEcho(echo), [session, echo]);
