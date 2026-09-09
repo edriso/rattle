@@ -23,9 +23,9 @@ export type Reciter = {
   folder: string;
   /**
    * Folder to reach for on the mirror, where it does not carry this exact
-   * cut. The two that differ are a higher bitrate of the same reading, a
-   * constant 79ms or less longer whatever the ayah, so the vendored phrase
-   * timings still land. See AGENTS.md for the measurements.
+   * cut. All three that differ are a higher bitrate of the same reading, and
+   * run a bounded 79 ms or less longer whatever the ayah, so the vendored
+   * phrase timings still land. See AGENTS.md for the measurements.
    */
   mirror?: string;
   /** Constant bitrate of that folder, in kbps, used to size a download. */

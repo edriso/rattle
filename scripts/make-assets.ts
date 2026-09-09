@@ -400,7 +400,10 @@ async function connect(url: string): Promise<Cdp> {
       settle?.(message);
       return;
     }
-    for (const watcher of [...watchers]) watcher(message);
+    /* Iterated directly: a Set tolerates an entry removing itself while it
+       is being visited, which is exactly what `once` below does, and nothing
+       adds a watcher from inside a dispatch. */
+    for (const watcher of watchers) watcher(message);
   });
 
   return {

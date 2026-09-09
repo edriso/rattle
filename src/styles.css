@@ -461,9 +461,10 @@ label:has(input:focus-visible) {
   display: grid;
   place-items: center;
 }
-/* Physical, not logical, and the one place in this file that is. A play
-   triangle is not mirrored by writing direction the way a chevron is, so the
-   nudge that optically centres it belongs on the same side in both. */
+/* Physical, and one of the two places in this file that hardcodes an inline
+   side, the other being the disclosure chevron's own border. A play triangle
+   is not mirrored by writing direction the way a chevron is, so the nudge
+   that optically centres it belongs on the same side in both. */
 .play-main svg {
   margin-left: 3px;
 }

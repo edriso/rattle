@@ -3,15 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.13.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
-    "start": "vite preview --host 0.0.0.0",
-    "lint": "oxlint src",
-    "format": "oxfmt",
     "preview": "vite preview --host 0.0.0.0",
+    "lint": "oxlint src scripts",
+    "format": "oxfmt",
     "test": "vitest run",
     "prepare:quran": "node scripts/prepare-quran.mjs",
     "prepare:timings": "node scripts/prepare-timings.ts && oxfmt src/data/timings",

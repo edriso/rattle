@@ -51,7 +51,14 @@ Three views, chosen by `prefs.screen`, with no router:
 
 `src/App.tsx` is the shell: it holds the preferences, saves them, and decides
 which of the three to render. The two slide-up panels (the passage picker and
-the settings) live in `src/components/Sheets.tsx` and are loaded on demand.
+the settings) live in `src/components/Sheets.tsx` and are loaded on demand;
+the frame all three sheets share, the grading one included, is
+`src/components/Panel.tsx`.
+
+Two small things sit beside the screens. `src/useSurah.ts` loads one surah's
+verses for whichever screen is showing Quran, and `src/webmcp.ts` offers a
+browser agent a single tool that opens a session over a passage. The tool has
+a section of its own in AGENTS.md.
 
 The method itself is in `src/memorize/`, and **only the files named `use*.ts`
 in there know that React exists.** Everything else is plain functions and
@@ -78,6 +85,7 @@ machine that walks it) → `player.ts` (Web Audio).
 | Add a keyboard shortcut | `src/usePracticeNavigation.ts` | The Keyboard section. It lists **four** places to update |
 | Change the review schedule | `src/memorize/review.ts` | It is SM-2 with a 35-day ceiling |
 | Add a settings control | `src/components/Sheets.tsx` | "Changing a setting while a drill is running" |
+| Change how a sheet opens or focuses | `src/components/Panel.tsx` | "The panels" in AGENTS.md |
 
 ## The five rules that will bite you
 
@@ -116,11 +124,13 @@ with `inputMode="numeric"`, render through `arabic()`, read back through
 **5. Prefer logical CSS properties.** The whole interface is right to left, so
 write `padding-inline-start`, not `padding-left`; `margin-inline`, not
 `margin-left`. `text-align: start`, not `right`. Anything that hardcodes a
-side is a bug waiting on the other one. Two physical properties are left in
-`styles.css` and each carries a comment saying why: the nudge that optically
-centres the play triangle, which is not mirrored by writing direction the way
-a chevron is, and the borders that draw the disclosure chevron itself, which
-is geometry rather than text.
+side is a bug waiting on the other one. The block axis is the same in both
+directions, so `margin-top` and `border-top` are written plainly throughout;
+it is the **inline** side that must never be hardcoded. Two rules in
+`styles.css` do, and each carries a comment saying why: the nudge that
+optically centres the play triangle, which is not mirrored by writing
+direction the way a chevron is, and the border that draws the disclosure
+chevron itself, which is geometry rather than text.
 
 ## The accessibility floor, which is not optional
 

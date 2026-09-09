@@ -64,7 +64,7 @@ An ayah keeps its timings out of the file, and plays whole, when:
 
 Coverage of the 1,560 ayat that split, as generated: Shuraim 1,555, Husary and Dussary 1,552, Husary Muallim 1,546, Minshawi 1,544, Sudais 1,537, Shatri 1,510, Abdul Basit's mujawwad 1,489, Alafasy 1,480, Abdul Basit 1,458, and Minshawi's mujawwad lowest at 1,398.
 
-Those are the figures the generator writes. Measuring against the audio takes some of them back down, since a cut with no pause under it is dropped: as shipped, Husary Muallim covers 1,541 of the 1,560, Husary 1,517, Abdul Basit's mujawwad 1,374 and his murattal 1,277. `src/data/timings.test.ts` checks every shipped file against what `buildSegments` requires of it, because that function answers a bad set of cuts by playing the ayah whole, which is right at run time and silent. `src/data/timings.test.ts` checks every shipped file against what `buildSegments` requires of it, because that function answers a bad set of cuts by playing the ayah whole, which is right at run time and silent.
+Those are the figures the generator writes. Measuring against the audio takes some of them back down, since a cut with no pause under it is dropped: as shipped, Husary Muallim covers 1,541 of the 1,560, Husary 1,517, Abdul Basit's mujawwad 1,374 and his murattal 1,277. `src/data/timings.test.ts` checks every shipped file against what `buildSegments` requires of it, because that function answers a bad set of cuts by playing the ayah whole, which is right at run time and silent.
 
 ### Cuts measured against the audio
 

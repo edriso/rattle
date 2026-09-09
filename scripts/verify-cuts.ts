@@ -342,7 +342,7 @@ async function pooled<T, R>(
   width: number,
   work: (item: T, index: number) => Promise<R>,
 ) {
-  const out: R[] = new Array(items.length);
+  const out: R[] = [];
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.min(width, items.length) }, async () => {
@@ -460,7 +460,7 @@ async function verify(
       heard = await silences(
         new URL(await recording(surah, ayah, id)).pathname,
       );
-    } catch (error) {
+    } catch {
       // A recording that cannot be fetched or read says nothing either way, so
       // its cuts are left exactly as they were rather than dropped.
       failed++;

@@ -27,13 +27,20 @@ in English.
 npm install
 npm run dev        # local server
 npm test           # vitest, no watch
-npm run lint       # oxlint
+npm run lint       # oxlint over src and scripts
 npm run format     # oxfmt
-npm run build      # type check, then build
+npm run build      # type check src and scripts, then build
+npm run preview    # serve the built app
 ```
 
 Run `npm test`, `npm run lint` and `npm run build` before you commit. All three
 must pass. The GitHub Pages workflow runs the same three.
+
+`tsconfig.json` and `npm run lint` both cover `scripts/` as well as `src/`.
+They did not, and the tools the npm scripts run were checked by nothing at
+all. `allowImportingTsExtensions` is what lets one config hold both, since
+a script has to import `'../src/data/audio.ts'` with its extension for plain
+`node` to resolve it.
 
 A few more commands regenerate or check something that is committed to the
 repo. You almost never need them. See "Data" below, and each script's own
@@ -55,9 +62,13 @@ src/
   data/          the Quran text, the reciters, the timings, saved settings
   memorize/      all the memorisation logic (see src/memorize/AGENTS.md)
   components/    the screens and the panels
-components/ui/   the eight shadcn parts the app actually uses, generated.
-                 Do not hand-edit them, and do not pull the whole library
-                 back in: `npx shadcn add <part>` fetches only what you need.
+  useSurah.ts    one surah's verses, for whichever screen is showing Quran
+  webmcp.ts      the one tool the app offers a browser agent, see below
+components/ui/   the eight shadcn parts this app pulled in, generated. Seven
+                 are rendered; `textarea.tsx` arrives with `input-group.tsx`
+                 and nothing renders it. Do not hand-edit them, and do not
+                 pull the whole library back in: `npx shadcn add <part>`
+                 fetches only what you need.
 scripts/         offline tools that build the committed data
 data/            the original Quran text file, its checksum, and its provenance
 docs/            CONTRIBUTING.md, the walk-through for a first change
@@ -435,7 +446,13 @@ network comes back starts from the right place.
   ships almost nothing beyond React and the UI parts it already has.
 - The linter runs the React Compiler rules and is strict. It will reject
   reading a ref during render, and calling `setState` straight from an effect
-  body. Restructure the code instead of silencing the rule.
+  body. Restructure the code instead of silencing the rule. Two places do
+  silence it, each narrowed to what needs it and carrying its own reason: the
+  `catch` in `App.tsx` where a refused store write is the only thing that
+  knows it failed, and the one effect in `useRangeAudio` that builds the media
+  element. A file-wide disable is not the way to add a third; one of the three
+  that used to be there silenced nothing at all, and was hiding whatever the
+  file might stop passing.
 - Every touch target is at least 44 by 44 pixels. Every control has a label.
   Text meets WCAG AA contrast (4.5:1) in both the light and the dark theme and
   in all four accent colours, and every control's edge meets the 3:1 that
@@ -444,6 +461,14 @@ network comes back starts from the right place.
 - Do not fade text with `opacity` to show it is secondary. Opacity multiplies
   against the background and quietly drops the contrast below AA; use
   `--muted-foreground`, which is chosen to pass.
+- **A colour a `components/ui` part styles with has to be registered in
+  `@theme inline`, not only declared in `:root`.** `--destructive` was
+  declared and not registered, so every `aria-invalid:border-destructive` and
+  `aria-invalid:ring-destructive` in those parts compiled to nothing while its
+  `ring-3` sibling compiled, and an ayah number out of range took a 3px ring
+  in whatever `currentcolor` happened to be. `styles.test.ts` fails by name on
+  any token this stylesheet declares that those parts style with and
+  `@theme inline` has not registered.
 - **`--muted-foreground` is chosen against `--surface`, so it is wrong on a
   row the accent has painted.** On `--accent` it collapses to between 1.0 and
   1.5 to one, measured across all four colours in both appearances. Secondary
@@ -476,7 +501,15 @@ network comes back starts from the right place.
   than fighting it there.
 - A control that becomes unavailable while it holds focus uses `aria-disabled`,
   not `disabled`. A `disabled` button drops the keyboard on the floor the
-  moment it is pressed.
+  moment it is pressed. Usually the press is what makes it unavailable, which
+  is easy to miss: reaching the first or last ayah of a surah, reaching the
+  first repetition of a drill, and pressing record, which goes inert while the
+  browser asks about the microphone. Recording also starts from Shift+Enter,
+  so it can take three other controls out from under the focus. All of those
+  are `aria-disabled` with the handler refusing the press, and all but two of
+  them already refused it. `disabled` is still right where
+  a control is unavailable for a reason of its own: «ابدأ جلسة التلقين» while
+  the text loads, «تأكيد المقطع» over an impossible range.
 - Anything third-party that this repository **redistributes** gets an entry in
   [NOTICE](NOTICE) in the same pass. Everything written here is
   [0BSD](LICENSE): no attribution, no conditions, deliberately, so do not add
@@ -518,6 +551,13 @@ learner their place, and only one thing in it can even try.
 - **The silence** is handed to the running session by `setEcho`. The session
   is built with `echo: 'off'` and given the real one straight away for exactly
   this reason.
+- **A drill the learner had stopped stays stopped**, whichever setting caused
+  the rebuild. A new `Session` begins `idle`, which the screen reads as a
+  drill nobody has begun, so it began one: somebody who pressed pause and then
+  chose a slower voice was recited at from behind the open sheet, where the
+  transport is under a modal and Space is unbound, with no way to stop him but
+  to close the panel. `useSession` carries the phase as well as the place now,
+  and `Session.hold()` is what the new one is put into.
 - **The reciter** rebuilds the drill, and `useSession` carries the cursor
   across **when it is the same drill**: the same steps and the same segments
   in a different voice. Comparing step boundaries is not enough, because two
@@ -548,8 +588,14 @@ those four it is before you decide where it goes.
 ## The panels
 
 The two sheets, the passage picker and the settings, and the grading sheet
-share `Panel` in `src/components/Sheets.tsx`. Three things about them are
-deliberate:
+share `Panel` in `src/components/Panel.tsx`. It is a module of its own rather
+than a helper inside `Sheets.tsx` because `Sheets.tsx` is loaded on demand and
+brings the combobox and the select with it, while the grading sheet ships with
+the session screen; sharing it from there would put the picker's widgets in
+the session's chunk. The grading sheet carried its own copy of the frame
+instead, which meant the three rules below were written down twice and a fix
+to one would have missed the panel a learner sees at the end of every sitting.
+Three things about them are deliberate:
 
 - They open with the cursor on their **title**, not on the close button.
   Landing on «إغلاق» reads as though leaving were the thing to do, and a
@@ -564,6 +610,29 @@ deliberate:
 - Anything the panel says about the app rather than about a setting belongs in
   the `.sheet-about` footer at the end, not as another note under the last
   control.
+
+## The one tool a browser agent gets
+
+`src/webmcp.ts` registers a single tool, `start_memorization`, on
+`document.modelContext` when the browser has one. It takes a surah and an
+ayah, optionally an end, and opens a session over that passage, saving the
+position like any other. Nothing else is exposed: no reading, no settings, no
+review plan.
+
+Four things about it are deliberate.
+
+- **It is entirely optional.** The registration is wrapped and its promise is
+  caught, so a browser with no `modelContext`, or one whose registry rejects,
+  changes nothing about the page. `AbortController` unregisters it on unmount.
+- **It validates the position itself** against `surahs[].count` rather than
+  trusting the caller, and refuses with an Arabic message. `App`'s own
+  clamping would silently move a bad position instead of saying so.
+- **`flushSync`**, so the tool's caller is told the session opened only once
+  the screen has actually changed.
+- **It writes, and only this.** `annotations.readOnlyHint` is `false` because
+  it does move somebody's saved position, and that is the whole of what an
+  agent can do here. If you add a second tool, keep it to the same shape:
+  one action, validated, no reading of anything private.
 
 ## Tests
 
