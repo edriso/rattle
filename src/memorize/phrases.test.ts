@@ -85,7 +85,13 @@ describe('phrase splitting', () => {
         });
       }
     }
-    // A stable figure guards against a rule change that quietly re-cuts the text.
+    /* A stable figure guards against a rule change that quietly re-cuts the
+       text. It counts the verses as stored, which carry the basmala on the
+       first ayah of every surah but two, and the app splits what `openVerse`
+       hands back with that separated. The two differ by 7, all of them a
+       first ayah (10:1, 11:1, 12:1, 14:1, 15:1, 27:1 and 34:1), so 8,373 is
+       the figure to expect from anything that goes through `openVerse` and
+       neither number is stale. */
     expect(phrases).toBe(8380);
   });
 
