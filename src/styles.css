@@ -260,6 +260,110 @@ label:has(input:focus-visible) {
   font-weight: 500;
   font-size: 18px;
 }
+/* The surah box on the start screen is the search field itself. The input
+   fills the whole box and the label and icons are drawn over it without
+   taking taps, so wherever a finger lands opens the list; a label or icon
+   that swallowed the tap would make the box answer in some places and not
+   others. Doubled class, so the shorter screens' padding for `.surah-field`
+   cannot put the inset back. */
+.surah-field.surah-box {
+  position: relative;
+  padding: 0;
+  cursor: text;
+}
+.surah-box > svg,
+.surah-box > label,
+.surah-box-label {
+  position: absolute;
+  pointer-events: none;
+}
+.surah-box > svg {
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--muted-foreground);
+}
+.surah-box > svg:first-child {
+  inset-inline-start: 16px;
+}
+.surah-box > svg:last-child {
+  inset-inline-end: 16px;
+}
+/* Label and name stacked as one block in the middle of the box, whatever
+   height the screen gives it: the label's 16px line sits directly above the
+   name, which the input's top padding pushes down by half that. */
+.surah-box > label,
+.surah-box-label {
+  inset-inline-start: 51px;
+  top: calc(50% - 21px);
+  font-size: 12px;
+  line-height: 16px;
+}
+/* What the start screen draws while the fields are on their way: the same
+   box and the same values, set where the inputs will set them. */
+.surah-box-static {
+  flex: 1;
+  padding: 16px 51px 0 46px;
+  padding-inline: 51px 46px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.inline-retry.text-button {
+  display: inline-flex;
+  width: auto;
+  margin: 0;
+  padding-inline: 8px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ayah-static {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 16px;
+}
+/* The app's own focus ring, drawn round the box rather than round the
+   input inside it, which is square and would cut across the corners. */
+.surah-box:focus-within {
+  border-color: var(--accent);
+}
+.surah-box:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.surah-box-input input:focus-visible {
+  outline: none;
+}
+.surah-box-input[data-slot='input-group'] {
+  flex: 1;
+  align-self: stretch;
+  height: auto;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  /* The box draws the focus ring, round its whole edge. */
+  box-shadow: none;
+}
+.surah-box-input input {
+  height: 100%;
+  align-self: stretch;
+  padding: 16px 46px 0 51px;
+  padding-inline: 51px 46px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.surah-box-input input::placeholder {
+  font-size: 16px;
+  font-weight: 400;
+}
 .ayah-field {
   display: flex;
   align-items: center;
@@ -719,6 +823,22 @@ progress::-moz-progress-bar {
   width: auto;
   min-width: min(300px, calc(100vw - 48px));
   max-width: calc(100vw - 40px);
+}
+/* Both lists stop above a phone's keyboard, which `--available-height`
+   knows nothing about: see `useKeyboardRoom`. */
+.surah-options [data-slot='combobox-list'],
+.ayah-options [data-slot='combobox-list'] {
+  max-height: min(
+    18rem,
+    calc(var(--available-height) - 8px),
+    var(--keyboard-room, 18rem)
+  );
+}
+/* On the start screen the ayah fields keep the height and ground of the
+   plain fields they replaced, which the screen's fit was measured with. */
+.start-main .ayah-search[data-slot='input-group'] {
+  height: 44px;
+  background: var(--surface);
 }
 .ayah-options [data-slot='combobox-item'] {
   min-height: 44px;

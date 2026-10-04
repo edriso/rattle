@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AudioLines,
   BookOpen,
@@ -12,7 +12,6 @@ import {
   arabic,
   ayatCount,
   daysCount,
-  digits,
   minutesCount,
   surahs,
   timesCount,
@@ -31,6 +30,92 @@ import { daysUntil, due, type ReviewItem } from '../memorize/review';
 import type { SchedulePlan } from '../memorize/schedule';
 import { Repetitions } from './Repetitions';
 
+/* The fields carry the combobox and the positioning it brings, which would
+   add more than half again to the script the first paint waits on. They are
+   fetched the moment this screen renders, and until they land the screen
+   draws the same boxes holding the same values, so nothing moves when they
+   arrive.
+
+   A chunk can fail to arrive: a flaky connection, or a deploy that renamed
+   it under a tab opened before. Through `lazy` with nothing to catch it,
+   React unmounts the whole screen, so this loads the module itself and keeps
+   the boxes up when it fails. The way on is a reload, not another `import()`:
+   a browser may remember the failed one, and after a deploy the old name is
+   gone for good, while a reload asks for the current names. Nothing is lost
+   to it, since the position and settings are already saved. Once loaded the
+   module is kept for the life of the page, so coming back to this screen
+   draws the fields straight away. */
+type Fields = typeof import('./PassageFields');
+let loadedFields: Fields | null = null;
+
+function usePassageFields() {
+  const [fields, setFields] = useState(loadedFields);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (fields) return;
+    let live = true;
+    import('./PassageFields').then(
+      (module) => {
+        loadedFields = module;
+        if (live) setFields(module);
+      },
+      () => {
+        if (live) setFailed(true);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [fields]);
+  return { fields, failed };
+}
+
+/** The passage fields as they look before they can be used: the same boxes
+    holding the same values, laid out exactly where the inputs will be. */
+function PassagePlaceholder({
+  surah,
+  from,
+  to,
+  onRetry,
+}: {
+  surah: string;
+  from: number;
+  to: number;
+  onRetry?: () => void;
+}) {
+  return (
+    <div aria-busy={!onRetry}>
+      <div className="surah-field surah-box">
+        <BookOpen size={21} aria-hidden="true" />
+        <span className="surah-box-label">السورة</span>
+        <span className="surah-box-static">{surah}</span>
+        <ChevronDown size={18} aria-hidden="true" />
+      </div>
+      <div className="range-fields">
+        {(
+          [
+            ['من الآية', from],
+            ['إلى الآية', to],
+          ] as const
+        ).map(([label, n]) => (
+          <div className="ayah-field" key={label}>
+            <span>{label}</span>
+            <span className="ayah-static">{arabic(n)}</span>
+          </div>
+        ))}
+      </div>
+      {onRetry && (
+        <p className="field-note" role="alert">
+          تعذّر تحميل حقول الاختيار.{' '}
+          <button className="text-button inline-retry" onClick={onRetry}>
+            إعادة المحاولة
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Minutes, rounded up, because a session never feels shorter than it is. */
 const minutes = (seconds: number) => Math.max(1, Math.ceil(seconds / 60));
 
@@ -40,65 +125,16 @@ const LONG_SESSION = 30;
 /** What is left to choose from for a mushaf with no published word timings. */
 const ayahGrains = grains.filter((grain) => grain !== 'phrase');
 
-/**
- * One end of the passage.
- *
- * While it is being typed into, the field shows what was typed; the moment it
- * is left, it shows the number the passage actually holds. It has to hold that
- * draft, for two reasons that are really one. The field used to refuse to go
- * blank, so a reader who wanted ٦ had to select the ١ and type over it. And
- * the passage clamps every keystroke, so a field showing the clamped value
- * fought the typing: clearing «إلى الآية» over ٩ and typing ١ then ٢ read the
- * ١ as an inverted range, snapped it to ٥, and appended the ٢ to *that*,
- * leaving the reader on ayah ٥٢ having asked for ١٢.
- *
- * Text rather than a number field, because a number field silently throws away
- * ٢٥٥, which is what an Arabic keyboard types.
- */
-function AyahField({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  return (
-    <div className="ayah-field">
-      <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        value={draft ?? arabic(value)}
-        onChange={(event) => {
-          setDraft(event.target.value);
-          const typed = digits(event.target.value);
-          if (typed) onChange(Number(typed));
-        }}
-        onBlur={() => setDraft(null)}
-      />
-    </div>
-  );
-}
-
 export function HomeView({
   prefs,
   update,
   items,
-  onOpenPicker,
   onOpenReciter,
   onStart,
 }: {
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
   items: readonly ReviewItem[];
-  onOpenPicker: () => void;
   onOpenReciter: () => void;
   onStart: (screen: 'session' | 'practice') => void;
 }) {
@@ -134,6 +170,7 @@ export function HomeView({
       reciter.pace,
     ],
   );
+  const { fields, failed: fieldsFailed } = usePassageFields();
   const pending = due(items);
   const ayat = prefs.to - prefs.ayah + 1;
   const phrases = cutsPhrases(prefs.reciter);
@@ -203,33 +240,34 @@ export function HomeView({
       )}
 
       <section aria-label="اختر المقطع">
-        <button
-          className="surah-field"
-          aria-label={`اختيار السورة، سورة ${surah.name}`}
-          onClick={onOpenPicker}
-        >
-          <BookOpen size={21} />
-          <span>
-            <small>السورة</small>
-            <strong>سورة {surah.name}</strong>
-          </span>
-          <ChevronDown size={18} />
-        </button>
-
-        <div className="range-fields">
-          <AyahField
-            id="from-ayah"
-            label="من الآية"
-            value={prefs.ayah}
-            onChange={(from) => setRange(from, prefs.to)}
+        {/* The real fields, not a button that opens them. The surah box used
+            to open the passage sheet, which repeated the ayah fields below it
+            and asked for a confirm; a reader tapping what looks like the
+            surah box expects to search right there. */}
+        {fields ? (
+          <fields.StartPassage
+            surah={prefs.surah}
+            from={prefs.ayah}
+            to={prefs.to}
+            onSurah={(next) =>
+              /* A new surah starts at its first ayah and keeps the length
+                 the reader had chosen, so «طول المدى» stays as it was. */
+              update({
+                surah: next.id,
+                ayah: 1,
+                to: Math.min(next.count, ayat),
+              })
+            }
+            onRange={setRange}
           />
-          <AyahField
-            id="to-ayah"
-            label="إلى الآية"
-            value={prefs.to}
-            onChange={(to) => setRange(prefs.ayah, to)}
+        ) : (
+          <PassagePlaceholder
+            surah={surah.name}
+            from={prefs.ayah}
+            to={prefs.to}
+            onRetry={fieldsFailed ? () => location.reload() : undefined}
           />
-        </div>
+        )}
 
         {/* The label is on the screen and not only in the accessible tree:
             these set how many ayat the passage covers, and a reader took them

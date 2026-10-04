@@ -168,7 +168,6 @@ export function App() {
               prefs={prefs}
               update={update}
               items={review.items}
-              onOpenPicker={() => setPanel('picker')}
               onOpenReciter={() => setPanel('reciter')}
               onStart={(screen) => update({ screen })}
             />

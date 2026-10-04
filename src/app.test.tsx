@@ -420,22 +420,81 @@ describe('settings and surah picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'إغلاق' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
-  it('puts the surah back when the list is left without a choice', async () => {
+  /* The start screen's surah box is the search field itself. It used to be
+     a button opening the passage sheet, which repeated the ayah fields
+     already on the page and asked for a confirm: not what a reader tapping
+     a surah box expects. */
+  it('searches for a surah right on the start screen', async () => {
     render(<App />);
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: /اختيار السورة، سورة الفاتحة/,
+    const input = (await screen.findByRole('combobox', {
+      name: 'السورة',
+    })) as HTMLInputElement;
+    expect(screen.queryByRole('button', { name: /اختيار السورة/ })).toBeNull();
+    const user = userEvent.setup();
+    expect(input.value).toBe('الفاتحة');
+    // Opening the list empties the box: the search starts on a clear field
+    // rather than making the reader delete the surah they are already on.
+    await user.click(input);
+    expect(input.value).toBe('');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await user.type(input, 'الناس');
+    fireEvent.click(await screen.findByRole('option', { name: /سورة الناس/ }));
+    // Taken at once, from its first ayah, keeping the length chosen.
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
+        surah: 114,
+        ayah: 1,
+        to: 5,
       }),
     );
-    const input = (await screen.findByRole(
-      'combobox',
-      { name: 'السورة' },
-      { timeout: 3000 },
-    )) as HTMLInputElement;
+    expect(input.value).toBe('الناس');
+  });
+
+  /* Opening the list highlights the surah already chosen, so Enter, or a tap
+     on it to say «never mind», chooses it again. With every choice taken at
+     once, that sent the reader back to the first ayah. */
+  it('keeps the place when the surah already chosen is chosen again', async () => {
+    localStorage.setItem(
+      'rattle:v1',
+      JSON.stringify({ ...defaults, surah: 2, ayah: 255, to: 257 }),
+    );
+    render(<App />);
+    const input = await screen.findByRole('combobox', { name: 'السورة' });
+    const user = userEvent.setup();
+    await user.click(input);
+    await user.keyboard('{Enter}');
+    await user.click(input);
+    fireEvent.click(await screen.findByRole('option', { name: /سورة البقرة/ }));
+    await waitFor(() =>
+      expect((input as HTMLInputElement).value).toBe('البقرة'),
+    );
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
+      surah: 2,
+      ayah: 255,
+      to: 257,
+    });
+  });
+
+  it('puts the surah back when the list is left without a choice', async () => {
+    render(<App />);
+    const input = (await screen.findByRole('combobox', {
+      name: 'السورة',
+    })) as HTMLInputElement;
     const user = userEvent.setup();
     await user.click(input);
     await user.type(input, 'الناس');
     await user.keyboard('{Escape}');
+    await waitFor(() => expect(input.value).toBe('الفاتحة'));
+    // And leaving the field without choosing takes nothing either: the
+    // highlighted match is not committed on the way out.
+    await user.click(input);
+    await user.type(input, 'البقرة');
+    await user.tab();
+    await waitFor(() => expect(input.value).toBe('الفاتحة'));
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!).surah).toBe(1);
+    // Nor does Enter over a search that matched nothing leave the text behind.
+    await user.click(input);
+    await user.type(input, 'zzz{Enter}');
     await waitFor(() => expect(input.value).toBe('الفاتحة'));
   });
 
@@ -447,28 +506,21 @@ describe('settings and surah picker', () => {
       JSON.stringify({ ...defaults, surah: 2, ayah: 1, to: 5 }),
     );
     render(<App />);
-    fireEvent.click(
-      await screen.findByRole('button', { name: /اختيار السورة، سورة البقرة/ }),
-    );
-    const from = (await screen.findByRole(
-      'combobox',
-      { name: 'من الآية' },
-      // The picker is a lazy chunk, so give it room to arrive.
-      { timeout: 3000 },
-    )) as HTMLInputElement;
+    const from = (await screen.findByRole('combobox', {
+      name: 'من الآية',
+    })) as HTMLInputElement;
     const user = userEvent.setup();
     await user.click(from);
     await user.type(from, 'الله لا اله الا هو الحي القيوم');
-    const option = await screen.findByRole('option', { name: /٢٥٥/ });
+    const option = await screen.findByRole(
+      'option',
+      { name: /٢٥٥/ },
+      { timeout: 3000 },
+    );
     fireEvent.click(option);
     await waitFor(() => expect(from.value).toBe('٢٥٥'));
     // The far end of the passage came along, rather than being left behind
-    // the ayah it was on with an error to clear.
-    expect(
-      (screen.getByRole('combobox', { name: 'إلى الآية' }) as HTMLInputElement)
-        .value,
-    ).toBe('٢٥٥');
-    fireEvent.click(screen.getByRole('button', { name: 'تأكيد المقطع' }));
+    // the ayah it was on.
     await waitFor(() =>
       expect(JSON.parse(localStorage.getItem('rattle:v1')!)).toMatchObject({
         surah: 2,
@@ -476,14 +528,27 @@ describe('settings and surah picker', () => {
         to: 255,
       }),
     );
+    expect(
+      (screen.getByRole('combobox', { name: 'إلى الآية' }) as HTMLInputElement)
+        .value,
+    ).toBe('٢٥٥');
   });
 
+  /* In a session the passage is changed from the position in the top bar,
+     and there it is a sheet with a confirm, since it replaces the drill that
+     is running. */
   it('opens the searchable catalogue and validates the selected verse', async () => {
+    localStorage.setItem(
+      'rattle:v1',
+      JSON.stringify({ ...defaults, screen: 'session' }),
+    );
     render(<App />);
     fireEvent.click(
-      await screen.findByRole('button', {
-        name: /اختيار السورة، سورة الفاتحة/,
-      }),
+      await screen.findByRole(
+        'button',
+        { name: /^سورة الفاتحة/ },
+        { timeout: 3000 },
+      ),
     );
     const input = (await screen.findByRole(
       'combobox',

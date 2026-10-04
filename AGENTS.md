@@ -179,6 +179,55 @@ has to agree with all of them, and the labels here come from a shared
 counter that cannot know what is above it. Prefer a legend that governs
 nothing.
 
+## The passage is chosen on the start screen itself
+
+The surah box and the two ayah fields under it are the real fields, from
+`StartPassage` in `src/components/PassageFields.tsx`, and every choice takes
+effect at once. The surah box used to be a button drawn to look like a field,
+and it opened the passage sheet: a modal holding a second copy of the ayah
+fields already on the page, and a button to confirm. A reader tapping what
+looks like a surah box expects to search right there, and said so. The sheet
+is still what the position in a session's top bar opens, because changing the
+passage there replaces the drill that is running, and that is worth a confirm.
+
+Four things about the fields are load-bearing:
+
+- **A field shows a draft while it is typed into**, and the value it holds
+  the moment it settles. `draft` is `null` whenever the field is showing its
+  value. It has to be: the start screen clamps every keystroke, so a field
+  showing the clamped value fought the typing, and clearing «إلى الآية» over ٩
+  and typing ١ then ٢ snapped the ١ to ٥ and appended the ٢, leaving the
+  reader on ٥٢ having asked for ١٢. Only the close reasons in `settles` put
+  the value back. Base UI also closes the list when the text is cleared, and
+  restoring on that would make a field impossible to empty.
+- **Leaving a field without choosing commits nothing, and neither does
+  choosing what it already holds.** Some autocompletes take the highlighted
+  match on blur; here that would silently move somebody's passage because
+  they tapped elsewhere. And opening the surah list highlights the surah
+  already chosen, so Enter or a «never mind» tap on it chooses it again; a new
+  surah starts at its first ayah, so passing that on sent the reader back to
+  ayah one. `SurahSearch` drops it.
+- **The whole surah box is the input.** The label and both icons are drawn
+  over it with `pointer-events: none`, so wherever a finger lands opens the
+  list, and the box rather than the square input draws the focus ring.
+- **The fields are a chunk of their own**, because the combobox and the
+  positioning it brings would add more than half again to the script the
+  first paint waits on (81 KB gzipped against 138). `usePassageFields` loads
+  the module itself rather than through `lazy`: a chunk that fails to arrive
+  through `lazy`, with nothing to catch it, unmounts the whole screen. Until
+  the module lands, `PassagePlaceholder` draws the same boxes holding the same
+  values on the same pixels, measured in Chrome, and if it fails they stay up
+  with a retry that reloads the page. Not another `import()`: a browser may
+  answer that from its memory of the failure, and after a deploy the old
+  chunk name is gone for good. The position is saved, so a reload costs
+  nothing. `passage-fields.test.tsx` holds that failure on its own,
+  because the screen keeps a loaded module for the life of the page.
+
+Each list also stops above a phone's keyboard. The keyboard shrinks only the
+visual viewport and Base UI sizes the list against the layout one, so
+`useKeyboardRoom` measures from the field, found by id because a tap opens the
+list before it focuses the input, to the bottom of what is actually visible.
+
 ## The start screen fits the screen
 
 Everything on the start screen is spaced from one rhythm, `--gap`, declared on
@@ -208,8 +257,8 @@ desktop. Two rules go with it:
 - **No row is ever dropped and every row keeps its full height.** Measured in
   Chrome against the built app at 390 wide, the form fits whole at 844, 812,
   780, 740 and 700 tall, and nothing overflows sideways down to 320px. At 667
-  it scrolls 16px and at 640 41px, both still **less** than the 24 and 49 it
-  scrolled before the counts arrived; the 3 or 4px over the 13 and 37 they
+  it scrolls 15px and at 640 40px, both still **less** than the 24 and 49 it
+  scrolled before the counts arrived; the 2 or 3px over the 13 and 37 they
   used to be is the reciter button standing a full `--gap` off «ابدأ» now
   that it is drawn as a control, where it had looked glued to it. **If you add a row to this screen,
   measure those heights again**, and measure the built app rather than the
@@ -608,7 +657,7 @@ those four it is before you decide where it goes.
 The three sheets, the passage picker, the reciter picker and the settings, and
 the grading sheet share `Panel` in `src/components/Panel.tsx`. It is a module
 of its own rather than a helper inside `Sheets.tsx` because `Sheets.tsx` is
-loaded on demand and brings the combobox with it, while the grading sheet ships with
+loaded on demand and brings the combobox with it (through `PassageFields`), while the grading sheet ships with
 the session screen; sharing it from there would put the picker's widgets in
 the session's chunk. The grading sheet carried its own copy of the frame
 instead, which meant the three rules below were written down twice and a fix
@@ -619,12 +668,13 @@ Three things about them are deliberate:
   Landing on «إغلاق» reads as though leaving were the thing to do, and a
   screen reader hears "close" instead of the panel's name. That is what
   `initialFocus` is for; do not drop it.
-- The surah box is a **search field that happens to show where you are**.
-  Opening it empties it, so nobody has to delete البقرة before looking for
-  آل عمران, and closing it without choosing puts the name back. The name to
-  restore comes from a ref, not from the rendered selection: picking a surah
-  closes the list in the same breath, and a handler would still be holding the
-  previous one.
+- The surah box, here and on the start screen, is a **search field that
+  happens to show where you are**. Opening it empties it, so nobody has to
+  delete البقرة before looking for آل عمران, and closing it without choosing
+  puts the name back. The name it falls back to comes from the current value,
+  never from a handler: picking a surah closes the list in the same breath,
+  and a handler would still be holding the previous one. See "The passage is
+  chosen on the start screen itself" for the draft this rests on.
 - Anything the panel says about the app rather than about a setting belongs in
   the `.sheet-about` footer at the end, not as another note under the last
   control.

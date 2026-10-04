@@ -268,11 +268,16 @@ const SCREENS = [
     name: 'the passage picker',
     least: 5,
     open: async () => {
-      start({ screen: 'home' });
+      // The start screen holds its own fields; the sheet is a session's.
+      start({ screen: 'session', surah: 112, ayah: 1, to: 3 });
       render(<App />);
       const user = userEvent.setup();
       await user.click(
-        await screen.findByRole('button', { name: /اختيار السورة/ }),
+        await screen.findByRole(
+          'button',
+          { name: /^سورة الإخلاص/ },
+          { timeout: 3000 },
+        ),
       );
       // The picker is a lazy chunk, so give it room to arrive.
       await screen.findByRole(

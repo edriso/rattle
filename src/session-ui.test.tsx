@@ -96,9 +96,13 @@ describe('choosing a passage', () => {
     });
     await waitFor(() => expect(estimate.textContent).toMatch(/دقيقة|دقائق/));
     const before = estimate.textContent;
-    fireEvent.change(screen.getByRole('textbox', { name: 'إلى الآية' }), {
-      target: { value: '10' },
-    });
+    // The passage fields are a chunk of their own, drawn once they land.
+    fireEvent.change(
+      await screen.findByRole('combobox', { name: 'إلى الآية' }),
+      {
+        target: { value: '10' },
+      },
+    );
     await waitFor(() => expect(estimate.textContent).not.toBe(before));
     expect(estimate.textContent).toMatch(/مرة|مرات|مرتان/);
   });
@@ -109,7 +113,7 @@ describe('choosing a passage', () => {
   it('takes a retyped number a digit at a time', async () => {
     start({ surah: 2, ayah: 5, to: 9 });
     render(<App />);
-    const to = (await screen.findByRole('textbox', {
+    const to = (await screen.findByRole('combobox', {
       name: 'إلى الآية',
     })) as HTMLInputElement;
     const user = userEvent.setup();
@@ -249,7 +253,7 @@ describe('choosing a passage', () => {
     await waitFor(() =>
       expect(
         (
-          screen.getByRole('textbox', {
+          screen.getByRole('combobox', {
             name: 'من الآية',
           }) as HTMLInputElement
         ).value,

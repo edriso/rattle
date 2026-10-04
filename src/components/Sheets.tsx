@@ -1,13 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Check, ChevronLeft, Play, Square } from 'lucide-react';
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxEmpty,
-} from '@/components/ui/combobox';
 import {
   audioMirrors,
   ayahAudioUrl,
@@ -17,144 +9,19 @@ import {
   reciters,
   type Reciter,
 } from '../data/audio';
-import { openVerse } from '../data/text';
-import { useSurah } from '../useSurah';
 import { Panel } from './Panel';
+import { AyahList, SurahSearch, useAyahChoices } from './PassageFields';
 import {
   surahs,
   arabic,
   ayatCount,
   daysCount,
-  digits,
-  normalize,
   type Preferences,
 } from '../data/quran';
 import { echoLabel, echoModes, type EchoMode } from '../memorize/session';
 import { MAX_INTERVAL } from '../memorize/review';
 import type { SchedulePlan } from '../memorize/schedule';
 import { Stepper } from './Stepper';
-
-/** An ayah of the chosen surah: its number, and enough of its opening to be
-    recognised by somebody who knows the verse and not the number. */
-type AyahChoice = {
-  ayah: number;
-  head: string;
-  /** The whole verse, folded for searching, so a half-remembered phrase from
-      the middle of it finds the ayah too. */
-  search: string;
-};
-
-/** Words of the opening shown in the list. Seven is what fits one line on a
-    phone; the rest is what the search looks through. */
-const HEAD_WORDS = 7;
-
-const opening = (text: string) => {
-  const words = text.split(' ').filter(Boolean);
-  return words.length > HEAD_WORDS
-    ? `${words.slice(0, HEAD_WORDS).join(' ')}…`
-    : words.join(' ');
-};
-
-/**
- * One end of the passage, chosen by number or by the verse itself. Typing a
- * number takes it, as the plain field it replaces did; anybody who knows the
- * ayah and not its number reads down the list or searches its words instead.
- * The value is held as plain digits so the field can be empty while it is
- * being retyped and still be checked as a number.
- */
-function AyahList({
-  id,
-  label,
-  value,
-  items,
-  invalid,
-  describedBy,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  items: readonly AyahChoice[];
-  invalid: boolean;
-  describedBy?: string;
-  onChange: (digits: string) => void;
-}) {
-  const shown = value ? arabic(Number(value)) : '';
-  /* What is typed matters only while the list is open. Closed, the field shows
-     the number the passage actually holds, so a close never has to restore
-     anything and can never restore something stale: choosing an ayah closes
-     the list in the same breath, and a handler holding the old number would
-     put it straight back. */
-  const [open, setOpen] = useState(false);
-  const [typed, setTyped] = useState('');
-  const chosen = items[Number(value) - 1] ?? null;
-
-  return (
-    <div className="ayah-field">
-      <label htmlFor={id}>{label}</label>
-      <Combobox
-        items={items}
-        value={chosen}
-        inputValue={open ? typed : shown}
-        onInputValueChange={(text) => {
-          setTyped(text);
-          const numerals = digits(text);
-          // Typing a number takes it; emptying the field takes nothing, which
-          // is what puts the range in error rather than guessing at one.
-          if (numerals || !text.trim()) onChange(numerals);
-        }}
-        autoHighlight
-        onOpenChange={(next, details) => {
-          setOpen(next);
-          /* Opening on a tap starts the search on an empty field, so nobody
-             deletes ٢٥٥ before looking for ٢٦١. Opening because the reader has
-             begun typing must keep what they typed. */
-          if (next && details.reason !== 'input-change') setTyped('');
-        }}
-        itemToStringLabel={(item) => arabic(item.ayah)}
-        isItemEqualToValue={(a, b) => a.ayah === b.ayah}
-        filter={(item, text) => {
-          // Not `typed`: that is the state this component holds, and it is in
-          // scope here.
-          const numerals = digits(text);
-          if (numerals) return String(item.ayah).startsWith(numerals);
-          const words = normalize(text.trim());
-          return !words || item.search.includes(words);
-        }}
-        onValueChange={(item) => {
-          if (item) onChange(String(item.ayah));
-        }}
-      >
-        {/* No trigger button: the generated one is a tab stop with no
-            accessible name, and typing or arrowing opens the list anyway. */}
-        {/* No `inputMode="numeric"`: this field takes the words of a verse as
-            well as its number, and a numeric keypad on a phone has no way to
-            reach letters. `digits()` reads the numerals either keyboard
-            produces. */}
-        <ComboboxInput
-          id={id}
-          className="ayah-search"
-          placeholder="الرقم أو أول الآية…"
-          autoComplete="off"
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          showTrigger={false}
-        />
-        <ComboboxContent dir="rtl" className="ayah-options">
-          <ComboboxEmpty>لا توجد آية بهذا الرقم أو النص</ComboboxEmpty>
-          <ComboboxList>
-            {(item: AyahChoice) => (
-              <ComboboxItem key={item.ayah} value={item}>
-                <span className="ayah-option-number">{arabic(item.ayah)}</span>
-                <span className="ayah-option-head">{item.head}</span>
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
-    </div>
-  );
-}
 
 export function Picker({
   onClose,
@@ -166,35 +33,12 @@ export function Picker({
   onSelect: (surah: number, from: number, to: number) => void;
 }) {
   const [id, setId] = useState(prefs.surah);
-  /* The field is a search box that happens to show the current surah. Opening
-     it empties it, so a reader after آل عمران types straight away instead of
-     clearing البقرة first; closing it without choosing puts the name back.
-     The ref, not `selected`, is what a close reads: picking a surah closes the
-     list in the same breath, and a handler would still see the old one. */
-  const [query, setQuery] = useState(() => surahs[prefs.surah - 1].name);
-  const chosen = useRef(prefs.surah);
   /* Held as plain digits and shown in Arabic-Indic ones, so a field can be
      emptied while it is being retyped and still be checked as a number. */
   const [from, setFrom] = useState(String(prefs.ayah));
   const [to, setTo] = useState(String(prefs.to));
   const selected = surahs[id - 1];
-  /* Every ayah of the chosen surah, so either field can be read down rather
-     than typed into. Costing al-Baqarah whole is a couple of milliseconds and
-     happens once per surah, not per keystroke. */
-  const { verses } = useSurah(id);
-  const choices = useMemo(
-    () =>
-      Array.from({ length: selected.count }, (_, i) => {
-        const raw = verses?.[i];
-        const text = raw ? openVerse(id, i + 1, raw).text : '';
-        return {
-          ayah: i + 1,
-          head: opening(text),
-          search: normalize(text),
-        };
-      }),
-    [id, selected.count, verses],
-  );
+  const choices = useAyahChoices(id);
   const inRange = (value: string) =>
     Number.isInteger(Number(value)) &&
     Number(value) >= 1 &&
@@ -210,48 +54,16 @@ export function Picker({
       <label className="setting-label" htmlFor="surah-search">
         السورة
       </label>
-      <Combobox
-        items={surahs}
-        value={selected}
-        inputValue={query}
-        onInputValueChange={setQuery}
-        // Typing a name and pressing Enter should take it.
-        autoHighlight
-        // Not `opening`: that is the helper above, which is in scope here.
-        onOpenChange={(shown) =>
-          setQuery(shown ? '' : surahs[chosen.current - 1].name)
-        }
-        itemToStringLabel={(s) => s.name}
-        isItemEqualToValue={(a, b) => a.id === b.id}
-        filter={(item, text) => normalize(item.name).includes(normalize(text))}
-        onValueChange={(s) => {
-          if (!s) return;
-          chosen.current = s.id;
+      <SurahSearch
+        id="surah-search"
+        className="surah-search"
+        value={id}
+        onChange={(s) => {
           setId(s.id);
           setFrom('1');
           setTo(String(Math.min(s.count, 5)));
         }}
-      >
-        {/* No trigger button: the generated one is a tab stop with no
-            accessible name, and typing or arrowing opens the list anyway. */}
-        <ComboboxInput
-          id="surah-search"
-          placeholder="ابحث عن سورة…"
-          className="surah-search"
-          showTrigger={false}
-        />
-        <ComboboxContent dir="rtl" className="surah-options">
-          <ComboboxEmpty>لا توجد سورة بهذا الاسم</ComboboxEmpty>
-          <ComboboxList>
-            {(s) => (
-              <ComboboxItem key={s.id} value={s}>
-                <span>سورة {s.name}</span>
-                <small>{ayatCount(s.count)}</small>
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
+      />
       <div className="picker-meta">
         السورة {arabic(id)} من ١١٤ <span>{ayatCount(selected.count)}</span>
       </div>
