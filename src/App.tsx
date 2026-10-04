@@ -24,6 +24,20 @@ const Picker = lazy(() =>
 const SettingsSheet = lazy(() =>
   import('./components/Sheets').then((m) => ({ default: m.SettingsSheet })),
 );
+const ReciterPicker = lazy(() =>
+  import('./components/Sheets').then((m) => ({ default: m.ReciterPicker })),
+);
+
+/** Which panel is open, and how it was reached. The reciters can be opened
+    from the start screen, where choosing one is the whole errand, or from
+    inside the settings, which choosing one goes back to. */
+type OpenPanel =
+  | 'picker'
+  | 'settings'
+  | 'reciter'
+  | 'settings:reciter'
+  | 'reciter:settings'
+  | null;
 
 const STORAGE = 'rattle:v1';
 
@@ -37,13 +51,10 @@ function stored(): Preferences {
 
 export function App() {
   const [prefs, setPrefs] = useState<Preferences>(stored);
-  /* «reciter» is the settings sheet opened from the start screen's reciter
-     button rather than from the gear: same panel, but the cursor lands on the
-     reciter instead of on the panel's name, so a reader who asked for one
-     thing is put in front of that thing. */
-  const [panel, setPanel] = useState<'picker' | 'settings' | 'reciter' | null>(
-    null,
-  );
+  /* «settings:reciter» is the settings come back to from the reciters, with
+     the cursor on the row that opened them; «reciter:settings» is the
+     reciters opened from there, which go back rather than closing. */
+  const [panel, setPanel] = useState<OpenPanel>(null);
   const [storageError, setStorageError] = useState(false);
   const review = useReviewPlan();
 
@@ -214,12 +225,31 @@ export function App() {
               }}
             />
           )}
-          {(panel === 'settings' || panel === 'reciter') && (
+          {(panel === 'settings' || panel === 'settings:reciter') && (
             <SettingsSheet
               onClose={() => setPanel(null)}
               prefs={prefs}
               update={update}
-              landOn={panel === 'reciter' ? 'reciter' : 'title'}
+              onOpenReciter={() => setPanel('reciter:settings')}
+              landOn={panel === 'settings:reciter' ? 'reciter' : 'title'}
+            />
+          )}
+          {(panel === 'reciter' || panel === 'reciter:settings') && (
+            <ReciterPicker
+              prefs={prefs}
+              preview={home}
+              onClose={() => setPanel(null)}
+              onBack={
+                panel === 'reciter:settings'
+                  ? () => setPanel('settings:reciter')
+                  : undefined
+              }
+              onSelect={(reciter) => {
+                update({ reciter });
+                setPanel(
+                  panel === 'reciter:settings' ? 'settings:reciter' : null,
+                );
+              }}
             />
           )}
         </Suspense>

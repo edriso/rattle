@@ -78,15 +78,15 @@ describe('catalogue and persisted state', () => {
     // The settings panel is a lazy chunk, so give it room to arrive.
     await user.click(
       await screen.findByRole(
-        'combobox',
-        { name: 'القارئ' },
+        'button',
+        { name: /^القارئ محمود/ },
         { timeout: 3000 },
       ),
     );
     await user.click(
       await screen.findByRole(
-        'option',
-        { name: /أيمن سويد/ },
+        'button',
+        { name: /^أيمن سويد/ },
         { timeout: 3000 },
       ),
     );
@@ -99,8 +99,10 @@ describe('catalogue and persisted state', () => {
   });
   /* Who recites is a session choice: it decides how long the sitting will
      take and whether «جملة» can be offered at all. So it is on the start
-     screen beside the estimate its pace moves, and tapping it puts the
-     cursor on the reciter rather than on the panel's name. */
+     screen beside the estimate its pace moves, and tapping it opens the
+     reciters themselves. It used to open the whole settings sheet with a
+     select at the top, so choosing a voice was a panel and then a menu on
+     top of it. */
   it('reaches the reciter from the start screen', async () => {
     render(<App />);
     const user = userEvent.setup();
@@ -111,28 +113,120 @@ describe('catalogue and persisted state', () => {
     expect(pick.textContent).toBe('الحصري');
     expect(pick.getAttribute('aria-label')).toBe('القارئ، محمود خليل الحصري');
     await user.click(pick);
-    const select = await screen.findByRole(
-      'combobox',
-      { name: 'القارئ' },
-      { timeout: 3000 },
+    // On the panel's own name, as every panel opens.
+    const title = await screen.findByText('اختر القارئ', {}, { timeout: 3000 });
+    await waitFor(() =>
+      expect(document.activeElement?.contains(title)).toBe(true),
     );
-    await waitFor(() => expect(document.activeElement).toBe(select));
-    await user.click(select);
+    // The voices are the panel: no menu to open first.
+    expect(
+      screen
+        .getByRole('button', { name: /^محمود خليل الحصري$/ })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(screen.queryByRole('combobox', { name: 'القارئ' })).toBeNull();
+    // The one mushaf with no word timings says what that costs.
+    expect(
+      screen.getByRole('button', { name: /^أيمن سويد يُكرَّر بالآية كاملة/ }),
+    ).toBeTruthy();
+    // Choosing one is the whole errand, so it closes the panel.
     await user.click(
-      await screen.findByRole('option', { name: /العفاسي/ }, { timeout: 3000 }),
+      screen.getByRole('button', { name: /^مشاري راشد العفاسي/ }),
     );
     await waitFor(() =>
       expect(JSON.parse(localStorage.getItem('rattle:v1')!).reciter).toBe(
         'alafasy',
       ),
     );
-    // And the gear still opens the same panel on its own name.
-    await user.click(screen.getByRole('button', { name: 'إغلاق' }));
-    await user.click(screen.getByRole('button', { name: 'الإعدادات' }));
+    await waitFor(() => expect(screen.queryByText('اختر القارئ')).toBeNull());
+    expect(pick.textContent).toBe('العفاسي');
+    await waitFor(() => expect(document.activeElement).toBe(pick));
+  });
+
+  /* Reached from the settings, the reciters are a level inside them: the way
+     out goes back to the settings, onto the row that opened them, rather
+     than closing everything over a reader who was still in the middle of
+     setting things. */
+  it('returns to the settings from the reciters it opened', async () => {
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'الإعدادات' }));
+    const row = await screen.findByRole(
+      'button',
+      { name: /^القارئ محمود خليل الحصري/ },
+      { timeout: 3000 },
+    );
+    // The gear opens the settings on their own name, not on the reciter.
+    expect(document.activeElement).not.toBe(row);
+    await user.click(row);
+    await user.click(
+      await screen.findByRole('button', { name: 'رجوع إلى الإعدادات' }),
+    );
     await waitFor(() =>
-      expect(document.activeElement).not.toBe(
-        screen.getByRole('combobox', { name: 'القارئ' }),
-      ),
+      expect(document.activeElement?.textContent).toContain('القارئ'),
+    );
+    // And choosing goes back there too, with the new name on the row.
+    await user.click(
+      screen.getByRole('button', { name: /^القارئ محمود خليل الحصري/ }),
+    );
+    await user.click(
+      await screen.findByRole('button', { name: /^سعود الشريم/ }),
+    );
+    const back = await screen.findByRole('button', {
+      name: /^القارئ سعود الشريم/,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(back));
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!).reciter).toBe(
+      'shuraim',
+    );
+  });
+
+  /* A voice can be heard before it is chosen, on the ayah the learner is
+     about to drill, and stopped by the same button. Sampling is not
+     choosing. */
+  it('lets a reciter be heard before he is chosen', async () => {
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockResolvedValue(undefined);
+    const pause = vi
+      .spyOn(HTMLMediaElement.prototype, 'pause')
+      .mockImplementation(() => {});
+    localStorage.setItem(
+      'rattle:v1',
+      JSON.stringify({ ...defaults, surah: 2, ayah: 255, to: 257 }),
+    );
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: /القارئ، محمود/ }),
+    );
+    const sample = await screen.findByRole(
+      'button',
+      { name: 'استمع إلى سعود الشريم' },
+      { timeout: 3000 },
+    );
+    expect(sample.getAttribute('aria-pressed')).toBe('false');
+    await user.click(sample);
+    expect(sample.getAttribute('aria-pressed')).toBe('true');
+    expect((play.mock.contexts.at(-1) as HTMLAudioElement).src).toBe(
+      'https://everyayah.com/data/Saood_ash-Shuraym_64kbps/002255.mp3',
+    );
+    // A second voice stops the first rather than reciting over it.
+    await user.click(
+      screen.getByRole('button', { name: 'استمع إلى مشاري راشد العفاسي' }),
+    );
+    expect(pause).toHaveBeenCalled();
+    expect(sample.getAttribute('aria-pressed')).toBe('false');
+    await user.click(
+      screen.getByRole('button', { name: 'استمع إلى مشاري راشد العفاسي' }),
+    );
+    expect(
+      screen
+        .getByRole('button', { name: 'استمع إلى مشاري راشد العفاسي' })
+        .getAttribute('aria-pressed'),
+    ).toBe('false');
+    expect(JSON.parse(localStorage.getItem('rattle:v1')!).reciter).toBe(
+      'husary',
     );
   });
 

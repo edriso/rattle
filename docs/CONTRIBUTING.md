@@ -50,9 +50,9 @@ Three views, chosen by `prefs.screen`, with no router:
 | Free review | `src/components/AyahView.tsx` | Show ayat, hide them, record yourself |
 
 `src/App.tsx` is the shell: it holds the preferences, saves them, and decides
-which of the three to render. The two slide-up panels (the passage picker and
-the settings) live in `src/components/Sheets.tsx` and are loaded on demand;
-the frame all three sheets share, the grading one included, is
+which of the three to render. The slide-up panels (the passage picker, the
+reciter picker and the settings) live in `src/components/Sheets.tsx` and are
+loaded on demand; the frame every sheet shares, the grading one included, is
 `src/components/Panel.tsx`.
 
 Two small things sit beside the screens. `src/useSurah.ts` loads one surah's
@@ -175,7 +175,7 @@ check is `git stash push -- <the file you fixed>`, run the test, `git stash
 pop`. Several tests in this repo exist only because a bug got through once,
 and the comment above them says which. Write that comment.
 
-**Give lazy panels room.** The settings and picker are separate chunks, so a
+**Give lazy panels room.** The settings and pickers are a separate chunk, so a
 query for something inside them needs `{ timeout: 3000 }`. A test that passes
 on your machine and fails in CI is usually this.
 

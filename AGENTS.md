@@ -72,7 +72,7 @@ src/
   components/    the screens and the panels
   useSurah.ts    one surah's verses, for whichever screen is showing Quran
   webmcp.ts      the one tool the app offers a browser agent, see below
-components/ui/   the eight shadcn parts this app pulled in, generated. Seven
+components/ui/   the seven shadcn parts this app pulled in, generated. Six
                  are rendered; `textarea.tsx` arrives with `input-group.tsx`
                  and nothing renders it. Do not hand-edit them, and do not
                  pull the whole library back in: `npx shadcn add <part>`
@@ -156,8 +156,8 @@ The reciter shares the estimate's row, because his pace is what the estimate
 is mostly saying: the slowest mushaf here takes three times as long over a
 passage as the quickest, and whether «جملة» can be offered at all depends on
 him. He shows a `short` name, which every reciter must carry, and the whole
-name as the button's accessible name. It opens the settings sheet with the
-cursor on him, through `landOn`.
+name as the button's accessible name. It opens the reciter picker, which is
+the reciters and nothing else: see "The reciter picker" below.
 
 What stays in the sheet is `linkBack`, the number of previous segments a وصل
 step reaches back over. That shapes the method rather than the length of a
@@ -208,8 +208,10 @@ desktop. Two rules go with it:
 - **No row is ever dropped and every row keeps its full height.** Measured in
   Chrome against the built app at 390 wide, the form fits whole at 844, 812,
   780, 740 and 700 tall, and nothing overflows sideways down to 320px. At 667
-  it scrolls 13px and at 640 37px, both **less** than the 24 and 49 it
-  scrolled before the counts arrived. **If you add a row to this screen,
+  it scrolls 16px and at 640 41px, both still **less** than the 24 and 49 it
+  scrolled before the counts arrived; the 3 or 4px over the 13 and 37 they
+  used to be is the reciter button standing a full `--gap` off «ابدأ» now
+  that it is drawn as a control, where it had looked glued to it. **If you add a row to this screen,
   measure those heights again**, and measure the built app rather than the
   dev server.
 
@@ -503,7 +505,8 @@ network comes back starts from the right place.
   85 per cent and must not go below 80.
 - **This stylesheet is unlayered, so a plain class beats a Tailwind utility**
   however specific the utility looks. `.muted` outranked
-  `**:text-accent-foreground` on the highlighted select row, which is why the
+  `**:text-accent-foreground` on the highlighted row of the select the
+  settings used to have, which is why the
   name flipped colour and the pace beside it did not. If a `components/ui`
   part's own utility is not winning, that is why; add the rule here rather
   than fighting it there.
@@ -602,10 +605,10 @@ those four it is before you decide where it goes.
 
 ## The panels
 
-The two sheets, the passage picker and the settings, and the grading sheet
-share `Panel` in `src/components/Panel.tsx`. It is a module of its own rather
-than a helper inside `Sheets.tsx` because `Sheets.tsx` is loaded on demand and
-brings the combobox and the select with it, while the grading sheet ships with
+The three sheets, the passage picker, the reciter picker and the settings, and
+the grading sheet share `Panel` in `src/components/Panel.tsx`. It is a module
+of its own rather than a helper inside `Sheets.tsx` because `Sheets.tsx` is
+loaded on demand and brings the combobox with it, while the grading sheet ships with
 the session screen; sharing it from there would put the picker's widgets in
 the session's chunk. The grading sheet carried its own copy of the frame
 instead, which meant the three rules below were written down twice and a fix
@@ -625,6 +628,41 @@ Three things about them are deliberate:
 - Anything the panel says about the app rather than about a setting belongs in
   the `.sheet-about` footer at the end, not as another note under the last
   control.
+- **No menu opens inside a panel.** The settings used to hold three selects,
+  and the reciter one was what a reader met on tapping the reciter: a panel
+  of unrelated settings, then a menu over it. Every list in the settings is
+  short enough to draw (the silence is a two-column grid, the free review
+  count a row of five), and the one that is not, the reciters, is a panel of
+  its own. That is also why `components/ui/select.tsx` is gone.
+- **One panel at a time.** A panel reached from inside another replaces it
+  and goes back to it, rather than stacking. `Panel`'s `onBack` draws a back
+  arrow in place of «إغلاق», since two ways out side by side make the reader
+  stop and choose, and `App` names how a panel was reached in its state
+  (`'reciter:settings'`, `'settings:reciter'`) so the way back lands the
+  cursor on the row that went in.
+
+## The reciter picker
+
+Tapping the reciter on the start screen opens the reciters, and choosing one
+closes the panel, as choosing from any picker does. Reached from the
+settings, choosing one goes back to the settings instead. Three things about
+it are deliberate:
+
+- **Each voice is a button with `aria-pressed`, not a radio.** Arrowing
+  through a radio group selects as it goes, and selecting closes the panel,
+  so a keyboard would have closed it on the first arrow.
+- **They are grouped by `paceLabel`**, slowest first, the order `reciters`
+  already keeps. Pace is what decides a sitting's length and what a learner
+  taking on new material is choosing between. Only the exception is
+  written under a name: a mushaf with no word timings says it cannot be cut
+  into «جملة».
+- **A voice can be heard before it is chosen, on the start screen only.** The
+  sample is the first ayah of the learner's own passage, through a plain
+  `Audio` element (no CORS needed, nothing to decode), falling through
+  `audioMirrors()` like everything else, and stopped by the same button, by
+  sampling another, or by the panel closing. Over a drill or free review it
+  is not offered: their own recitation would be sounding under it, and the
+  panel is modal, so the transport that could stop it is out of reach.
 
 ## The one tool a browser agent gets
 

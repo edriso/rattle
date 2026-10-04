@@ -372,6 +372,7 @@ export function HomeView({
           <button
             className="reciter-pick"
             aria-label={`القارئ، ${reciter.name}`}
+            aria-haspopup="dialog"
             onClick={onOpenReciter}
           >
             <AudioLines size={15} />

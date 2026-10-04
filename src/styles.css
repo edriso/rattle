@@ -4,7 +4,6 @@
 @source '../components/ui/sheet.tsx';
 @source '../components/ui/button.tsx';
 @source '../components/ui/combobox.tsx';
-@source '../components/ui/select.tsx';
 @source '../components/ui/input-group.tsx';
 @source '../components/ui/input.tsx';
 @source '../components/ui/textarea.tsx';
@@ -767,17 +766,6 @@ progress::-moz-progress-bar {
   font-size: 14px;
   margin-bottom: 10px;
 }
-.setting-select[data-slot='select-trigger'] {
-  width: 100%;
-  min-height: 48px;
-  background: var(--background);
-  border-color: var(--control-border);
-  padding: 8px 12px;
-  font-size: 14px;
-}
-.setting-select [data-slot='select-value'] {
-  text-align: start;
-}
 .field-note {
   display: block;
   font-size: 12px;
@@ -849,25 +837,147 @@ progress::-moz-progress-bar {
   background: var(--surface-raised);
   color: var(--foreground);
 }
-[data-slot='select-item'] {
-  min-height: 44px;
-  font-family: 'IBM Plex Sans Arabic', sans-serif;
+/* ── Inside the settings, and the reciters ──────────────────────────────── */
+.sheet-heading:has(.sheet-back) {
+  justify-content: flex-start;
 }
-/* `<small>` inherits the UA's `smaller`, which lands on 11px inside a 14px
-   row: under the 14px that would let it claim 1.4.3's 3:1 allowance, and
-   smaller than the same role gets in the surah list. */
-[data-slot='select-item'] .muted {
+/* What a run of settings is about. In the accent, because it has to read as
+   a different kind of line from the labels under it at a glance, and a size
+   step alone at this scale does not. */
+.setting-group {
+  margin: 8px 0 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.setting-group:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+/* A setting whose choices live one level in: it says what is chosen, and the
+   chevron says that pressing it goes somewhere rather than toggling. */
+.choice-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  text-align: start;
+  background: var(--background);
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  color: var(--muted-foreground);
+}
+.choice-row:hover {
+  border-color: var(--accent);
+}
+.choice-row span {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+.choice-row small {
   font-size: 12px;
 }
-/* The highlight paints the row in the accent, and this file is unlayered, so
-   `.muted` outranks the utility that is supposed to recolour the row's
-   descendants: the reciter's name flipped and the pace beside it did not.
-   Keyed on `:focus` because `:focus` is what paints the background, so the
-   ink and the ground it sits on cannot come apart. Not on `[data-selected]`:
-   a selected row that is not highlighted stays transparent, and accent ink
-   on the popover would be the same bug moved. */
-[data-slot='select-item']:focus .muted {
-  color: var(--accent-foreground-muted);
+.choice-row strong {
+  color: var(--foreground);
+  font-weight: 500;
+  font-size: 16px;
+}
+/* Six choices in two columns rather than one row of six that could not hold
+   «مرة ونصف المقطع», or a menu inside the panel. */
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.option-grid label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4;
+}
+.reciter-hint {
+  margin: -8px 0 20px;
+}
+.reciter-band + .reciter-band {
+  margin-top: 20px;
+}
+.reciter-band-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.reciter-band ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.reciter-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline-end: 4px;
+  background: var(--background);
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+}
+.reciter-row:hover {
+  border-color: var(--accent);
+}
+/* The chosen voice takes the accent on its edge and its tick, not on its
+   ground: secondary text on an accent ground needs its own token, and the
+   row has to stay readable while it is also being sampled. */
+.reciter-row[data-chosen='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.reciter-choice {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: start;
+  font-size: 15px;
+}
+.reciter-choice svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.reciter-choice-text {
+  flex: 1;
+  display: grid;
+  line-height: 1.5;
+}
+.reciter-choice-text small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.reciter-sample[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface-raised);
+}
+.reciter-sample[data-phase='loading'] svg {
+  animation: sample-wait 1s ease-in-out infinite alternate;
+}
+@keyframes sample-wait {
+  to {
+    transform: scale(0.6);
+  }
 }
 [data-slot='sheet-overlay'] {
   background: var(--shadow);
@@ -1012,7 +1122,7 @@ progress::-moz-progress-bar {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: var(--gap, 20px) 0 var(--gap-sm, 14px);
+  margin: var(--gap, 20px) 0;
 }
 .session-estimate {
   display: flex;
@@ -1023,7 +1133,9 @@ progress::-moz-progress-bar {
 }
 /* The reciter, on the same line as the minutes his pace decides. It keeps
    its own name short and lets the estimate wrap, because the estimate is two
-   short numbers and a name is not divisible. */
+   short numbers and a name is not divisible. It is drawn as a control, with
+   an edge and full-strength ink, because in the estimate's muted grey it read
+   as one more caption and nobody thought to tap it. */
 .reciter-pick {
   display: inline-flex;
   align-items: center;
@@ -1031,12 +1143,16 @@ progress::-moz-progress-bar {
   flex-shrink: 0;
   max-width: 60%;
   min-height: 44px;
-  padding-inline: 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
+  padding-inline: 14px 10px;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 14px;
+}
+.reciter-pick svg {
+  flex-shrink: 0;
   color: var(--muted-foreground);
-  font-size: 13px;
 }
 .reciter-pick span {
   overflow: hidden;
@@ -1044,8 +1160,7 @@ progress::-moz-progress-bar {
   white-space: nowrap;
 }
 .reciter-pick:hover {
-  color: var(--foreground);
-  background: var(--surface-raised);
+  border-color: var(--accent);
 }
 .session-estimate span {
   display: inline-flex;

@@ -291,8 +291,23 @@ const SCREENS = [
       const user = userEvent.setup();
       await user.click(await screen.findByRole('button', { name: 'الإعدادات' }));
       await screen.findByRole(
-        'combobox',
-        { name: 'القارئ' },
+        'button',
+        { name: /^القارئ / },
+        { timeout: 3000 },
+      );
+    },
+  },
+  {
+    name: 'the reciter picker',
+    least: 25,
+    open: async () => {
+      start({ screen: 'home' });
+      render(<App />);
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: /القارئ، / }));
+      await screen.findByRole(
+        'button',
+        { name: /^سعود الشريم/ },
         { timeout: 3000 },
       );
     },

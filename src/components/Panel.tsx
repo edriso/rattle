@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -28,6 +28,8 @@ export function Panel({
   title,
   description,
   landOn,
+  onBack,
+  backLabel,
   children,
 }: {
   onClose: () => void;
@@ -36,6 +38,15 @@ export function Panel({
   description: string;
   /** Where the cursor goes, when it is not the panel's own name. */
   landOn?: React.RefObject<HTMLElement | null>;
+  /**
+   * A panel reached from inside another one goes back to it rather than
+   * closing over nothing: the reciters are opened from the settings, and
+   * whoever chose one there expects to be returned to the settings. The back
+   * arrow takes the place of «إغلاق», since two ways out side by side make
+   * the reader stop and work out which one they want.
+   */
+  onBack?: () => void;
+  backLabel?: string;
   children: React.ReactNode;
 }) {
   /* Opening a panel puts the cursor on its title, not on the close button:
@@ -58,10 +69,21 @@ export function Panel({
       >
         <div className="sheet-handle" />
         <div className="sheet-heading" ref={heading} tabIndex={-1}>
+          {onBack && (
+            <button
+              className="icon-button sheet-back"
+              aria-label={backLabel}
+              onClick={onBack}
+            >
+              <ArrowRight size={21} />
+            </button>
+          )}
           <SheetTitle>{title}</SheetTitle>
-          <SheetClose className="icon-button" aria-label="إغلاق">
-            <X size={21} />
-          </SheetClose>
+          {!onBack && (
+            <SheetClose className="icon-button" aria-label="إغلاق">
+              <X size={21} />
+            </SheetClose>
+          )}
         </div>
         <SheetDescription className="sr-only">{description}</SheetDescription>
         {children}

@@ -711,7 +711,7 @@ describe('a talqeen session', () => {
         { timeout: 3000 },
       ),
     );
-    await screen.findByRole('combobox', { name: 'القارئ' }, { timeout: 3000 });
+    await screen.findByRole('button', { name: /^القارئ / }, { timeout: 3000 });
     expect(screen.queryByText(/بدأت الجلسة من أوّلها/)).toBeNull();
   });
 

@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import { Check, ChevronLeft } from 'lucide-react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Check, ChevronLeft, Play, Square } from 'lucide-react';
 import {
   Combobox,
   ComboboxInput,
@@ -9,13 +9,14 @@ import {
   ComboboxEmpty,
 } from '@/components/ui/combobox';
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import { findReciter, paceLabel, reciters } from '../data/audio';
+  audioMirrors,
+  ayahAudioUrl,
+  cutsPhrases,
+  findReciter,
+  paceLabel,
+  reciters,
+  type Reciter,
+} from '../data/audio';
 import { openVerse } from '../data/text';
 import { useSurah } from '../useSurah';
 import { Panel } from './Panel';
@@ -296,22 +297,205 @@ export function Picker({
   );
 }
 
+/** The reciters in the bands `paceLabel` names, slowest first, which is the
+    order `reciters` already keeps. */
+const paceBands = reciters.reduce<{ label: string; members: Reciter[] }[]>(
+  (bands, reciter) => {
+    const label = paceLabel(reciter.pace);
+    const last = bands.at(-1);
+    if (last?.label === label) last.members.push(reciter);
+    else bands.push({ label, members: [reciter] });
+    return bands;
+  },
+  [],
+);
+
+/**
+ * One recording at a time, played to let a reader hear a voice before
+ * choosing it. A plain media element rather than the session's audio graph:
+ * nothing is cut or decoded, it only has to start on a tap and stop on the
+ * next one, and a media element needs no CORS header to do that.
+ */
+function usePreview(surah: number, ayah: number) {
+  const playing = useRef<HTMLAudioElement | null>(null);
+  const [state, setState] = useState<{
+    id: string;
+    phase: 'loading' | 'playing';
+  } | null>(null);
+
+  const stop = () => {
+    playing.current?.pause();
+    playing.current = null;
+    setState(null);
+  };
+  // Closing the panel must not leave a voice reciting behind it.
+  useEffect(() => () => playing.current?.pause(), []);
+
+  const toggle = (id: string) => {
+    const again = state?.id === id;
+    stop();
+    if (again) return;
+    const url = ayahAudioUrl(surah, ayah, id);
+    const sources = [url, ...audioMirrors(url)];
+    const element = new Audio();
+    let tried = 0;
+    // Each handler checks it still belongs to the recording being played,
+    // since a stopped one can still report an error it was already loading.
+    const current = () => playing.current === element;
+    const finish = () => {
+      if (current()) stop();
+    };
+    const start = () => {
+      try {
+        void Promise.resolve(element.play()).catch((error: unknown) => {
+          // Changing the source aborts the play before it; that is not a
+          // failure. Anything else is, and leaves nothing to wait for.
+          if ((error as Error)?.name !== 'AbortError') finish();
+        });
+      } catch {
+        finish();
+      }
+    };
+    element.addEventListener('playing', () => {
+      if (current()) setState({ id, phase: 'playing' });
+    });
+    element.addEventListener('ended', finish);
+    element.addEventListener('error', () => {
+      if (!current()) return;
+      tried += 1;
+      if (tried >= sources.length) return finish();
+      element.src = sources[tried];
+      start();
+    });
+    element.src = sources[0];
+    playing.current = element;
+    setState({ id, phase: 'loading' });
+    start();
+  };
+
+  return { state, toggle };
+}
+
+/**
+ * The reciters, each one a tap away.
+ *
+ * This used to be a select inside the settings sheet, so choosing a voice
+ * from the start screen meant a panel full of other settings and then a menu
+ * opening on top of it: two layers, the second a list of bare names. Here
+ * the voices are the panel. They are grouped by how deliberately they
+ * recite, because that is what decides a sitting's length and what a learner
+ * taking on new material is choosing between, and each can be heard before it
+ * is chosen. Choosing one closes the panel, as choosing from any picker does.
+ */
+export function ReciterPicker({
+  prefs,
+  onSelect,
+  onClose,
+  onBack,
+  preview,
+}: {
+  prefs: Preferences;
+  onSelect: (reciter: string) => void;
+  onClose: () => void;
+  /** Present when the picker was opened from the settings. */
+  onBack?: () => void;
+  /**
+   * Whether a voice can be sampled here. Not over a drill or free review:
+   * their own recitation would be sounding under it, and the panel is modal,
+   * so the transport that could stop it is out of reach.
+   */
+  preview: boolean;
+}) {
+  const { state, toggle } = usePreview(prefs.surah, prefs.ayah);
+  const groups = useId();
+  const surah = surahs[prefs.surah - 1];
+
+  return (
+    <Panel
+      onClose={onClose}
+      onBack={onBack}
+      backLabel="رجوع إلى الإعدادات"
+      title="اختر القارئ"
+      description="اختر من يتلو عليك. القارئ المتأنّي أعون على حفظ الجديد."
+    >
+      {preview && (
+        <p className="field-note reciter-hint">
+          اضغط زرّ التشغيل بجانب القارئ لتسمعه يتلو الآية {arabic(prefs.ayah)} من
+          سورة {surah.name}.
+        </p>
+      )}
+      {paceBands.map((band, i) => (
+        <section className="reciter-band" key={band.label}>
+          <h3 className="reciter-band-label" id={`${groups}-${i}`}>
+            أداء {band.label}
+          </h3>
+          <ul aria-labelledby={`${groups}-${i}`}>
+            {band.members.map((r) => {
+              const chosen = r.id === prefs.reciter;
+              const sampling = state?.id === r.id ? state.phase : undefined;
+              return (
+                <li key={r.id} className="reciter-row" data-chosen={chosen}>
+                  {/* A button that says whether it is the chosen one, rather
+                      than a radio: arrowing through a radio group selects as
+                      it goes, and selecting closes this panel. */}
+                  <button
+                    className="reciter-choice"
+                    aria-pressed={chosen}
+                    onClick={() => onSelect(r.id)}
+                  >
+                    <span className="reciter-choice-text">
+                      <span>{r.name}</span>
+                      {/* Said only where it is true: the exception is what
+                          the reader needs to know, not the rule. The space
+                          is for the accessible name, which would otherwise
+                          run the name and the note into one word. */}
+                      {!cutsPhrases(r.id) && (
+                        <>
+                          {' '}
+                          <small>يُكرَّر بالآية كاملة، بلا تقسيم بالجملة</small>
+                        </>
+                      )}
+                    </span>
+                    {chosen && <Check size={19} aria-hidden="true" />}
+                  </button>
+                  {preview && (
+                    <button
+                      className="icon-button reciter-sample"
+                      aria-label={`استمع إلى ${r.name}`}
+                      aria-pressed={sampling !== undefined}
+                      data-phase={sampling}
+                      onClick={() => toggle(r.id)}
+                    >
+                      {sampling ? <Square size={15} /> : <Play size={17} />}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </Panel>
+  );
+}
+
 export function SettingsSheet({
   onClose,
   prefs,
   update,
+  onOpenReciter,
   landOn = 'title',
 }: {
   onClose: () => void;
   prefs: Preferences;
   update: (v: Partial<Preferences>) => void;
-  /** What the panel was opened to reach. The start screen's reciter button
-      opens this same panel, and a reader who tapped a reciter should not have
-      to find him again. */
+  onOpenReciter: () => void;
+  /** What the panel was opened to reach. Coming back from the reciters, the
+      cursor goes to the row that opened them rather than to the top. */
   landOn?: 'title' | 'reciter';
 }) {
   const reciter = findReciter(prefs.reciter);
-  const reciterTrigger = useRef<HTMLButtonElement>(null);
+  const reciterRow = useRef<HTMLButtonElement>(null);
   // The two screens name the same keys differently, and only one records.
   const inSession = prefs.screen === 'session';
   const setPlan = (patch: Partial<SchedulePlan>) =>
@@ -321,81 +505,62 @@ export function SettingsSheet({
     <Panel
       onClose={onClose}
       title="الإعدادات"
-      description="القارئ، وطريقة التكرار، والمظهر."
-      landOn={landOn === 'reciter' ? reciterTrigger : undefined}
+      description="القارئ، وطريقة الترديد، والمراجعة الحرة، والمظهر."
+      landOn={landOn === 'reciter' ? reciterRow : undefined}
     >
+      {/* Every choice here is drawn, none behind a menu: a menu opening
+          inside a panel is a second layer to find one's way out of, and none
+          of these lists is long enough to need one. */}
+      <h3 className="setting-group">التلاوة والترديد</h3>
       <section className="setting-section">
-        <div className="setting-label" id="reciter-label">
-          القارئ
-        </div>
-        <Select
-          value={prefs.reciter}
-          onValueChange={(v) => {
-            if (v) update({ reciter: v });
-          }}
+        <button
+          ref={reciterRow}
+          className="choice-row"
+          aria-haspopup="dialog"
+          onClick={onOpenReciter}
         >
-          <SelectTrigger
-            ref={reciterTrigger}
-            className="setting-select"
-            aria-labelledby="reciter-label"
-          >
-            <SelectValue>{reciter.name}</SelectValue>
-          </SelectTrigger>
-          <SelectContent dir="rtl">
-            {reciters.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                <span>{r.name}</span>
-                <small className="muted"> · {paceLabel(r.pace)}</small>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="field-note">
-          الأداء {paceLabel(reciter.pace)}. التلاوات من everyayah.com.
-          {/* The only case where changing the reciter costs the learner their
-              place: at «جملة» a reciter with no timing for an ayah leaves it
-              whole, which is a different set of segments and so a different
-              drill. At «آية» and above it never happens, so it is not said
-              there. */}
-          {inSession &&
-            prefs.grain === 'phrase' &&
-            ' وفي التقسيم بالجملة قد يختلف تقسيم قارئٍ عن قارئ، فتبدأ الجلسة حينها من أوّلها.'}
-        </p>
+          {/* The spaces are for the accessible name: three lines drawn as a
+              grid are three words run together without them. */}
+          <span>
+            <small>القارئ</small> <strong>{reciter.name}</strong>{' '}
+            <small>الأداء {paceLabel(reciter.pace)}</small>
+          </span>
+          <ChevronLeft size={18} aria-hidden="true" />
+        </button>
+        {/* The only case where changing the reciter costs the learner their
+            place: at «جملة» a reciter with no timing for an ayah leaves it
+            whole, which is a different set of segments and so a different
+            drill. At «آية» and above it never happens, so it is not said
+            there. */}
+        {inSession && prefs.grain === 'phrase' && (
+          <p className="field-note">
+            في التقسيم بالجملة قد يختلف تقسيم قارئٍ عن قارئ، فتبدأ الجلسة حينها
+            من أوّلها.
+          </p>
+        )}
       </section>
 
-      <section className="setting-section">
-        <div className="setting-label" id="echo-label">
-          سكتة الترديد
+      <fieldset className="setting-section">
+        <legend>سكتة الترديد</legend>
+        <div className="segmented option-grid">
+          {echoModes.map((mode: EchoMode) => (
+            <label key={String(mode)} data-active={prefs.echo === mode}>
+              <input
+                className="sr-only"
+                type="radio"
+                name="echo"
+                checked={prefs.echo === mode}
+                onChange={() => update({ echo: mode })}
+              />
+              {echoLabel(mode)}
+            </label>
+          ))}
         </div>
-        <Select
-          value={String(prefs.echo)}
-          onValueChange={(v) => {
-            if (!v) return;
-            const echo = (
-              v === 'off' || v === 'manual' ? v : Number(v)
-            ) as EchoMode;
-            update({ echo });
-          }}
-        >
-          <SelectTrigger
-            className="setting-select"
-            aria-labelledby="echo-label"
-          >
-            <SelectValue>{echoLabel(prefs.echo)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent dir="rtl">
-            {echoModes.map((mode) => (
-              <SelectItem key={String(mode)} value={String(mode)}>
-                {echoLabel(mode)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <p className="field-note">
-          تُقاس السكتة بطول المقطع نفسه، فتطول مع الآية الطويلة. واختر «أستمع فقط»
-          إن أردت تكرار السماع بلا ترديد.
+          تُقاس السكتة بطول المقطع نفسه، فتطول مع الآية الطويلة. وفي «أنا أتحكّم»
+          تنتظرك الجلسة حتى تطلب المتابعة.
         </p>
-      </section>
+      </fieldset>
 
       {/* How many times each step repeats is on the start screen, next to the
           estimate those numbers move. This one is not a length but the shape
@@ -423,31 +588,25 @@ export function SettingsSheet({
         </p>
       </section>
 
-      <section className="setting-section">
-        <div className="setting-label" id="count-label">
-          الآيات في المراجعة الحرة
+      <h3 className="setting-group">المراجعة الحرة</h3>
+      <fieldset className="setting-section">
+        <legend>الآيات المعروضة معًا</legend>
+        <div className="segmented">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <label key={n} data-active={prefs.perView === n}>
+              <input
+                className="sr-only"
+                type="radio"
+                name="per-view"
+                aria-label={ayatCount(n)}
+                checked={prefs.perView === n}
+                onChange={() => update({ perView: n })}
+              />
+              {arabic(n)}
+            </label>
+          ))}
         </div>
-        <Select
-          value={String(prefs.perView)}
-          onValueChange={(v) => {
-            if (v) update({ perView: Number(v) });
-          }}
-        >
-          <SelectTrigger
-            className="setting-select"
-            aria-labelledby="count-label"
-          >
-            <SelectValue>{ayatCount(prefs.perView)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent dir="rtl">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <SelectItem key={n} value={String(n)}>
-                {ayatCount(n)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </section>
+      </fieldset>
 
       {/* Not autoplay: nothing here starts a recitation. It keeps one that is
           already sounding from stopping at every move, which is what a reader
@@ -474,11 +633,11 @@ export function SettingsSheet({
           ))}
         </div>
         <p className="field-note">
-          في المراجعة الحرة، تنتقل التلاوة مع الآية بلا حاجة إلى زر التشغيل في كل
-          مرة.
+          تنتقل التلاوة مع الآية بلا حاجة إلى زر التشغيل في كل مرة.
         </p>
       </fieldset>
 
+      <h3 className="setting-group">الواجهة</h3>
       <fieldset className="setting-section">
         <legend>المظهر</legend>
         <div className="segmented">
@@ -548,6 +707,7 @@ export function SettingsSheet({
           <a href="https://tanzil.net" target="_blank" rel="noreferrer">
             مشروع تنزيل
           </a>
+          ، والتلاوات من everyayah.com.
         </p>
       </section>
       <details className="shortcut-help">
